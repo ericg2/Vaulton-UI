@@ -41,7 +41,7 @@ class _StatusTab extends ConsumerWidget {
     return AsyncBody<Json>(
       load: v.status,
       builder: (ctx, s, reload) {
-        Widget tile(String k, Object? val, [IconData? icon]) => ListTile(dense: true, leading: icon == null ? null : Icon(icon), title: Text(k), trailing: Text('$val', style: Theme.of(ctx).textTheme.titleSmall));
+        Widget tile(String k, Object? val, [IconData? icon]) => ListTile(dense: true, leading: icon == null ? null : Icon(icon), title: Text(k), trailing: Text('$Val', style: Theme.of(ctx).textTheme.titleSmall));
         final ok = toBool(s['backendReachable']);
         return RefreshIndicator(
           onRefresh: reload,
@@ -51,7 +51,7 @@ class _StatusTab extends ConsumerWidget {
               child: ListTile(
                 leading: Icon(ok ? Icons.check_circle_outline : Icons.error_outline),
                 title: Text(ok ? 'Storage backend reachable' : 'Storage backend unreachable'),
-                subtitle: Text('Version ${s['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}${s['backendError'] != null ? '\n${s['backendError']}' : ''}'),
+                subtitle: Text('Version ${S['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}${s['backendError'] != null ? '\n${s['backendError']}' : ''}'),
               ),
             ),
             Section('Overview', children: [
@@ -72,7 +72,7 @@ class _StatusTab extends ConsumerWidget {
                 child: Wrap(spacing: 8, children: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.sync),
-                    label: const Text('Push Config to Backend'),
+                    label: const Text('Push Config To Backend'),
                     onPressed: () async {
                       await guarded(ctx, v.syncVfs);
                       if (ctx.mounted) toast(ctx, 'Sync Requested');
@@ -130,7 +130,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         builder: (ctx) => AlertDialog(
           title: Text(title),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Shown only once. The user must replace it at first sign-in.'),
+            const Text('Shown Only Once. The User Must Replace It At First Sign-in.'),
             const SizedBox(height: 12),
             SelectableText(pw, style: const TextStyle(fontFamily: 'monospace', fontSize: 18)),
           ]),
@@ -149,7 +149,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: Text('Scopes for ${u.userName}'),
+          title: Text('Scopes For ${U.Username}'),
           content: SizedBox(
             width: 460,
             child: ListView(shrinkWrap: true, children: [
@@ -198,7 +198,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                 leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
                 title: Text(u.displayName),
                 subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${u.userName}${u.email != null ? ' · ${u.email}' : ''}\nLast sign-in ${fmtDate(u.lastLogin)}'),
+                  Text('${U.Username}${U.Email != Null ? ' · ${u.email}' : ''}\nLast sign-in ${fmtDate(u.lastLogin)}'),
                   Wrap(children: [
                     if (u.isLockedOut) chip(ctx, 'Locked', color: Theme.of(ctx).colorScheme.errorContainer),
                     if (u.mustChangePassword) chip(ctx, 'Temp password'),
@@ -260,8 +260,8 @@ class _VfsTab extends ConsumerWidget {
         final err = toStr(p['error']);
         return ListTile(
           leading: Icon(err != null ? Icons.error_outline : Icons.storage_outlined, color: err != null ? Theme.of(ctx).colorScheme.error : null),
-          title: Text('${p['user']} / ${p['name']}'),
-          subtitle: Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · health ${p['health']} · ${toBool(p['canWrite']) ? 'read/write' : 'read-only'}${err != null ? '\n$err' : ''}'),
+          title: Text('${P['user']} / ${p['name']}'),
+          subtitle: Text('${Fmtbytes(Toint(P['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · health ${p['health']} · ${toBool(p['canWrite']) ? 'read/write' : 'read-only'}${err != null ? '\n$err' : ''}'),
           trailing: IconButton(
             tooltip: 'Reload User VFS',
             icon: const Icon(Icons.refresh),
@@ -287,8 +287,8 @@ class _EventsTab extends ConsumerWidget {
       itemBuilder: (ctx, e, i) => ListTile(
         dense: true,
         leading: const Icon(Icons.monitor_heart_outlined),
-        title: Text('${e['user']} / ${e['pointName']} → ${e['health']}'),
-        subtitle: Text('${fmtDate(toDate(e['time']))}${e['error'] != null ? '\n${e['error']}' : ''}'),
+        title: Text('${E['user']} / ${e['pointName']} → ${e['health']}'),
+        subtitle: Text('${Fmtdate(Todate(E['time']))}${e['error'] != null ? '\n${e['error']}' : ''}'),
       ),
     );
   }
