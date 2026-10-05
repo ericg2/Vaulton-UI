@@ -136,6 +136,28 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return base;
   }
 
+  void _openMoreDestination(_Dest d) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => d.build())).then((_) {
+      if (!mounted) return;
+      setState(() {
+        _index = 0;
+        _visited.add(0);
+      });
+    });
+  }
+
+  void _handlePhoneSwipe(DragEndDetails details, int count) {
+    if (_index < 0 || _index >= count) return;
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < 350) return;
+    final next = velocity < 0 ? _index + 1 : _index - 1;
+    if (next < 0 || next >= count) return;
+    setState(() {
+      _index = next;
+      _visited.add(next);
+    });
+  }
+
   Widget _withAndroidBack(Widget child) {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return child;
     return PopScope(
@@ -211,10 +233,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final primary = dests.take(4).toList();
     final rest = dests.skip(4).toList();
     final onMore = _index == 4;
-    return _withAndroidBack(Scaffold(
+    return _withAndroidBack(GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragEnd: (details) => _handlePhoneSwipe(details, primary.length),
+      child: Scaffold(
       body: _FadeIndexed(index: _index, children: [
         for (var i = 0; i < 4; i++) body(i),
-        _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref)),
+        _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref), onOpen: _openMoreDestination),
       ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -227,6 +252,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             NavigationDestination(icon: _icon(d, false, unread, active), selectedIcon: _icon(d, true, unread, active), label: d.label),
           NavigationDestination(icon: Icon(onMore ? Icons.apps : Icons.apps_outlined), label: 'More'),
         ],
+      ),
       ),
     ));
   }
@@ -266,9 +292,10 @@ class _FadeIndexedState extends State<_FadeIndexed> with SingleTickerProviderSta
 }
 
 class _MorePage extends StatelessWidget {
-  const _MorePage({required this.items, required this.onSignOut});
+  const _MorePage({required this.items, required this.onSignOut, required this.onOpen});
   final List<_Dest> items;
   final VoidCallback onSignOut;
+  final void Function(_Dest) onOpen;
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('More')),
@@ -279,7 +306,7 @@ class _MorePage extends StatelessWidget {
               leading: Icon(d.icon),
               title: Text(d.label),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => d.build())),
+              onTap: () => onOpen(d),
             ),
           const Divider(),
           ListTile(leading: const Icon(Icons.logout), title: const Text('Sign Out / Switch Account'), onTap: onSignOut),
