@@ -22,7 +22,7 @@ class ErrorView extends StatelessWidget {
           Text(e.message, textAlign: TextAlign.center, maxLines: 4, overflow: TextOverflow.ellipsis),
           if (e.status == null) ...[
             const SizedBox(height: 4),
-            Text('Make Sure The Server Is Running And You Are On The Right Network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            Text('Make sure the server is running, and you are on the right network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
           ],
           if (onRetry != null && !e.isForbidden) ...[
             const SizedBox(height: 12),

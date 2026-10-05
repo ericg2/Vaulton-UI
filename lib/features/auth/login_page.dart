@@ -359,7 +359,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                   Expanded(
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Text(_pwTitle ?? 'Password Change Required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
-                                      Text('Enter The Temporary Password Above, Then Choose A Permanent One To Finish Signing In.', style: TextStyle(color: cs.onTertiaryContainer)),
+                                      Text('Enter the temporary password above, then choose a permanent one to finish signing in.', style: TextStyle(color: cs.onTertiaryContainer)),
                                     ]),
                                   ),
                                 ]),
@@ -390,7 +390,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         value: _rememberPassword,
                         onChanged: (v) => setState(() => _rememberPassword = v ?? false),
                         title: const Text('Remember Password'),
-                        subtitle: const Text('Stored In The Secure Keystore On This Device.'),
+                        subtitle: const Text('Stored on this device.'),
                       ),
                     ),
                     AnimatedSize(

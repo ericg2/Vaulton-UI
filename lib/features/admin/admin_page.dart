@@ -130,7 +130,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         builder: (ctx) => AlertDialog(
           title: Text(title),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Shown Only Once. The User Must Replace It At First Sign-in.'),
+            const Text('Shown only once. The user must change password at first sign-in.'),
             const SizedBox(height: 12),
             SelectableText(pw, style: const TextStyle(fontFamily: 'monospace', fontSize: 18)),
           ]),
