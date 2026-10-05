@@ -22,7 +22,7 @@ class ErrorView extends StatelessWidget {
           Text(e.message, textAlign: TextAlign.center, maxLines: 4, overflow: TextOverflow.ellipsis),
           if (e.status == null) ...[
             const SizedBox(height: 4),
-            Text('Make sure the server is running and you are on the right network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            Text('Make Sure The Server Is Running And You Are On The Right Network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
           ],
           if (onRetry != null && !e.isForbidden) ...[
             const SizedBox(height: 12),
@@ -242,7 +242,7 @@ class CursorListState<T> extends State<CursorList<T>> {
             if (!_loading) WidgetsBinding.instance.addPostFrameCallback((_) => load());
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
           }
-          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Failed to Load More — Retry'));
+          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Failed To Load More — Retry'));
           return const SizedBox(height: 88);
           },
         ),
