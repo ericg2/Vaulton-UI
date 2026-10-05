@@ -135,19 +135,38 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                 if (r.error != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(r.error!, style: TextStyle(color: cs.error, fontSize: 12))),
                 const SizedBox(height: 12),
               ],
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                FilledButton.icon(onPressed: _repo == null ? null : () => _browse(), icon: const Icon(Icons.folder_open), label: const Text('Browse latest')),
-                FilledButton.tonalIcon(onPressed: _backup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup now')),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final j = await guarded(context, () => _v.check(widget.repoId));
-                    if (j != null) _queued(j);
-                  },
-                  icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Health check'),
-                ),
-                OutlinedButton.icon(onPressed: _retention, icon: const Icon(Icons.auto_delete_outlined), label: const Text('Clean up once')),
-              ]),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final narrow = constraints.maxWidth < 600;
+                  final buttons = [
+                    FilledButton.icon(onPressed: _repo == null ? null : () => _browse(), icon: const Icon(Icons.folder_open), label: const Text('Browse latest')),
+                    FilledButton.tonalIcon(onPressed: _backup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup now')),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final j = await guarded(context, () => _v.check(widget.repoId));
+                        if (j != null) _queued(j);
+                      },
+                      icon: const Icon(Icons.fact_check_outlined),
+                      label: const Text('Health check'),
+                    ),
+                    OutlinedButton.icon(onPressed: _retention, icon: const Icon(Icons.auto_delete_outlined), label: const Text('Clean up')),
+                  ];
+                  if (!narrow) return Wrap(spacing: 8, runSpacing: 8, children: buttons);
+                  return Column(children: [
+                    Row(children: [
+                      Expanded(child: buttons[0]),
+                      const SizedBox(width: 8),
+                      Expanded(child: buttons[1]),
+                    ]),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(child: buttons[2]),
+                      const SizedBox(width: 8),
+                      Expanded(child: buttons[3]),
+                    ]),
+                  ]);
+                },
+              ),
             ]),
           ),
         ),
@@ -220,10 +239,28 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+  TabBar _tabs() => TabBar(controller: _tc, tabs: const [Tab(text: 'Snapshots'), Tab(text: 'Jobs'), Tab(text: 'Schedules')]);
+
+  Widget _tabView() => TabBarView(controller: _tc, children: [
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920),
+            child: CursorList<Snapshot>(
+              key: _key,
+              empty: 'No snapshots yet',
+              emptyIcon: Icons.camera_alt_outlined,
+              autoRefresh: const Duration(seconds: 5),
+              fetch: (c) => _v.snapshots(widget.repoId, cursor: c),
+              itemBuilder: (ctx, s, i) => _snapshotCard(s),
+            ),
+          ),
+        ),
+        JobsList(repoId: widget.repoId),
+        SchedulesList(repoId: widget.repoId),
+      ]);
+
+  PreferredSizeWidget _appBar() => AppBar(
         title: Text(_repo?.name ?? 'Backup vault'),
         actions: [
           PopupMenuButton<String>(
@@ -233,31 +270,25 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update vault password…'))],
           ),
         ],
-        bottom: TabBar(controller: _tc, tabs: const [Tab(text: 'Snapshots'), Tab(text: 'Jobs'), Tab(text: 'Schedules')]),
-      ),
+        bottom: _tabs(),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: _appBar(),
       floatingActionButton: _tc.index == 0 ? FloatingActionButton.extended(onPressed: _backup, icon: const Icon(Icons.backup), label: const Text('Backup')) : null,
       body: Column(children: [
         _header(),
-        CleanupCard(key: _cleanupKey, repoId: widget.repoId, onRunNow: _retention),
         Expanded(
-          child: TabBarView(controller: _tc, children: [
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 920),
-                child: CursorList<Snapshot>(
-                  key: _key,
-                  empty: 'No snapshots yet',
-                  emptyIcon: Icons.camera_alt_outlined,
-                  autoRefresh: const Duration(seconds: 5),
-                  fetch: (c) => _v.snapshots(widget.repoId, cursor: c),
-                  itemBuilder: (ctx, s, i) => _snapshotCard(s),
-                ),
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              SliverToBoxAdapter(
+                child: CleanupCard(key: _cleanupKey, repoId: widget.repoId, onRunNow: _retention),
               ),
-            ),
-            JobsList(repoId: widget.repoId),
-            SchedulesList(repoId: widget.repoId),
-          ]),
+            ],
+            body: _tabView(),
+          ),
         ),
       ]),
     );

@@ -107,14 +107,19 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
                 style: t.bodyMedium?.copyWith(color: fg),
               ),
               const SizedBox(height: 10),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                FilledButton.icon(
-                  onPressed: _setUp,
-                  icon: Icon(on ? Icons.edit_outlined : Icons.auto_delete_outlined),
-                  label: Text(on ? 'Change plan' : (s == null ? 'Turn on automatic cleanup' : 'Review plan')),
-                ),
-                OutlinedButton.icon(onPressed: widget.onRunNow, icon: const Icon(Icons.play_arrow_outlined), label: const Text('Clean up once now')),
-              ]),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final narrow = constraints.maxWidth < 600;
+                  final setupLabel = on ? 'Change plan' : (s == null ? 'Turn on cleanup' : 'Review plan');
+                  final buttons = [
+                    FilledButton.icon(onPressed: _setUp, icon: Icon(on ? Icons.edit_outlined : Icons.auto_delete_outlined), label: Text(setupLabel))
+                  ];
+                  if (!narrow) return Wrap(spacing: 8, runSpacing: 8, children: buttons);
+                  return Row(children: [
+                    Expanded(child: buttons[0]),
+                  ]);
+                },
+              ),
             ]),
           ),
         ),
