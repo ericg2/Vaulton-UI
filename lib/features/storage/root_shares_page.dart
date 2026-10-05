@@ -1,0 +1,388 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/models.dart';
+import '../../core/providers.dart';
+import '../../core/util.dart';
+import '../../core/vaulton.dart';
+import '../../core/widgets.dart';
+import 'share_logic.dart';
+
+/// Who a storage root is shared with, and how much of it each person may use.
+///
+/// * People come from a searchable dropdown (name, user name or e-mail); users that already
+///   have access, and the owner, are left out.
+/// * Quotas are validated, and the total is compared with the root's capacity.
+class RootSharesPage extends ConsumerStatefulWidget {
+  const RootSharesPage({super.key, required this.root});
+  final Root root;
+
+  @override
+  ConsumerState<RootSharesPage> createState() => _RootSharesPageState();
+}
+
+class _ShareRow {
+  _ShareRow(this.userName, this.originalBytes)
+      : initialText = bytesToGb(originalBytes),
+        quota = TextEditingController(text: bytesToGb(originalBytes));
+
+  final String userName;
+  final int originalBytes;
+  final String initialText;
+  final TextEditingController quota;
+  final FocusNode focus = FocusNode();
+  String unit = 'GB';
+
+  /// Untouched rows keep their exact stored quota instead of the rounded text.
+  int get bytes => quota.text.trim() == initialText && unit == 'GB' ? originalBytes : (capacityToBytes(quota.text, unit) ?? 0);
+  bool get overInvalid => quota.text.trim().isNotEmpty && capacityToBytes(quota.text, unit) == null;
+  bool overLimit(int maxBytes) => !overInvalid && capacityToBytes(quota.text, unit) != null && capacityToBytes(quota.text, unit)! > maxBytes;
+
+  void dispose() {
+    quota.dispose();
+    focus.dispose();
+  }
+}
+
+class _RootSharesPageState extends ConsumerState<RootSharesPage> {
+  static const _pageSize = 100;
+
+  final _rows = <_ShareRow>[];
+  TextEditingController? _fieldCtl; // controller of the dropdown's text field
+  List<ShareUser>? _directory;
+  bool _loading = true, _saving = false;
+  Object? _error;
+  String _initial = '';
+  int _pickerEpoch = 0;
+
+  Vaulton get _v => ref.read(vaultonProvider);
+  Root get _root => widget.root;
+
+  Set<String> get _excluded {
+    final me = ref.read(userProvider);
+    return {normUser(_root.userName), if (me != null) normUser(me.userName)};
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    for (final r in _rows) {
+      r.dispose();
+    }
+    super.dispose();
+  }
+
+  String _snapshot() => ([for (final r in _rows) '${normUser(r.userName)}|${r.bytes}']..sort()).join(';');
+  bool get _dirty => !_loading && _error == null && _snapshot() != _initial;
+  int get _allocated => _rows.fold(0, (sum, r) => sum + r.bytes);
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final shares = await _v.shares(_root.id);
+      final dir = await _loadDirectory();
+      if (!mounted) return;
+      setState(() {
+        _rows
+          ..clear()
+          ..addAll([for (final s in shares) _ShareRow('${s['userName']}', toInt(s['maxBytes']))]);
+        _directory = dir;
+        _initial = _snapshot();
+        _loading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<List<ShareUser>> _loadDirectory() async {
+    try {
+      final out = <ShareUser>[];
+      String? cursor;
+      do {
+        final p = await _v.users(cursor: cursor, limit: _pageSize);
+        for (final a in p.items) {
+          out.add(ShareUser(userName: a.userName, displayName: a.displayName, email: a.email, isLockedOut: a.isLockedOut));
+        }
+        cursor = p.hasMore ? p.nextCursor : null;
+      } while (cursor != null);
+      return out;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  void _addName(String raw) {
+    final name = raw.trim();
+    if (name.isEmpty) return;
+    final key = normUser(name);
+    if (_excluded.contains(key)) return toast(context, 'That user already owns this root', error: true);
+    if (_rows.any((r) => normUser(r.userName) == key)) return toast(context, '“$name” is already in the list', error: true);
+
+    var canonical = name;
+    final dir = _directory;
+    if (dir != null) {
+      var match = findUser(dir, name);
+      if (match == null) {
+        // A partial entry is fine when it points at exactly one remaining user.
+        final cands = filterUsers(availableUsers(all: dir, taken: _rows.map((r) => r.userName), exclude: _excluded), name);
+        if (cands.length == 1) match = cands.single;
+      }
+      if (match != null) {
+        canonical = match.userName;
+      } else {
+        return toast(context, 'No user matches “$name”', error: true);
+      }
+    }
+
+    final row = _ShareRow(canonical, 0);
+    setState(() {
+      _rows.add(row);
+      _pickerEpoch++; // rebuilds the dropdown so the same person can be picked again later
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) row.focus.requestFocus();
+    });
+  }
+
+  void _remove(_ShareRow r) {
+    setState(() => _rows.remove(r));
+    WidgetsBinding.instance.addPostFrameCallback((_) => r.dispose());
+  }
+
+  Future<void> _save() async {
+    if (_rows.any((r) => r.overInvalid || r.overLimit(_root.maxBytes))) {
+      return toast(context, 'Fix the highlighted quotas first', error: true);
+    }
+    final payload = buildSharePayload([for (final r in _rows) (userName: r.userName, maxBytes: r.bytes)]);
+    setState(() => _saving = true);
+    final res = await guarded(context, () => _v.setShares(_root.id, payload));
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (res == null) return;
+    _initial = _snapshot();
+    toast(context, 'Sharing Updated');
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final discard = await confirm(context, 'Discard changes?', 'You have unsaved sharing changes.', ok: 'Discard', danger: true);
+        if (discard && mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Share “${_root.name}”', overflow: TextOverflow.ellipsis),
+          actions: [
+            if (!_loading && _error == null)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: FilledButton(
+                  onPressed: _saving || !_dirty ? null : _save,
+                  child: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
+                ),
+              ),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? ErrorView(_error!, onRetry: _load)
+                : _body(context),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final dir = _directory;
+    final avail = dir == null ? const <ShareUser>[] : availableUsers(all: dir, taken: _rows.map((r) => r.userName), exclude: _excluded);
+    final allocated = _allocated;
+    final over = overAllocated(_root.maxBytes, allocated);
+    final note = theme.textTheme.bodySmall?.copyWith(color: cs.outline);
+
+    return ListView(
+      padding: const EdgeInsets.only(top: 8, bottom: 32),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Quota Allocation', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              UsageBar(used: allocated, max: _root.maxBytes),
+              const SizedBox(height: 6),
+              Text(
+                _root.maxBytes > 0 ? '${fmtBytes(allocated)} allocated of ${fmtBytes(_root.maxBytes)}' : '${fmtBytes(allocated)} allocated',
+                style: theme.textTheme.bodySmall,
+              ),
+              if (over)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text('The quotas add up to more than this root’s capacity.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
+                ),
+            ]),
+          ),
+        ),
+        Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 4), child: _picker(avail)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(
+            avail.isEmpty
+                ? 'Everyone else already has access.'
+                : 'Pick a person, then set how much of the root they may use.',
+            style: note,
+          ),
+        ),
+        if (_rows.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(children: [
+              Icon(Icons.group_outlined, size: 40, color: cs.outline),
+              const SizedBox(height: 8),
+              Text('Not shared with anyone yet', style: TextStyle(color: cs.outline)),
+            ]),
+          )
+        else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('SHARED WITH (${_rows.length})', style: theme.textTheme.labelMedium?.copyWith(color: cs.primary, letterSpacing: 1)),
+          ),
+          for (final r in _rows) _rowTile(context, r, dir),
+        ],
+      ],
+    );
+  }
+
+  Widget _rowTile(BuildContext context, _ShareRow r, List<ShareUser>? dir) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final u = dir == null ? null : findUser(dir, r.userName);
+    final unknown = dir != null && u == null;
+    final sub = unknown ? 'Not in the user list' : (u?.subtitle ?? '');
+    return Card(
+      key: ObjectKey(r),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          CircleAvatar(child: Text(u?.initial ?? (r.userName.isEmpty ? '?' : r.userName[0].toUpperCase()))),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(u?.title ?? r.userName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+                if (sub.isNotEmpty)
+                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: unknown ? cs.error : cs.outline)),
+                if (u?.isLockedOut == true) chip(context, 'Locked', color: cs.errorContainer),
+              ]),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 220,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: TextField(
+                controller: r.quota,
+                focusNode: r.focus,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(labelText: 'Quota', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_root.maxBytes) ? 'Over root capacity' : null)),
+                onChanged: (_) => setState(() {}),
+              )),
+              const SizedBox(width: 6),
+              SizedBox(width: 78, child: DropdownButtonFormField<String>(
+                initialValue: r.unit,
+                decoration: const InputDecoration(labelText: 'Unit', isDense: true),
+                items: [for (final u in capacityFactors.keys) DropdownMenuItem(value: u, child: Text(u))],
+                onChanged: (u) {
+                  if (u == null) return;
+                  final current = r.bytes;
+                  setState(() { r.unit = u; r.quota.text = bytesToCapacity(current, u); });
+                },
+              )),
+            ]),
+          ),
+          IconButton(tooltip: 'Remove', icon: const Icon(Icons.remove_circle_outline), onPressed: () => _remove(r)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _picker(List<ShareUser> avail) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+      Expanded(
+        child: LayoutBuilder(
+          builder: (context, box) => Autocomplete<ShareUser>(
+            key: ValueKey(_pickerEpoch),
+            displayStringForOption: (u) => u.userName,
+            optionsBuilder: (v) => filterUsers(avail, v.text),
+            onSelected: (u) => _addName(u.userName),
+            fieldViewBuilder: (context, controller, focus, onSubmitted) {
+              _fieldCtl = controller;
+              return TextField(
+                controller: controller,
+                focusNode: focus,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(
+                  labelText: 'Add user',
+                  hintText: 'Search by name, user name or e-mail',
+                  prefixIcon: Icon(Icons.person_add_alt),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
+                ),
+                onSubmitted: (_) => onSubmitted(),
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) => Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: 280, maxWidth: box.maxWidth),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, i) {
+                      final u = options.elementAt(i);
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(radius: 16, child: Text(u.initial)),
+                        title: Text(u.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: u.subtitle.isEmpty ? null : Text(u.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        trailing: u.isLockedOut ? const Icon(Icons.lock_outline, size: 16) : null,
+                        onTap: () => onSelected(u),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      IconButton.filledTonal(tooltip: 'Add typed name', icon: const Icon(Icons.add), onPressed: () => _addName(_fieldCtl?.text ?? '')),
+    ]);
+  }
+}

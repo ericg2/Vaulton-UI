@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vaulton is normally self-hosted, so the app has to be able to talk to:
+    * plain http:// servers on your LAN, and
+    * HTTPS servers whose certificate comes from a private CA that you installed on the phone
+      (Settings > Security > Encryption & credentials > Install a certificate).
+
+  To lock the app down to public HTTPS only, set cleartextTrafficPermitted="false" and
+  remove the <certificates src="user"/> line.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>
