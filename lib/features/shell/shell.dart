@@ -41,6 +41,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
   int _storageTab = 0;
   final _visited = <int>{0};
+  final PageController _pages = PageController();
   late final AppLifecycleListener _life;
   Timer? _folderTimer;
 
@@ -56,7 +57,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         context: ctx,
         builder: (c) => AlertDialog(
           title: const Text('Transfers in Progress'),
-          content: const Text('Uploads/downloads are still running. Minimise Vaulton to keep them going, or quit and resume them next time.'),
+          content: const Text('Uploads or downloads are still running. Minimise Vaulton to keep them going, or quit and pick them up again next time.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Quit')),
             FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Minimise')),
@@ -90,28 +91,37 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void dispose() {
     _life.dispose();
     _folderTimer?.cancel();
+    _pages.dispose();
     super.dispose();
   }
 
-  void _goto(String label, List<_Dest> dests, bool wide) {
-    if (label == 'Data Points' || label == 'Repositories') {
-      _storageTab = label == 'Data Points' ? 1 : 2;
-      final storage = dests.indexWhere((d) => d.label == 'Storage');
-      if (storage >= 0) {
-        setState(() {
-          _index = storage;
-          _visited.add(storage);
-        });
+  /// Switches tab. On phones the page slides, so taps and swipes feel the same.
+  void _select(int i) {
+    final from = _index;
+    setState(() {
+      _index = i;
+      _visited.add(i);
+    });
+    if (_pages.hasClients && from != i) {
+      if ((i - from).abs() > 1) {
+        _pages.jumpToPage(i);
+      } else {
+        _pages.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
       }
+    }
+  }
+
+  void _goto(String label, List<_Dest> dests, bool wide) {
+    if (label == 'Data folders' || label == 'Backup vaults') {
+      _storageTab = label == 'Data folders' ? 1 : 2;
+      final storage = dests.indexWhere((d) => d.label == 'Storage');
+      if (storage >= 0) _select(storage);
       return;
     }
     final i = dests.indexWhere((d) => d.label == label);
     if (i < 0) return;
     if (wide || i < 4) {
-      setState(() {
-        _index = i;
-        _visited.add(i);
-      });
+      _select(i);
     } else {
       Navigator.push(context, MaterialPageRoute(builder: (_) => dests[i].build()));
     }
@@ -122,7 +132,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _Dest('Files', Icons.folder_outlined, Icons.folder, () => const FilesPage()),
         _Dest('Transfers', Icons.swap_vert, Icons.swap_vert, () => const TransfersPage()),
         _Dest('Storage', Icons.storage_outlined, Icons.storage, () => StoragePage(key: ValueKey(_storageTab), initialTab: _storageTab)),
-        if (u.has(Scopes.jobsManage)) _Dest('Recent Jobs', Icons.history_outlined, Icons.history, () => const BackupsPage()),
+        if (u.has(Scopes.jobsManage)) _Dest('Activity', Icons.history_outlined, Icons.history, () => const BackupsPage()),
         _Dest('Sync', Icons.cloud_sync_outlined, Icons.cloud_sync, () => const SyncPage()),
         _Dest('Messages', Icons.mail_outline, Icons.mail, () => const MessagesPage()),
         if (u.hasAny(Scopes.admin)) _Dest('Admin', Icons.admin_panel_settings_outlined, Icons.admin_panel_settings, () => const AdminPage()),
@@ -137,25 +147,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _openMoreDestination(_Dest d) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => d.build())).then((_) {
-      if (!mounted) return;
-      setState(() {
-        _index = 0;
-        _visited.add(0);
-      });
-    });
-  }
-
-  void _handlePhoneSwipe(DragEndDetails details, int count) {
-    if (_index < 0 || _index >= count) return;
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity.abs() < 350) return;
-    final next = velocity < 0 ? _index + 1 : _index - 1;
-    if (next < 0 || next >= count) return;
-    setState(() {
-      _index = next;
-      _visited.add(next);
-    });
+    Navigator.push(context, MaterialPageRoute(builder: (_) => d.build()));
   }
 
   Widget _withAndroidBack(Widget child) {
@@ -165,10 +157,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_index != 0) {
-          setState(() {
-            _index = 0;
-            _visited.add(0);
-          });
+          _select(0);
         } else {
           SystemNavigator.pop();
         }
@@ -186,7 +175,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final unread = ref.watch(unreadProvider).value ?? 0;
     final active = ref.watch(transferProvider.select((l) => l.where((t) => t.active).length));
     final extended = MediaQuery.sizeOf(context).width >= 1150;
-    if (_index >= (wide ? dests.length : 5)) _index = 0;
+    if (_index >= (wide ? dests.length : 5)) {
+      _index = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pages.hasClients) _pages.jumpToPage(0);
+      });
+    }
 
     Widget body(int i) => _visited.contains(i) ? dests[i].build() : const SizedBox.shrink();
 
@@ -197,18 +191,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             extended: extended,
             selectedIndex: _index,
             labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-            onDestinationSelected: (i) => setState(() {
-              _index = i;
-              _visited.add(i);
-            }),
+            onDestinationSelected: _select,
             trailing: Expanded(
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: extended
-                      ? TextButton.icon(onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout), label: const Text('Sign Out'))
-                      : IconButton(tooltip: 'Sign Out', onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout)),
+                      ? TextButton.icon(onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout), label: const Text('Sign out'))
+                      : IconButton(tooltip: 'Sign out', onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout)),
                 ),
               ),
             ),
@@ -229,32 +220,50 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ));
     }
 
-    // Phones: 4 primary tabs + "More" which lists the rest.
+    // Phones: 4 main tabs plus "More". Pages slide with your finger and snap into place.
     final primary = dests.take(4).toList();
     final rest = dests.skip(4).toList();
     final onMore = _index == 4;
-    return _withAndroidBack(GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragEnd: (details) => _handlePhoneSwipe(details, primary.length),
-      child: Scaffold(
-      body: _FadeIndexed(index: _index, children: [
-        for (var i = 0; i < 4; i++) body(i),
-        _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref), onOpen: _openMoreDestination),
-      ]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() {
+    return _withAndroidBack(Scaffold(
+      body: PageView(
+        controller: _pages,
+        onPageChanged: (i) => setState(() {
           _index = i;
           _visited.add(i);
         }),
+        children: [
+          for (var i = 0; i < 4; i++) _KeepAlive(child: dests[i].build()),
+          _KeepAlive(child: _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref), onOpen: _openMoreDestination)),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: _select,
         destinations: [
           for (final d in primary)
             NavigationDestination(icon: _icon(d, false, unread, active), selectedIcon: _icon(d, true, unread, active), label: d.label),
           NavigationDestination(icon: Icon(onMore ? Icons.apps : Icons.apps_outlined), label: 'More'),
         ],
       ),
-      ),
     ));
+  }
+}
+
+/// Keeps a page alive once built, so scroll position and loaded data survive swiping away.
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+  final Widget child;
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 
@@ -309,7 +318,7 @@ class _MorePage extends StatelessWidget {
               onTap: () => onOpen(d),
             ),
           const Divider(),
-          ListTile(leading: const Icon(Icons.logout), title: const Text('Sign Out / Switch Account'), onTap: onSignOut),
+          ListTile(leading: const Icon(Icons.logout), title: const Text('Sign out / switch account'), onTap: onSignOut),
         ]),
       );
 }

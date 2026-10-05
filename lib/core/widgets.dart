@@ -26,7 +26,7 @@ class ErrorView extends StatelessWidget {
           ],
           if (onRetry != null && !e.isForbidden) ...[
             const SizedBox(height: 12),
-            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('Try Again')),
+            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('Try again')),
           ],
         ]),
       ),
@@ -242,7 +242,7 @@ class CursorListState<T> extends State<CursorList<T>> {
             if (!_loading) WidgetsBinding.instance.addPostFrameCallback((_) => load());
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
           }
-          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Failed To Load More — Retry'));
+          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Failed to load more — retry'));
           return const SizedBox(height: 88);
           },
         ),
@@ -410,7 +410,7 @@ class _HintBannerState extends ConsumerState<HintBanner> {
                 const SizedBox(width: 10),
                 Expanded(child: Text(widget.text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSecondaryContainer))),
                 IconButton(
-                  tooltip: 'Dismiss Tip',
+                  tooltip: 'Dismiss tip',
                   visualDensity: VisualDensity.compact,
                   icon: Icon(Icons.close, size: 16, color: cs.onSecondaryContainer),
                   onPressed: () {

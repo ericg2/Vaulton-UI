@@ -45,7 +45,7 @@ IconData iconFor(Node n) {
 class FilesPage extends ConsumerStatefulWidget {
   const FilesPage({super.key, this.initialPointId});
 
-  /// Opens this data point first (used when navigating here from the Storage screen).
+  /// Opens this data folder first (used when navigating here from the Storage screen).
   final String? initialPointId;
   @override
   ConsumerState<FilesPage> createState() => _FilesPageState();
@@ -231,7 +231,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }
 
   Future<void> _newFolder() async {
-    final name = await promptText(context, 'New Folder', 'Folder Name', ok: 'Create');
+    final name = await promptText(context, 'New folder', 'Folder name', ok: 'Create');
     if (name == null) return;
     await guarded(context, () => _v.mkdir(_point!.id, joinPath(_path, name)));
     _refresh();
@@ -244,7 +244,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }
 
   Future<void> _moveCopy(List<Node> nodes, bool copy) async {
-    final dest = await pickFolder(context, initialPointId: _point!.id, initialPath: _path, title: copy ? 'Copy To…' : 'Move To…');
+    final dest = await pickFolder(context, initialPointId: _point!.id, initialPath: _path, title: copy ? 'Copy to…' : 'Move to…');
     if (dest == null) return;
     await _runTransfers(nodes, dest.point.id, dest.path, copy: copy);
   }
@@ -344,9 +344,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.upload_file), title: const Text('Upload Files'), onTap: () { Navigator.pop(ctx); _pickFiles(); }),
-          if (isDesktop) ListTile(leading: const Icon(Icons.drive_folder_upload_outlined), title: const Text('Upload Folder'), onTap: () { Navigator.pop(ctx); _pickFolder(); }),
-          ListTile(leading: const Icon(Icons.create_new_folder_outlined), title: const Text('New Folder'), onTap: () { Navigator.pop(ctx); _newFolder(); }),
+          ListTile(leading: const Icon(Icons.upload_file), title: const Text('Upload files'), onTap: () { Navigator.pop(ctx); _pickFiles(); }),
+          if (isDesktop) ListTile(leading: const Icon(Icons.drive_folder_upload_outlined), title: const Text('Upload folder'), onTap: () { Navigator.pop(ctx); _pickFolder(); }),
+          ListTile(leading: const Icon(Icons.create_new_folder_outlined), title: const Text('New folder'), onTap: () { Navigator.pop(ctx); _newFolder(); }),
         ]),
       ),
     );
@@ -361,11 +361,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     if (_points == null) return Scaffold(appBar: AppBar(title: const Text('Files')), body: const Center(child: CircularProgressIndicator()));
     if (_point == null) {
       return Scaffold(appBar: AppBar(title: const Text('Files')),
-          body: const EmptyView('No Data Points Yet.\nCreate one under Storage to start storing files.', icon: Icons.folder_off_outlined));
+          body: const EmptyView('No data folders yet.\nCreate one under Storage to start storing files.', icon: Icons.folder_off_outlined));
     }
     final pt = _point!;
     final selecting = _sel.isNotEmpty;
-    // An upload to this data point just finished -> refresh the list in place (no spinner).
+    // An upload to this data folder just finished -> refresh the list in place (no spinner).
     final doneUploads = ref.watch(transferProvider.select((l) => l.where((t) => t.kind == TKind.upload && t.state == TState.done && t.pointId == pt.id).length));
     if (_doneUploads >= 0 && doneUploads != _doneUploads) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -381,7 +381,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: 'Select All', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _sel.addAll(_loaded.map((n) => n.name)))),
+              IconButton(tooltip: 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _sel.addAll(_loaded.map((n) => n.name)))),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(tooltip: 'Move', icon: const Icon(Icons.drive_file_move_outline), onPressed: () => _moveCopy(_selected, false)),
               IconButton(tooltip: 'Copy', icon: const Icon(Icons.copy_outlined), onPressed: () => _moveCopy(_selected, true)),
@@ -393,7 +393,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 ? TextField(
                     controller: _searchCtl,
                     autofocus: true,
-                    decoration: const InputDecoration(hintText: 'Search This Folder', border: InputBorder.none),
+                    decoration: const InputDecoration(hintText: 'Search this folder', border: InputBorder.none),
                     onSubmitted: (v) { setState(() => _search = v.trim()); _refresh(); },
                   )
                 : DropdownButtonHideUnderline(
@@ -465,9 +465,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               Expanded(
                 child: CursorList<Node>(
                   key: _listKey,
-                  empty: _search.isEmpty ? 'This Folder Is Empty' : 'No Matches',
+                  empty: _search.isEmpty ? 'This folder is empty' : 'No matches',
                   emptyHint: _search.isEmpty
-                      ? (isDesktop || kIsWeb ? 'Tap Add to upload files or create a folder, or drag and drop files here.' : 'Tap Add to upload files or create a folder.')
+                      ? (isDesktop || kIsWeb ? 'Tap add to upload files or create a folder, or drag and drop files here.' : 'Tap add to upload files or create a folder.')
                       : 'Try a different word, or clear the search.',
                   emptyIcon: Icons.folder_open,
                   header: _PendingUploads(pointId: pt.id, dir: _path, since: _panelSince, onDismiss: () => setState(() => _panelSince = DateTime.now())),
@@ -502,8 +502,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                 PopupMenuItem(value: 'open', child: Text('Open')),
                                 PopupMenuItem(value: 'download', child: Text('Download')),
                                 PopupMenuItem(value: 'rename', child: Text('Rename')),
-                                PopupMenuItem(value: 'move', child: Text('Move To…')),
-                                PopupMenuItem(value: 'copy', child: Text('Copy To…')),
+                                PopupMenuItem(value: 'move', child: Text('Move to…')),
+                                PopupMenuItem(value: 'copy', child: Text('Copy to…')),
                                 PopupMenuItem(value: 'select', child: Text('Select')),
                                 PopupMenuItem(value: 'info', child: Text('Details')),
                                 PopupMenuDivider(),
@@ -521,7 +521,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               Positioned.fill(
                 child: Container(
                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                  child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.upload_file, size: 56), SizedBox(height: 8), Text('Drop to Upload Here')])),
+                  child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.upload_file, size: 56), SizedBox(height: 8), Text('Drop to upload here')])),
                 ),
               ),
           ]),
@@ -682,7 +682,7 @@ class _PendingRow extends StatelessWidget {
         title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: busy ? cs.onSurfaceVariant : cs.error)),
         trailing: busy
-            ? IconButton(tooltip: 'Cancel Upload', icon: const Icon(Icons.close), onPressed: onCancel)
+            ? IconButton(tooltip: 'Cancel upload', icon: const Icon(Icons.close), onPressed: onCancel)
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 if (exists && !isFolder) TextButton(onPressed: () => onRetry(overwrite: true), child: const Text('Overwrite')),
                 IconButton(tooltip: 'Retry', icon: const Icon(Icons.refresh), onPressed: () => onRetry()),

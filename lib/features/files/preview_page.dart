@@ -20,7 +20,7 @@ class PreviewPage extends ConsumerWidget {
   const PreviewPage({super.key, required this.pointId, required this.path, required this.name, this.onDownload, this.snapshotId});
   final String pointId, path, name;
 
-  /// When set, [pointId] is a repository id and the file is read from that snapshot.
+  /// When set, [pointId] is a backup vault id and the file is read from that snapshot.
   final String? snapshotId;
   final VoidCallback? onDownload;
 

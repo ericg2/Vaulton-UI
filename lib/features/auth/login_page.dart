@@ -77,7 +77,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
             );
         return SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Need Help Signing In?', style: t.titleLarge)),
+            Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Need help signing in?', style: t.titleLarge)),
             tip(Icons.dns_outlined, 'Server address', 'Use the address your administrator gave you, e.g. https://vault.example.com or 192.168.1.10:5141. Without a scheme, http:// is assumed.'),
             tip(Icons.wifi_off_outlined, 'Cannot reach the server', 'Check that you are on the right network (or VPN) and that the server is running.'),
             tip(Icons.key_outlined, 'Forgot your password', 'Ask an administrator to reset it. You will then sign in with a temporary password and choose a new one.'),
@@ -154,7 +154,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
         if (ex.status == 403 && text.contains('password')) {
           // The server wants a permanent password before it will sign this account in.
           _temp = true;
-          _pwTitle = 'Password Change Required';
+          _pwTitle = 'Password change required';
           _error = null;
         } else if (ex.status == 401) {
           _error = 'Incorrect username or password.';
@@ -175,7 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: Text('Recent Accounts', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+          child: Text('Recent accounts', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
         ),
         Card(
           margin: EdgeInsets.zero,
@@ -189,7 +189,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                 subtitle: Text(a.host),
                 onTap: () => _pick(a),
                 trailing: IconButton(
-                  tooltip: 'Remove From List',
+                  tooltip: 'Remove from list',
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: () => ref.read(accountsProvider.notifier).forget(a),
                 ),
@@ -246,7 +246,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                     const SizedBox(height: 16),
                     _stagger(1, Text('Vaulton', textAlign: TextAlign.center, style: t.headlineMedium)),
                     const SizedBox(height: 4),
-                    _stagger(1, Text('Sign In to Your Server', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant))),
+                    _stagger(1, Text('Sign in to your server', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant))),
                     const SizedBox(height: 24),
                     _stagger(2, AnimatedSize(duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic, alignment: Alignment.topCenter, child: _recent(cs))),
                     AnimatedSize(
@@ -274,7 +274,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         decoration: const InputDecoration(
-                          labelText: 'Server Address',
+                          labelText: 'Server address',
                           prefixIcon: Icon(Icons.dns_outlined),
                           hintText: '192.168.1.10 or vault.example.com',
                         ),
@@ -326,10 +326,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         textInputAction: _temp ? TextInputAction.next : TextInputAction.done,
                         onFieldSubmitted: (_) => _temp ? null : _submit(),
                         decoration: InputDecoration(
-                          labelText: _temp ? 'Temporary Password' : 'Password',
+                          labelText: _temp ? 'Temporary password' : 'Password',
                           prefixIcon: const Icon(Icons.key_outlined),
                           suffixIcon: IconButton(
-                            tooltip: _show ? 'Hide Password' : 'Show Password',
+                            tooltip: _show ? 'Hide password' : 'Show password',
                             icon: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
                               transitionBuilder: (c, a) => RotationTransition(turns: Tween<double>(begin: 0.85, end: 1).animate(a), child: FadeTransition(opacity: a, child: c)),
@@ -358,7 +358,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(_pwTitle ?? 'Password Change Required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
+                                      Text(_pwTitle ?? 'Password change required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
                                       Text('Enter the temporary password above, then choose a permanent one to sign-in.', style: TextStyle(color: cs.onTertiaryContainer)),
                                     ]),
                                   ),
@@ -368,7 +368,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 controller: _new,
                                 obscureText: !_show,
                                 textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.password), helperText: 'At least 8 characters'),
+                                decoration: const InputDecoration(labelText: 'New password', prefixIcon: Icon(Icons.password), helperText: 'At least 8 characters'),
                                 validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters' : null,
                               ),
                               gap,
@@ -377,7 +377,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 obscureText: !_show,
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => _submit(),
-                                decoration: const InputDecoration(labelText: 'Repeat New Password', prefixIcon: Icon(Icons.password)),
+                                decoration: const InputDecoration(labelText: 'Repeat new password', prefixIcon: Icon(Icons.password)),
                                 validator: (v) => v != _new.text ? 'Passwords do not match' : null,
                               ),
                             ]),
@@ -389,7 +389,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         controlAffinity: ListTileControlAffinity.leading,
                         value: _rememberPassword,
                         onChanged: (v) => setState(() => _rememberPassword = v ?? false),
-                        title: const Text('Remember Password'),
+                        title: const Text('Remember password'),
                         subtitle: const Text('Stored on this device.'),
                       ),
                     ),
@@ -425,12 +425,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                             duration: const Duration(milliseconds: 200),
                             child: _busy
                                 ? const SizedBox(key: ValueKey('busy'), height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                : Text(_temp ? 'Change Password & Sign In' : 'Sign In', key: ValueKey(_temp)),
+                                : Text(_temp ? 'Change password & sign in' : 'Sign in', key: ValueKey(_temp)),
                           ),
                         ),
                       ),
                     ),
-                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need Help')))),
+                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need help')))),
                   ]),
                 ),
               ),

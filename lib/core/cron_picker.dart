@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 enum _Freq { minutes, hours, hourly, daily, weekly, monthly, custom }
 
 const _freqLabels = {
-  _Freq.minutes: 'Every Few Minutes',
-  _Freq.hours: 'Every Few Hours',
+  _Freq.minutes: 'Every few minutes',
+  _Freq.hours: 'Every few hours',
   _Freq.hourly: 'Hourly',
   _Freq.daily: 'Daily',
   _Freq.weekly: 'Weekly',
@@ -155,9 +155,9 @@ class _CronFieldState extends State<CronField> {
       if (_f == _Freq.hours) ...[
         _numberDropdown('Every', _every, const [1, 2, 3, 4, 6, 8, 12], (v) => _every = v, fmt: (n) => '$n hour${n == 1 ? '' : 's'}'),
         const SizedBox(height: 12),
-        _numberDropdown('At Minute', _minute, const [0, 5, 10, 15, 20, 30, 45], (v) => _minute = v, fmt: (n) => ':${n.toString().padLeft(2, '0')}'),
+        _numberDropdown('At minute', _minute, const [0, 5, 10, 15, 20, 30, 45], (v) => _minute = v, fmt: (n) => ':${n.toString().padLeft(2, '0')}'),
       ],
-      if (_f == _Freq.hourly) _numberDropdown('At Minute', _minute, const [0, 5, 10, 15, 20, 30, 45], (v) => _minute = v, fmt: (n) => ':${n.toString().padLeft(2, '0')}'),
+      if (_f == _Freq.hourly) _numberDropdown('At minute', _minute, const [0, 5, 10, 15, 20, 30, 45], (v) => _minute = v, fmt: (n) => ':${n.toString().padLeft(2, '0')}'),
       if (_f == _Freq.daily) _timeButton(),
       if (_f == _Freq.weekly) ...[
         Wrap(spacing: 6, runSpacing: 6, children: [
@@ -186,7 +186,7 @@ class _CronFieldState extends State<CronField> {
       if (_f == _Freq.custom)
         TextFormField(
           controller: widget.controller,
-          decoration: const InputDecoration(labelText: 'Cron Expression *', hintText: 'min hour day month weekday'),
+          decoration: const InputDecoration(labelText: 'Cron expression *', hintText: 'min hour day month weekday'),
           onChanged: (_) => setState(() {}),
           validator: (v) => (v == null || v.trim().split(RegExp(r'\s+')).length < 5) ? 'Needs 5 fields' : null,
         ),

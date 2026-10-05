@@ -20,7 +20,7 @@ Future<void> revealDownload(BuildContext context, String path) async {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(exists ? 'File Location' : 'File Not Found', style: t.titleLarge),
+            Text(exists ? 'File location' : 'File not found', style: t.titleLarge),
             const SizedBox(height: 8),
             Text(
               exists
@@ -40,7 +40,7 @@ Future<void> revealDownload(BuildContext context, String path) async {
               FilledButton.tonalIcon(
                 onPressed: () => copyText(ctx, path, 'Path copied'),
                 icon: const Icon(Icons.copy, size: 18),
-                label: const Text('Copy Path'),
+                label: const Text('Copy path'),
               ),
               if (exists)
                 OutlinedButton.icon(
@@ -49,7 +49,7 @@ Future<void> revealDownload(BuildContext context, String path) async {
                     if (!ok && ctx.mounted) toast(ctx, 'No app can open this file', error: true);
                   },
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('Open File'),
+                  label: const Text('Open file'),
                 ),
             ]),
           ]),

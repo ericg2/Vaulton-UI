@@ -61,7 +61,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   Future<void> _setEnabled(bool v) async {
     if (v) {
       if (_s.pointId == null) {
-        toast(context, 'Choose a Destination Data Point First', error: true);
+        toast(context, 'Choose a destination data folder first', error: true);
         return;
       }
       if (!await requestPhotoPermission()) {
@@ -144,7 +144,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           Section('Photo & video backup', children: [
             Card(
               child: SwitchListTile(
-                title: const Text('Backup Photos and Videos'),
+                title: const Text('Back up photos and videos'),
                 subtitle: Text(_s.enabled ? 'Runs in the background, even when the app is closed' : 'Off'),
                 value: _s.enabled,
                 onChanged: _setEnabled,
@@ -156,7 +156,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 child: Column(children: [
                   DropdownButtonFormField<String>(
                     initialValue: _points.any((p) => p.id == _s.pointId) ? _s.pointId : null,
-                    decoration: const InputDecoration(labelText: 'Destination Data Point'),
+                    decoration: const InputDecoration(labelText: 'Destination data folder'),
                     items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
                     onChanged: (v) {
                       _s.pointId = v;
@@ -166,20 +166,20 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _remote,
-                    decoration: const InputDecoration(labelText: 'Destination Folder'),
+                    decoration: const InputDecoration(labelText: 'Destination folder'),
                     onChanged: (v) {
                       _s.remoteDir = v.startsWith('/') ? v : '/$v';
                     },
                     onEditingComplete: _save,
                     onTapOutside: (_) => _save(),
                   ),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Organise Into year/month Folders'), value: _s.organizeByDate, onChanged: (v) { _s.organizeByDate = v; _save(); }),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Include Videos'), value: _s.includeVideos, onChanged: (v) { _s.includeVideos = v; _save(); }),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Wi‑Fi / Unmetered Only'), value: _s.wifiOnly, onChanged: (v) { _s.wifiOnly = v; _save(); }),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Only While Charging'), value: _s.chargingOnly, onChanged: (v) { _s.chargingOnly = v; _save(); }),
+                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Organise into year/month folders'), value: _s.organizeByDate, onChanged: (v) { _s.organizeByDate = v; _save(); }),
+                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Include videos'), value: _s.includeVideos, onChanged: (v) { _s.includeVideos = v; _save(); }),
+                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Wi‑Fi / unmetered only'), value: _s.wifiOnly, onChanged: (v) { _s.wifiOnly = v; _save(); }),
+                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Only while charging'), value: _s.chargingOnly, onChanged: (v) { _s.chargingOnly = v; _save(); }),
                   DropdownButtonFormField<int>(
                     initialValue: const [15, 30, 60, 180, 360, 720, 1440].contains(_s.intervalMinutes) ? _s.intervalMinutes : 60,
-                    decoration: const InputDecoration(labelText: 'Check for New Photos Every'),
+                    decoration: const InputDecoration(labelText: 'Check for new photos every'),
                     items: const [
                       DropdownMenuItem(value: 15, child: Text('15 minutes')),
                       DropdownMenuItem(value: 30, child: Text('30 minutes')),
@@ -225,24 +225,24 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   Wrap(spacing: 8, children: [
                     FilledButton.tonalIcon(
                       icon: const Icon(Icons.backup),
-                      label: const Text('Backup Now'),
+                      label: const Text('Backup now'),
                       onPressed: _s.pointId == null ? null : () async {
                         if (!await requestPhotoPermission()) {
-                          if (context.mounted) toast(context, 'Photo Access Not Granted', error: true);
+                          if (context.mounted) toast(context, 'Photo access not granted', error: true);
                           return;
                         }
                         await triggerPhotoSyncNow();
-                        if (context.mounted) toast(context, 'Backup Started');
+                        if (context.mounted) toast(context, 'Backup started');
                       },
                     ),
                     TextButton(
                       onPressed: () async {
-                        if (await confirm(context, 'Reset Sync History?', 'Everything will be re-checked on the next run. Files already on the server are skipped, not duplicated.')) {
+                        if (await confirm(context, 'Reset sync history?', 'Everything will be re-checked on the next run. Files already on the server are skipped, not duplicated.')) {
                           await resetSyncHistory(ref.read(prefsProvider));
                           setState(() => _st = SyncStatus.load(ref.read(prefsProvider)));
                         }
                       },
-                      child: const Text('Reset History'),
+                      child: const Text('Reset history'),
                     ),
                   ]),
                 ]),
@@ -260,13 +260,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         if (desktop)
           Section('Folder sync', children: [
             if (_pairs.isEmpty)
-              const Padding(padding: EdgeInsets.all(16), child: Text('Mirror local folders into a data point. New and changed files are uploaded automatically while Vaulton is open or minimised.')),
+              const Padding(padding: EdgeInsets.all(16), child: Text('Mirror local folders into a data folder. New and changed files are uploaded automatically while Vaulton is open or minimised.')),
             for (final p in _pairs)
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.folder_special_outlined),
                   title: Text(p.localDir, overflow: TextOverflow.ellipsis),
-                  subtitle: Text('→ ${_points.where((x) => x.id == p.pointId).firstOrNull?.name ?? 'data point'}${p.remoteDir}\nEvery ${p.intervalMinutes} min · last run ${p.lastRun == 0 ? 'never' : fmtDate(DateTime.fromMillisecondsSinceEpoch(p.lastRun))}'),
+                  subtitle: Text('→ ${_points.where((x) => x.id == p.pointId).firstOrNull?.name ?? 'data folder'}${p.remoteDir}\nEvery ${p.intervalMinutes} min · last run ${p.lastRun == 0 ? 'never' : fmtDate(DateTime.fromMillisecondsSinceEpoch(p.lastRun))}'),
                   isThreeLine: true,
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     Switch(value: p.enabled, onChanged: (v) async {
@@ -274,7 +274,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
                       setState(() {});
                     }),
-                    IconButton(icon: const Icon(Icons.sync), tooltip: 'Sync Now', onPressed: () => _runPair(p)),
+                    IconButton(icon: const Icon(Icons.sync), tooltip: 'Sync now', onPressed: () => _runPair(p)),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
                       tooltip: 'Remove',
@@ -288,7 +288,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   ]),
                 ),
               ),
-            Padding(padding: const EdgeInsets.all(12), child: Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: _addPair, icon: const Icon(Icons.add), label: const Text('Add Folder')))),
+            Padding(padding: const EdgeInsets.all(12), child: Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: _addPair, icon: const Icon(Icons.add), label: const Text('Add folder')))),
           ]),
       ]),
     );

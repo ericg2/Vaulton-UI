@@ -148,7 +148,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     final name = raw.trim();
     if (name.isEmpty) return;
     final key = normUser(name);
-    if (_excluded.contains(key)) return toast(context, 'That user already owns this root', error: true);
+    if (_excluded.contains(key)) return toast(context, 'That user already owns this location', error: true);
     if (_rows.any((r) => normUser(r.userName) == key)) return toast(context, '“$name” is already in the list', error: true);
 
     var canonical = name;
@@ -184,7 +184,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
 
   Future<void> _save() async {
     if (_rows.any((r) => r.overInvalid || r.overLimit(_shareCapacity))) {
-      return toast(context, 'Fix the highlighted quotas first', error: true);
+      return toast(context, 'Fix the highlighted limits first', error: true);
     }
     final payload = buildSharePayload([for (final r in _rows) (userName: r.userName, maxBytes: r.bytes)]);
     setState(() => _saving = true);
@@ -193,7 +193,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     setState(() => _saving = false);
     if (res == null) return;
     _initial = _snapshot();
-    toast(context, 'Sharing Updated');
+    toast(context, 'Sharing updated');
     Navigator.pop(context, true);
   }
 
@@ -245,7 +245,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Quota Allocation', style: theme.textTheme.titleSmall),
+              Text('Space allocation', style: theme.textTheme.titleSmall),
               const SizedBox(height: 8),
               UsageBar(used: _pointAllocated + allocated, max: _root.maxBytes),
               const SizedBox(height: 6),
@@ -257,14 +257,14 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    '${fmtBytes(_pointAllocated)} is already allocated to existing data points/repositories, leaving ${fmtBytes(_shareCapacity)} available for sharing.',
+                    '${fmtBytes(_pointAllocated)} is already used by data folders and backup vaults, leaving ${fmtBytes(_shareCapacity)} available to share.',
                     style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
                   ),
                 ),
               if (over)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text('The shared quotas exceed the capacity remaining after existing point allocations.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
+                  child: Text('The limits you’ve set add up to more than the space still available.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
                 ),
             ]),
           ),
@@ -275,7 +275,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
           child: Text(
             avail.isEmpty
                 ? 'There are no additional users available to add.'
-                : 'Pick a person, then set how much of the root they may use.',
+                : 'Pick a person, then set how much of the location they may use.',
             style: note,
           ),
         ),
@@ -332,7 +332,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 focusNode: r.focus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: 'Quota', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
+                decoration: InputDecoration(labelText: 'Space limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
                 onChanged: (_) => setState(() {}),
               )),
               const SizedBox(width: 6),
@@ -372,7 +372,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 enableSuggestions: false,
                 decoration: const InputDecoration(
                   labelText: 'Add user',
-                  hintText: 'Search by name, user name or e-mail',
+                  hintText: 'Search by name or email',
                   prefixIcon: Icon(Icons.person_add_alt),
                   suffixIcon: Icon(Icons.arrow_drop_down),
                 ),
@@ -410,7 +410,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
         ),
       ),
       const SizedBox(width: 8),
-      IconButton.filledTonal(tooltip: 'Add typed name', icon: const Icon(Icons.add), onPressed: () => _addName(_fieldCtl?.text ?? '')),
+      IconButton.filledTonal(tooltip: 'Add', icon: const Icon(Icons.add), onPressed: () => _addName(_fieldCtl?.text ?? '')),
     ]);
   }
 }

@@ -56,13 +56,13 @@ class _StatusTab extends ConsumerWidget {
             ),
             Section('Overview', children: [
               tile('Users', s['users'], Icons.people_outline),
-              tile('Roots', s['roots'], Icons.dns_outlined),
-              tile('Data Points', s['dataPoints'], Icons.folder_outlined),
-              tile('Repositories', s['repoPoints'], Icons.inventory_2_outlined),
-              tile('Points Healthy / Failed / Unknown', '${s['pointsHealthy']} / ${s['pointsFailed']} / ${s['pointsUnknown']}', Icons.monitor_heart_outlined),
-              tile('Jobs Pending / Running', '${s['jobsPending']} / ${s['jobsRunning']}', Icons.work_outline),
-              tile('Failed Jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
-              tile('Enabled Schedules', s['schedulesEnabled'], Icons.schedule),
+              tile('Locations', s['roots'], Icons.dns_outlined),
+              tile('Data folders', s['dataPoints'], Icons.folder_outlined),
+              tile('Backup vaults', s['repoPoints'], Icons.inventory_2_outlined),
+              tile('Points healthy / failed / Unknown', '${s['pointsHealthy']} / ${s['pointsFailed']} / ${s['pointsUnknown']}', Icons.monitor_heart_outlined),
+              tile('Jobs pending / running', '${s['jobsPending']} / ${s['jobsRunning']}', Icons.work_outline),
+              tile('Failed jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
+              tile('Enabled schedules', s['schedulesEnabled'], Icons.schedule),
               tile('SMB', toBool(s['smbRunning']) ? 'running · ${s['smbShares']} shares' : 'stopped', Icons.folder_shared_outlined),
               tile('Email', toBool(s['emailEnabled']) ? 'enabled · ${s['emailPending']} queued' : 'disabled', Icons.email_outlined),
             ]),
@@ -72,18 +72,18 @@ class _StatusTab extends ConsumerWidget {
                 child: Wrap(spacing: 8, children: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.sync),
-                    label: const Text('Push Config To Backend'),
+                    label: const Text('Push config to backend'),
                     onPressed: () async {
                       await guarded(ctx, v.syncVfs);
-                      if (ctx.mounted) toast(ctx, 'Sync Requested');
+                      if (ctx.mounted) toast(ctx, 'Sync requested');
                     },
                   ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.mark_email_read_outlined),
-                    label: const Text('Send Test Email'),
+                    label: const Text('Send test email'),
                     onPressed: () async {
                       await guarded(ctx, v.testEmail);
-                      if (ctx.mounted) toast(ctx, 'Test Email Sent to Your Address');
+                      if (ctx.mounted) toast(ctx, 'Test email sent to your address');
                     },
                   ),
                 ]),
@@ -109,12 +109,12 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   bool get _manage => ref.read(userProvider)!.has(Scopes.usersManage);
 
   Future<void> _create() async {
-    final f = await formDialog(context, 'New User', [
-      const FieldSpec('u', 'User Name', required: true),
-      const FieldSpec('first', 'First Name'),
-      const FieldSpec('last', 'Last Name'),
+    final f = await formDialog(context, 'New user', [
+      const FieldSpec('u', 'User name', required: true),
+      const FieldSpec('first', 'First name'),
+      const FieldSpec('last', 'Last name'),
       const FieldSpec('email', 'Email'),
-      const FieldSpec('welcome', 'Send Welcome Email', kind: 'bool'),
+      const FieldSpec('welcome', 'Send welcome email', kind: 'bool'),
     ], ok: 'Create');
     if (f == null) return;
     final r = await guarded(context, () => _v.addUser({
@@ -149,7 +149,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: Text('Scopes For ${u.userName}'),
+          title: Text('Permissions for ${u.userName}'),
           content: SizedBox(
             width: 460,
             child: ListView(shrinkWrap: true, children: [
@@ -178,7 +178,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   Widget build(BuildContext context) {
     final me = ref.watch(userProvider)!;
     return Scaffold(
-      floatingActionButton: _manage ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.person_add_alt), label: const Text('New User')) : null,
+      floatingActionButton: _manage ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.person_add_alt), label: const Text('New user')) : null,
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.all(12),
@@ -190,7 +190,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         Expanded(
           child: CursorList<UserAccount>(
             key: ValueKey(_search),
-            empty: 'No Users',
+            empty: 'No users',
             emptyIcon: Icons.people_outline,
             fetch: (c) => _v.users(search: _search, cursor: c),
             itemBuilder: (ctx, u, i) => Card(
@@ -215,13 +215,13 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                               await guarded(context, () => u.isLockedOut ? _v.unlockUser(u.userName) : _v.lockUser(u.userName));
                               _key.currentState?.refresh();
                             case 'reset':
-                              if (await confirm(context, 'Reset Password?', 'A new temporary password is created and all sessions of ${u.userName} end.', ok: 'Reset')) {
+                              if (await confirm(context, 'Reset password?', 'A new temporary password is created and all sessions of ${u.userName} end.', ok: 'Reset')) {
                                 final r = await guarded(context, () => _v.resetPassword(u.userName));
                                 if (r != null && context.mounted) _showPassword('New password for ${u.userName}', '${r['temporaryPassword']}');
                               }
                             case 'revoke':
                               await guarded(context, () => _v.revokeSessions(u.userName));
-                              if (context.mounted) toast(context, 'Sessions Ended');
+                              if (context.mounted) toast(context, 'Sessions ended');
                             case 'del':
                               if (await confirm(context, 'Delete ${u.userName}?', 'Deletes the user and everything they own.', ok: 'Delete', danger: true)) {
                                 await guarded(context, () => _v.deleteUser(u.userName));
@@ -230,10 +230,10 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'scopes', child: Text('Edit Scopes')),
+                          const PopupMenuItem(value: 'scopes', child: Text('Edit permissions')),
                           PopupMenuItem(value: 'lock', child: Text(u.isLockedOut ? 'Unlock' : 'Lock')),
-                          const PopupMenuItem(value: 'reset', child: Text('Reset Password')),
-                          const PopupMenuItem(value: 'revoke', child: Text('Revoke Sessions')),
+                          const PopupMenuItem(value: 'reset', child: Text('Reset password')),
+                          const PopupMenuItem(value: 'revoke', child: Text('Revoke sessions')),
                           if (u.userName != me.userName) const PopupMenuItem(value: 'del', child: Text('Delete')),
                         ],
                       )
@@ -254,7 +254,7 @@ class _VfsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final v = ref.read(vaultonProvider);
     return CursorList<Json>(
-      empty: 'No Points',
+      empty: 'No points',
       fetch: (c) => v.vfs(cursor: c),
       itemBuilder: (ctx, p, i) {
         final err = toStr(p['error']);
@@ -263,7 +263,7 @@ class _VfsTab extends ConsumerWidget {
           title: Text('${p['user']} / ${p['name']}'),
           subtitle: Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · health ${p['health']} · ${toBool(p['canWrite']) ? 'read/write' : 'read-only'}${err != null ? '\n$err' : ''}'),
           trailing: IconButton(
-            tooltip: 'Reload User VFS',
+            tooltip: 'Reload user VFS',
             icon: const Icon(Icons.refresh),
             onPressed: () async {
               await guarded(ctx, () => v.reloadVfs('${p['user']}'));
@@ -282,7 +282,7 @@ class _EventsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final v = ref.read(vaultonProvider);
     return CursorList<Json>(
-      empty: 'No Health Events',
+      empty: 'No health events',
       fetch: (c) => v.events(cursor: c),
       itemBuilder: (ctx, e, i) => ListTile(
         dense: true,
@@ -313,7 +313,7 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
       Expanded(
         child: CursorList<Json>(
           key: ValueKey(_search),
-          empty: 'No Log Entries',
+          empty: 'No log entries',
           fetch: (c) => v.logs(search: _search, cursor: c),
           itemBuilder: (ctx, e, i) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),

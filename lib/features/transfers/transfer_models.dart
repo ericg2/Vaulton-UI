@@ -24,7 +24,7 @@ class TransferTask {
 
   final String id;
   final TKind kind;
-  /// For snapshot downloads [pointId] holds the repository id and [snapshotId] the snapshot.
+  /// For snapshot downloads [pointId] holds the backup vault id and [snapshotId] the snapshot.
   final String pointId, remotePath, name, origin;
   final String? snapshotId;
   final String? localPath;

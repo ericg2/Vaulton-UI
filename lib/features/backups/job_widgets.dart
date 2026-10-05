@@ -31,9 +31,9 @@ IconData kindIcon(String kind) => switch (kind) {
 String kindLabel(String kind) => switch (kind) {
       'backup' => 'Backup',
       'restore' => 'Restore',
-      'check' => 'Start Check',
-      'forget' => 'Delete Snapshots',
-      'retention' => 'View Retention',
+      'check' => 'Health check',
+      'forget' => 'Delete snapshots',
+      'retention' => 'Clean up snapshots',
       _ => kind.isEmpty ? 'Job' : '${kind[0].toUpperCase()}${kind.substring(1)}',
     };
 
@@ -44,14 +44,14 @@ String jobSummary(RepoJob j) {
   final o = j.options;
   switch (j.kind) {
     case 'backup':
-      return '${o['path'] ?? '/'}${o['dryRun'] == true ? ' (dry run)' : ''}';
+      return '${o['path'] ?? '/'}${o['dryRun'] == true ? ' (test run)' : ''}';
     case 'restore':
-      return '${shortId('${o['snapshotId'] ?? ''}')}:${o['snapshotPath'] ?? '/'} → ${o['outputPath'] ?? ''}${o['dryRun'] == true ? ' (dry run)' : ''}';
+      return '${shortId('${o['snapshotId'] ?? ''}')}:${o['snapshotPath'] ?? '/'} → ${o['outputPath'] ?? ''}${o['dryRun'] == true ? ' (test run)' : ''}';
     case 'forget':
       final n = (o['snapshots'] as List?)?.length ?? 0;
       return '$n snapshot${n == 1 ? '' : 's'}';
     case 'retention':
-      return o['dryRun'] == true ? 'Dry Run' : 'Apply Retention Policy';
+      return o['dryRun'] == true ? 'Preview only' : 'Clean up old snapshots';
     default:
       return '';
   }

@@ -19,7 +19,7 @@ import '../transfers/transfers_page.dart';
 import 'job_detail_page.dart';
 import 'job_widgets.dart';
 
-/// Browse the contents of a repository snapshot, download files/folders or restore them.
+/// Browse the contents of a backup vault snapshot, download files/folders or restore them.
 class SnapshotBrowserPage extends ConsumerStatefulWidget {
   const SnapshotBrowserPage({super.key, required this.repo, this.snapshotId});
   final Point repo;
@@ -57,8 +57,8 @@ Future<void> restoreSnapshotFlow({
     context,
     'Restore $label',
     [
-      const FieldSpec('delete', 'Delete Extra Files in Destination', kind: 'bool'),
-      const FieldSpec('dry', 'Dry Run', kind: 'bool'),
+      const FieldSpec('delete', 'Delete extra files in the destination', kind: 'bool'),
+      const FieldSpec('dry', 'Test run only', kind: 'bool'),
     ],
     ok: 'Restore',
     intro: 'From snapshot: ${selected.map((x) => x.path).join(', ')}\n'
@@ -138,7 +138,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Choose Snapshot Path'),
+      title: const Text('Choose snapshot path'),
       content: SizedBox(
         width: 520,
         height: 460,
@@ -155,7 +155,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
                 context,
                 [(path: _path, isDir: true, name: _path == '/' ? 'snapshot' : baseName(_path))],
               ),
-              child: const Text('Select Folder'),
+              child: const Text('Select folder'),
             ),          
           ]),
           const Divider(height: 1),
@@ -345,7 +345,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     }
   }
 
-  /// Restores [targets] using the same source/destination/options flow as the repository-level restore.
+  /// Restores [targets] using the same source/destination/options flow as the backup vault-level restore.
   Future<void> _restore(List<SnapshotRestoreTarget> targets) async {
     await restoreSnapshotFlow(
       context: context,
@@ -398,7 +398,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     if (_error != null) return Scaffold(appBar: AppBar(title: title), body: ErrorView(_error!, onRetry: _init));
     if (_snaps == null) return Scaffold(appBar: AppBar(title: title), body: const Center(child: CircularProgressIndicator()));
     if (_snap == null) {
-      return Scaffold(appBar: AppBar(title: title), body: const EmptyView('This repository has no snapshots yet.\nRun a backup first.', icon: Icons.camera_alt_outlined));
+      return Scaffold(appBar: AppBar(title: title), body: const EmptyView('This backup vault has no snapshots yet.\nRun a backup first.', icon: Icons.camera_alt_outlined));
     }
     final snap = _snap!;
     final selecting = _sel.isNotEmpty;
@@ -408,7 +408,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: 'Select All', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _sel.addAll(_loaded.map((n) => n.name)))),
+              IconButton(tooltip: 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _sel.addAll(_loaded.map((n) => n.name)))),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(
                 tooltip: 'Restore…',
@@ -440,7 +440,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
               ),
               IconButton(tooltip: _desc ? 'Descending' : 'Ascending', icon: Icon(_desc ? Icons.arrow_downward : Icons.arrow_upward), onPressed: () => setState(() => _desc = !_desc)),
               IconButton(
-                tooltip: 'Restore This folder…',
+                tooltip: 'Restore this folder…',
                 icon: const Icon(Icons.settings_backup_restore),
                 onPressed: () => _restore([(path: _cur ?? '/', isDir: true, name: _trail.isEmpty ? 'snapshot' : _trail.last.name)]),
               ),
@@ -533,7 +533,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                             PopupMenuItem(value: 'restore', child: Text('Restore…')),
                             PopupMenuItem(value: 'select', child: Text('Select')),
                             PopupMenuItem(value: 'info', child: Text('Details')),
-                            PopupMenuItem(value: 'copy', child: Text('Copy Path')),
+                            PopupMenuItem(value: 'copy', child: Text('Copy path')),
                           ],
                         ),
                   onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),

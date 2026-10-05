@@ -34,8 +34,9 @@ String fmtDuration(Duration d) {
 }
 
 String pretty(String camel) {
-  final s = camel.replaceAllMapped(RegExp(r'([a-z0-9])([A-Z])'), (m) => '${m[1]} ${m[2]}');
-  return s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  final s = camel.replaceAllMapped(RegExp(r'([a-z0-9])([A-Z])'), (m) => '${m[1]} ${m[2].toString().toLowerCase()}');
+  final fixed = s.replaceAllMapped(RegExp(r'\b(id|url|ssl|tls|api|uri|ip)\b'), (m) => m[1]!.toUpperCase());
+  return fixed.isEmpty ? fixed : fixed[0].toUpperCase() + fixed.substring(1);
 }
 
 /// Remote paths are '/'-rooted.

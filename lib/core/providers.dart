@@ -189,7 +189,7 @@ final unreadProvider = StreamProvider<int>((ref) async* {
 
 
 // ------------------------------------------------- shared lookups / refresh
-/// id -> display name for every data point and repository (used to label jobs).
+/// id -> display name for every data folder and backup vault (used to label jobs).
 final pointNamesProvider = FutureProvider<Map<String, String>>((ref) async {
   final v = ref.watch(vaultonProvider);
   ref.watch(_signedInUserProvider);

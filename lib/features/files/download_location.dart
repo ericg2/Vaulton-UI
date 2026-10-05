@@ -20,11 +20,11 @@ Future<String?> chooseDownloadBase(BuildContext context, WidgetRef ref) async {
   final choice = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Download Location'),
+      title: const Text('Download location'),
       content: const Text('Choose where this download should be stored.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('Cancel')),
-        OutlinedButton(onPressed: () => Navigator.pop(ctx, 'custom'), child: const Text('Choose Folder')),
+        OutlinedButton(onPressed: () => Navigator.pop(ctx, 'custom'), child: const Text('Choose folder')),
         FilledButton(onPressed: () => Navigator.pop(ctx, 'default'), child: const Text('Default')),
       ],
     ),

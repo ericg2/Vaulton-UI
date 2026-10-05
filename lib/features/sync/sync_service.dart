@@ -61,7 +61,7 @@ class PhotoSyncService {
     if (prev.isLive) return false; // another run is already active
     final st = SyncStatus(running: true, totalSynced: prev.totalSynced, lastRun: prev.lastRun);
     if (s.pointId == null) {
-      st..running = false..error = 'Choose a destination data point first.';
+      st..running = false..error = 'Choose a destination data folder first.';
       await st.save(prefs);
       return false;
     }

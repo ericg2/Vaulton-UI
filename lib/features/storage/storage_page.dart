@@ -24,11 +24,11 @@ class StoragePage extends StatelessWidget {
         initialIndex: initialTab.clamp(0, 2).toInt(),
         child: Scaffold(
           appBar: AppBar(title: const Text('Storage'), bottom: const TabBar(tabs: [
-            Tab(text: 'Roots'),
-            Tab(text: 'Data Points'),
-            Tab(text: 'Repositories'),
+            Tab(text: 'Locations'),
+            Tab(text: 'Data folders'),
+            Tab(text: 'Backup vaults'),
           ])),
-          body: const TabBarView(children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)]),
+          body: const TabBarView(physics: NeverScrollableScrollPhysics(), children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)]),
         ),
       );
 }
@@ -73,12 +73,12 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
   }
 
   Future<void> _create() async {
-    final r = await formDialog(context, 'New Root', [
+    final r = await formDialog(context, 'New location', [
       const FieldSpec('name', 'Name', required: true),
-      FieldSpec('scheme', 'Storage Type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
+      FieldSpec('scheme', 'Storage type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
       const FieldSpec('capacity', 'Capacity', kind: 'capacity', required: true),
-      const FieldSpec('data', 'Allow Data Points', kind: 'bool', initial: 'true'),
-      const FieldSpec('repo', 'Allow Repositories', kind: 'bool', initial: 'true'),
+      const FieldSpec('data', 'Allow data folders', kind: 'bool', initial: 'true'),
+      const FieldSpec('repo', 'Allow backup vaults', kind: 'bool', initial: 'true'),
     ], ok: 'Next');
     if (r == null || !mounted) return;
     final src = await _sourceForm(r['scheme']!, null);
@@ -92,7 +92,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
         }));
     if (created != null) {
       _key.currentState?.refresh();
-      if (mounted) toast(context, 'Root Created');
+      if (mounted) toast(context, 'Location created');
     }
   }
 
@@ -100,8 +100,8 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
     final r = await formDialog(context, 'Edit ${root.name}', [
       FieldSpec('name', 'Name', initial: root.name, required: true),
       FieldSpec('capacity', 'Capacity', kind: 'capacity', initial: bytesToGb(root.maxBytes), required: true),
-      FieldSpec('data', 'Allow Data Points', kind: 'bool', initial: '${root.isDataAllowed}'),
-      FieldSpec('repo', 'Allow Repositories', kind: 'bool', initial: '${root.isRepoAllowed}'),
+      FieldSpec('data', 'Allow data folders', kind: 'bool', initial: '${root.isDataAllowed}'),
+      FieldSpec('repo', 'Allow backup vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
     ]);
     if (r == null) return;
     await guarded(context, () => _v.patchRoot(root.id, {
@@ -111,18 +111,46 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
 
   Future<void> _editSource(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
-    if (!kSourceSchemas.containsKey(scheme)) return toast(context, 'Unknown Storage Type', error: true);
+    if (!kSourceSchemas.containsKey(scheme)) return toast(context, 'Unknown connection type', error: true);
     final src = await _sourceForm(scheme, root.source);
     if (src == null) return;
     await guarded(context, () => _v.patchRoot(root.id, {'source': src}));
     _key.currentState?.refresh();
   }
 
-  Future<void> _shares(Root root) =>
-      Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => RootSharesPage(root: root)));
+  Future<void> _shares(Root root) async {
+    await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => RootSharesPage(root: root)));
+    _key.currentState?.silentRefresh(force: true);
+  }
+
+  /// Tapping a location shows what it is, who can use it, and what you can do with it.
+  void _openRoot(Root root) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      constraints: const BoxConstraints(maxWidth: 640),
+      builder: (sheetCtx) {
+        void then(VoidCallback run) {
+          Navigator.pop(sheetCtx);
+          run();
+        }
+
+        return _RootSheet(
+          root: root,
+          vaulton: _v,
+          onShare: () => then(() => _shares(root)),
+          onEdit: () => then(() => _edit(root)),
+          onEditConnection: () => then(() => _editSource(root)),
+          onDelete: () => then(() => _delete(root)),
+        );
+      },
+    );
+  }
 
   Future<void> _delete(Root root) async {
-    if (!await confirm(context, 'Delete root “${root.name}”?', 'Refused while it still contains data or repository points. Files in the underlying storage are not erased.', ok: 'Delete', danger: true)) return;
+    if (!await confirm(context, 'Delete location “${root.name}”?', 'Refused while it still contains data or backup vault points. Files in the underlying storage are not erased.', ok: 'Delete', danger: true)) return;
     await guarded(context, () => _v.deleteRoot(root.id));
     _key.currentState?.refresh();
   }
@@ -133,11 +161,11 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
     final u = ref.watch(userProvider)!;
     final canCreate = u.has(Scopes.rootsManage);
     return Scaffold(
-      floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New Root')) : null,
+      floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New location')) : null,
       body: CursorList<Root>(
         key: _key,
-        empty: 'No Storage Roots',
-        emptyHint: canCreate ? 'A root is a storage location (disk, share or cloud). Tap New Root to connect one.' : 'Ask an administrator to share a storage root with you.',
+        empty: 'No storage locations',
+        emptyHint: canCreate ? 'A location is where your data is stored, such as a disk, network share or cloud account. Tap “New location” to connect one.' : 'Ask an administrator to share a storage location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
         fetch: (c) => _v.roots(cursor: c),
@@ -145,7 +173,9 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
           final used = r.maxBytes - r.freeBytes;
           final scheme = '${r.source?['scheme'] ?? ''}';
           return Card(
-            child: Padding(
+            child: InkWell(
+              onTap: () => _openRoot(r),
+              child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
@@ -164,7 +194,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
                       },
                       itemBuilder: (_) => const [
                         PopupMenuItem(value: 'edit', child: Text('Edit')),
-                        PopupMenuItem(value: 'src', child: Text('Edit Connection')),
+                        PopupMenuItem(value: 'src', child: Text('Edit connection')),
                         PopupMenuItem(value: 'share', child: Text('Sharing…')),
                         PopupMenuDivider(),
                         PopupMenuItem(value: 'del', child: Text('Delete')),
@@ -174,14 +204,15 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
                 Wrap(children: [
                   if (scheme.isNotEmpty) chip(ctx, scheme.toUpperCase()),
                   chip(ctx, r.isOwner ? 'Owner' : 'Shared by ${r.userName}'),
-                  if (r.isDataAllowed) chip(ctx, 'Data Points'),
-                  if (r.isRepoAllowed) chip(ctx, 'Repositories'),
+                  if (r.isDataAllowed) chip(ctx, 'Data folders'),
+                  if (r.isRepoAllowed) chip(ctx, 'Backup vaults'),
                 ]),
                 const SizedBox(height: 10),
                 Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: used, max: r.maxBytes)),
                 const SizedBox(height: 4),
                 Text('${fmtBytes(used < 0 ? 0 : used)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: Theme.of(ctx).textTheme.bodySmall),
               ]),
+            ),
             ),
           );
         },
@@ -201,7 +232,7 @@ class PointsTab extends ConsumerStatefulWidget {
 class _PointsTabState extends ConsumerState<PointsTab> {
   final _key = GlobalKey<CursorListState<Point>>();
   Vaulton get _v => ref.read(vaultonProvider);
-  String get _noun => widget.repo ? 'Repository' : 'Data Point';
+  String get _noun => widget.repo ? 'backup vault' : 'data folder';
   List<Root> _roots = const [];
 
   @override
@@ -221,13 +252,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     final roots = await guarded(context, () => _v.roots(limit: 200));
     if (roots == null || !mounted) return;
     final usable = roots.items.where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed).toList();
-    if (usable.isEmpty) return toast(context, 'No root allows ${widget.repo ? 'repositories' : 'data points'}. Create or share one first.', error: true);
+    if (usable.isEmpty) return toast(context, 'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Create or share one first.', error: true);
     final labels = {for (final r in usable) '${r.name}${usable.where((x) => x.name == r.name).length > 1 ? ' (${r.id.substring(0, 6)})' : ''}': r};
     final f = await formDialog(context, 'New $_noun', [
-      FieldSpec('root', 'Root', kind: 'choice', options: labels.keys.toList()),
+      FieldSpec('root', 'Location', kind: 'choice', options: labels.keys.toList()),
       const FieldSpec('name', 'Name', required: true),
-      FieldSpec('capacity', 'Quota', kind: 'capacity', required: true, maxBytes: usable.map((r) => r.maxBytes).where((x) => x > 0).fold<int?>(null, (m, x) => m == null || x > m ? x : m)),
-      if (widget.repo) const FieldSpec('pw', 'Repository Password (Min 8)', kind: 'secret', required: true),
+      FieldSpec('capacity', 'Space limit', kind: 'capacity', required: true, maxBytes: usable.map((r) => r.maxBytes).where((x) => x > 0).fold<int?>(null, (m, x) => m == null || x > m ? x : m)),
+      if (widget.repo) const FieldSpec('pw', 'Vault password (at least 8 characters)', kind: 'secret', required: true),
     ], ok: 'Create');
     if (f == null) return;
     final body = {'rootId': labels[f['root']]!.id, 'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0, if (widget.repo) 'password': f['pw']};
@@ -242,7 +273,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (root == null || !mounted) return;
     final f = await formDialog(context, 'Edit ${p.name}', [
       FieldSpec('name', 'Name', initial: p.name, required: true),
-      FieldSpec('capacity', 'Quota', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null),
+      FieldSpec('capacity', 'Space limit', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null),
     ]);
     if (f == null) return;
     final body = {'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0};
@@ -273,8 +304,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New $_noun')),
       body: CursorList<Point>(
         key: _key,
-        empty: 'No ${widget.repo ? 'Repositories' : 'Data Points'} Yet',
-        emptyHint: widget.repo ? 'A repository stores backups. Tap New Repository to create one.' : 'A data point is a folder with a quota where your files live. Tap New Data Point to create one.',
+        empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet',
+        emptyHint: widget.repo ? 'A backup vault is where your backups are kept safely. Tap “New backup vault” to create one.' : 'A data folder is where your files live. You set how much space it can use. Tap “New data folder” to create one.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
@@ -295,7 +326,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               icon: const Icon(Icons.folder_open),
               label: const Text('Browse'),
             ),
-            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup Here')),
+            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup here')),
             OutlinedButton.icon(onPressed: () => _openRepo(p), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Snapshots')),
             OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 1), icon: const Icon(Icons.work_history_outlined), label: const Text('Jobs')),
             OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 2), icon: const Icon(Icons.schedule), label: const Text('Schedules')),
@@ -304,7 +335,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             FilledButton.tonalIcon(
               onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
               icon: const Icon(Icons.folder_open),
-              label: const Text('Open Files'),
+              label: const Text('Open files'),
             ),
             FilledButton.icon(onPressed: () => startBackup(ctx, ref, data: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup')),
             OutlinedButton.icon(
@@ -314,7 +345,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             ),
           ];
     return Card(
-      child: Padding(
+      child: InkWell(
+        onTap: () => widget.repo ? _openRepo(p) : Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -323,13 +356,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(p.name, style: Theme.of(ctx).textTheme.titleMedium),
               Text(
-                'Root: ${_roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ??
+                'Location: ${_roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ??
     (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId)}',                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.outline),
               ),
             ])),
             PopupMenuButton<String>(
               onSelected: (a) => a == 'edit' ? _edit(p) : _delete(p),
-              itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Rename / Quota')), PopupMenuItem(value: 'del', child: Text('Delete'))],
+              itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Rename or change limit')), PopupMenuItem(value: 'del', child: Text('Delete'))],
             ),
           ]),
           Wrap(children: [chip(ctx, p.healthLabel, color: p.isError ? cs.errorContainer : null)]),
@@ -341,13 +374,14 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, children: actions),
         ]),
+        ),
       ),
     );
   }
 }
 
 
-/// Everything that has touched one data point, with a one-tap backup button.
+/// Everything that has touched one data folder, with a one-tap backup button.
 class DataJobsPage extends ConsumerWidget {
   const DataJobsPage({super.key, required this.data});
   final Point data;
@@ -361,4 +395,117 @@ class DataJobsPage extends ConsumerWidget {
         ),
         body: JobsList(dataId: data.id),
       );
+}
+
+
+/// Details for one storage location, including who it is shared with.
+class _RootSheet extends StatefulWidget {
+  const _RootSheet({required this.root, required this.vaulton, required this.onShare, required this.onEdit, required this.onEditConnection, required this.onDelete});
+  final Root root;
+  final Vaulton vaulton;
+  final VoidCallback onShare, onEdit, onEditConnection, onDelete;
+  @override
+  State<_RootSheet> createState() => _RootSheetState();
+}
+
+class _RootSheetState extends State<_RootSheet> {
+  List<Json>? _shares;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.root.isOwner) {
+      widget.vaulton.shares(widget.root.id).then((v) {
+        if (mounted) setState(() => _shares = v);
+      }).catchError((_) {
+        if (mounted) setState(() => _failed = true);
+      });
+    }
+  }
+
+  Widget _row(IconData icon, String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.outline),
+          const SizedBox(width: 12),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const Spacer(),
+          Flexible(child: Text(value, textAlign: TextAlign.end, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+        ]),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.root;
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final used = (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes > 0 ? r.maxBytes : 1 << 62).toInt();
+    final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
+    final holds = [if (r.isDataAllowed) 'Data folders', if (r.isRepoAllowed) 'Backup vaults'];
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          CircleAvatar(backgroundColor: cs.secondaryContainer, child: Icon(Icons.dns_outlined, color: cs.onSecondaryContainer)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(r.name, style: t.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(r.isOwner ? 'Owned by you' : 'Shared with you by ${r.userName}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        UsageBar(used: used, max: r.maxBytes),
+        const SizedBox(height: 6),
+        Text('${fmtBytes(used)} used · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
+        const SizedBox(height: 8),
+        if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection type', scheme),
+        _row(Icons.inventory_2_outlined, 'Can hold', holds.isEmpty ? 'Nothing yet' : holds.join(' and ')),
+        const Divider(height: 28),
+        Text('Who can use it', style: t.titleSmall),
+        const SizedBox(height: 8),
+        if (!r.isOwner)
+          Text('Only the owner can change who has access.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
+        else if (_failed)
+          Text('Couldn’t load sharing details.', style: t.bodyMedium?.copyWith(color: cs.error))
+        else if (_shares == null)
+          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator())
+        else if (_shares!.isEmpty)
+          Text('Not shared with anyone yet. Only you can use this location.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
+        else
+          for (final s in _shares!)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: CircleAvatar(radius: 16, child: Text('${s['userName']}'.isEmpty ? '?' : '${s['userName']}'[0].toUpperCase())),
+              title: Text('${s['userName']}'),
+              trailing: Text('Up to ${fmtBytes(toInt(s['maxBytes']))}', style: t.bodySmall),
+            ),
+        if (r.isOwner) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: widget.onShare,
+              icon: const Icon(Icons.group_add_outlined),
+              label: Text(_shares != null && _shares!.isNotEmpty ? 'Manage sharing' : 'Share this location'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(onPressed: widget.onEdit, icon: const Icon(Icons.edit_outlined), label: const Text('Edit details')),
+            OutlinedButton.icon(onPressed: widget.onEditConnection, icon: const Icon(Icons.link), label: const Text('Edit connection')),
+            TextButton.icon(
+              onPressed: widget.onDelete,
+              style: TextButton.styleFrom(foregroundColor: cs.error),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Delete'),
+            ),
+          ]),
+        ],
+      ]),
+    );
+  }
 }

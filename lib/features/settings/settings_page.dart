@@ -30,12 +30,12 @@ class SettingsPage extends ConsumerWidget {
               leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
               title: Text(u.displayName),
               subtitle: Text('${u.userName} · ${session.baseUrl}'),
-              trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit Profile', onPressed: () async {
+              trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit profile', onPressed: () async {
                 final f = await formDialog(context, 'Profile', [
-                  FieldSpec('first', 'First Name', initial: u.firstName ?? ''),
-                  FieldSpec('last', 'Last Name', initial: u.lastName ?? ''),
+                  FieldSpec('first', 'First name', initial: u.firstName ?? ''),
+                  FieldSpec('last', 'Last name', initial: u.lastName ?? ''),
                   FieldSpec('email', 'Email', initial: u.email ?? ''),
-                  FieldSpec('notif', 'Email Notifications', kind: 'bool', initial: '${u.emailNotifications}'),
+                  FieldSpec('notif', 'Email notifications', kind: 'bool', initial: '${u.emailNotifications}'),
                 ]);
                 if (f == null) return;
                 await guarded(context, () => v.patchUser(u.userName, {
@@ -60,7 +60,7 @@ class SettingsPage extends ConsumerWidget {
         ]),
         Section('Transfers', children: [
           ListTile(
-            title: const Text('Parallel Transfers'),
+            title: const Text('Simultaneous transfers'),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Slider(value: s.concurrency.toDouble(), min: 1, max: 8, divisions: 7, label: '${s.concurrency}', onChanged: (v) => c.setConcurrency(v.round())),
               Text('How many files upload or download at once. Lower it on slow or metered connections.', style: Theme.of(context).textTheme.bodySmall),
@@ -71,7 +71,7 @@ class SettingsPage extends ConsumerWidget {
           // arbitrary folder, so downloads always go to the app's own storage there.
           if (isDesktop)
             ListTile(
-              title: const Text('Download Folder'),
+              title: const Text('Download folder'),
               subtitle: Text(s.downloadDir ?? 'Default (Vaulton folder in Downloads)'),
               trailing: s.downloadDir == null ? null : IconButton(icon: const Icon(Icons.restore), onPressed: () => c.setDownloadDir(null)),
               onTap: () async {
@@ -82,34 +82,34 @@ class SettingsPage extends ConsumerWidget {
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
             const ListTile(
               leading: Icon(Icons.folder_outlined),
-              title: Text('Download Location'),
+              title: Text('Download location'),
               subtitle: Text('App storage. Open a finished download from Transfers to view, share or save it elsewhere.'),
             ),
         ]),
         Section('Security', children: [
           ListTile(
             leading: const Icon(Icons.password),
-            title: const Text('Change Password'),
+            title: const Text('Change password'),
             subtitle: const Text('Also used for SMB file shares. Other sessions are signed out.'),
             onTap: () async {
-              final f = await formDialog(context, 'Change Password', [
-                const FieldSpec('cur', 'Current Password', kind: 'secret', required: true),
-                const FieldSpec('new', 'New Password (min 8)', kind: 'secret', required: true),
+              final f = await formDialog(context, 'Change password', [
+                const FieldSpec('cur', 'Current password', kind: 'secret', required: true),
+                const FieldSpec('new', 'New password (min 8)', kind: 'secret', required: true),
               ]);
               if (f == null) return;
               if (f['new']!.length < 8) return toast(context, 'New password must be at least 8 characters', error: true);
               final t = await guarded(context, () => v.changePassword(f['cur']!, f['new']!));
               if (t != null) {
                 await session.setTokens(t);
-                if (context.mounted) toast(context, 'Password Changed');
+                if (context.mounted) toast(context, 'Password changed');
               }
             },
           ),
           ListTile(
             leading: const Icon(Icons.devices_other),
-            title: const Text('Sign Out Everywhere'),
+            title: const Text('Sign out everywhere'),
             onTap: () async {
-              if (!await confirm(context, 'Sign Out of All Devices?', 'Every session of your account ends, including this one.', ok: 'Sign Out')) return;
+              if (!await confirm(context, 'Sign out of all devices?', 'Every session of your account ends, including this one.', ok: 'Sign out')) return;
               await guarded(context, v.logoutAll);
               ref.read(transferProvider.notifier).reset();
               await session.clear();
@@ -118,10 +118,10 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('Sign Out'),
+            title: const Text('Sign out'),
             onTap: () async {
               if (ref.read(transferProvider.notifier).hasActive &&
-                  !await confirm(context, 'Transfers in Progress', 'Signing out cancels unfinished transfers.', ok: 'Sign Out', danger: true)) {
+                  !await confirm(context, 'Transfers in Progress', 'Signing out cancels unfinished transfers.', ok: 'Sign out', danger: true)) {
                 return;
               }
               ref.read(transferProvider.notifier).reset();
@@ -130,7 +130,7 @@ class SettingsPage extends ConsumerWidget {
           ),
         ]),
         Section('About', children: [
-          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Vaulton Client'), subtitle: const Text('Version $kAppVersion')),
+          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Vaulton client'), subtitle: const Text('Version $kAppVersion')),
         ]),
       ]),
     );

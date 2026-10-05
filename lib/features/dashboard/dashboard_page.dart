@@ -101,7 +101,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     final hour = DateTime.now().hour;
-    final greet = hour < 12 ? 'Good Morning' : (hour < 18 ? 'Good Afternoon' : 'Good Evening');
+    final greet = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
 
     Widget body;
     if (_error != null && d == null) {
@@ -119,10 +119,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final cap = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.maxBytes);
 
       final stats = [
-        _Stat(Icons.folder_outlined, '${d.datas.length}', 'Data Points', () => widget.onNavigate?.call('Data Points')),
-        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', 'Repositories', () => widget.onNavigate?.call('Repositories')),
-        if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Recent Jobs'), highlight: running.isNotEmpty),
-        if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Recent Jobs'), bad: failed > 0),
+        _Stat(Icons.folder_outlined, '${d.datas.length}', 'Data folders', () => widget.onNavigate?.call('Data folders')),
+        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', 'Backup vaults', () => widget.onNavigate?.call('Backup vaults')),
+        if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
+        if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
       ];
 
       body = RefreshIndicator(
@@ -148,8 +148,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     Flexible(
                       child: Text(
                         failedPoints > 0
-                            ? '$failedPoints storage point${failedPoints == 1 ? ' needs' : 's need'} attention. Open Storage to see details.'
-                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours. Tap Failed to review.' : 'Everything looks healthy'),
+                            ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention. Open Storage to see details.'
+                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours. Tap failed to review.' : 'Everything looks healthy'),
                         style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
                       ),
                     ),
@@ -176,32 +176,32 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   color: cs.tertiaryContainer,
                   child: ListTile(
                     leading: Icon(Icons.rocket_launch_outlined, color: cs.onTertiaryContainer),
-                    title: Text('Get Started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Create a data point under Storage first. It is the place your files are kept.', style: TextStyle(color: cs.onTertiaryContainer)),
+                    title: Text('Get started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Create a data folder under Storage first. It is the place your files are kept.', style: TextStyle(color: cs.onTertiaryContainer)),
                     trailing: Icon(Icons.chevron_right, color: cs.onTertiaryContainer),
-                    onTap: () => widget.onNavigate?.call('Data Points'),
+                    onTap: () => widget.onNavigate?.call('Data folders'),
                   ),
                 ),
               ),
-            Section('Quick Actions', children: [
+            Section('Quick actions', children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup), label: const Text('Backup Now')),
+                  if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup), label: const Text('Backup now')),
                   FilledButton.tonalIcon(
                     onPressed: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => const FilesPage()));
                       if (mounted) _load(); // usage may have changed while you were in Files
                     },
                     icon: const Icon(Icons.upload_file),
-                    label: const Text('Upload Files'),
+                    label: const Text('Upload files'),
                   ),
-                  OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Manage Storage')),
+                  OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Manage storage')),
                 ]),
               ),
             ]),
             if (cap > 0)
-              Section('Storage Usage', children: [
+              Section('Storage usage', children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Card(
@@ -213,7 +213,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         const SizedBox(height: 8),
                         Text('${fmtBytes(used)} used of ${fmtBytes(cap)} allocated', style: t.bodySmall),
                         const SizedBox(height: 2),
-                        Text('Total across all data points and repositories you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                        Text('Total across all data folders and backup vaults you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         if (lastOk != null) ...[
                           const SizedBox(height: 4),
                           Text('Last successful backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
@@ -224,14 +224,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ]),
             if (_canJobs) ...[
-              Section('Running Now', children: [
+              Section('Running now', children: [
                 if (running.isEmpty && waiting == 0)
                   const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('No jobs are running.'))
                 else
                   for (final j in d.jobs.where((j) => j.active))
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
               ]),
-              Section('Recent Jobs', children: [
+              Section('Activity', children: [
                 if (d.jobs.where((j) => !j.active).isEmpty)
                   const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('No finished jobs yet.'))
                 else
@@ -239,7 +239,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton(onPressed: () => widget.onNavigate?.call('Recent Jobs'), child: const Text('View All Jobs')),
+                  child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('View all jobs')),
                 ),
               ]),
             ],

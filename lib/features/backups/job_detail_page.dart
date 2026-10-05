@@ -156,7 +156,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
   // ----------------------------------------------------------------- actions
   Future<void> _cancel(RepoJob j) async {
-    if (!await confirm(context, 'Cancel This Job?', 'A running job is told to stop and finishes shortly after.', ok: 'Cancel Job', danger: true)) return;
+    if (!await confirm(context, 'Cancel this job?', 'A running job is told to stop and finishes shortly after.', ok: 'Cancel job', danger: true)) return;
     await guarded(context, () => _v.cancelJob(j.id, admin: widget.admin));
     _refresh();
   }
@@ -188,7 +188,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         appBar: AppBar(
           title: Text(j == null ? 'Job' : kindLabel(j.kind)),
           actions: [
-            if (j != null && j.active) IconButton(tooltip: 'Cancel Job', icon: const Icon(Icons.stop_circle_outlined), onPressed: () => _cancel(j)),
+            if (j != null && j.active) IconButton(tooltip: 'Cancel job', icon: const Icon(Icons.stop_circle_outlined), onPressed: () => _cancel(j)),
             if (j != null && !j.active && !widget.admin) IconButton(tooltip: 'Remove from History', icon: const Icon(Icons.delete_outline), onPressed: () => _delete(j)),
             IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _refresh),
           ],
@@ -271,8 +271,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           const SizedBox(height: 16),
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (j.kind == 'backup' && j.phase == JobPhase.succeeded && j.snapshotId != null && j.options['dryRun'] != true)
-              FilledButton.icon(onPressed: () => _browse(j), icon: const Icon(Icons.folder_open), label: const Text('Browse Snapshot')),
-            OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Repository')),
+              FilledButton.icon(onPressed: () => _browse(j), icon: const Icon(Icons.folder_open), label: const Text('Browse snapshot')),
+            OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open backup vault')),
             if (j.active) OutlinedButton.icon(onPressed: () => _cancel(j), icon: const Icon(Icons.stop_circle_outlined), label: const Text('Cancel')),
           ]),
         ]),
@@ -323,7 +323,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         ]);
     return _card('Details', [
       _kv('Job ID', copyable(j.id)),
-      _kv('Repository', copyable(j.repoId)),
+      _kv('Backup vault', copyable(j.repoId)),
       if (j.dataId != null) _kv('Data point', copyable(j.dataId!)),
       if (j.scheduleId != null) _kv('Schedule', copyable(j.scheduleId!)),
       if (j.snapshotId != null) _kv('Snapshot', copyable(j.snapshotId!)),
@@ -379,7 +379,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               ),
             ),
             IconButton(
-              tooltip: 'Copy Visible Lines',
+              tooltip: 'Copy visible lines',
               icon: const Icon(Icons.copy_all_outlined),
               onPressed: lines.isEmpty ? null : () => copyText(context, lines.reversed.map(_fmtLine).join('\n'), 'Log copied'),
             ),
@@ -411,7 +411,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                           child: Center(
                             child: _loadingOlder
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                : TextButton.icon(onPressed: _loadOlder, icon: const Icon(Icons.expand_less), label: const Text('Load Older Lines')),
+                                : TextButton.icon(onPressed: _loadOlder, icon: const Icon(Icons.expand_less), label: const Text('Load older lines')),
                           ),
                         );
                       }

@@ -23,6 +23,12 @@ ThemeData buildTheme(ColorScheme scheme) {
     fontFamilyFallback: isLinux ? const ['Cantarell', 'Ubuntu', 'Noto Sans', 'DejaVu Sans'] : null,
     visualDensity: (isWin || isLinux) ? VisualDensity.compact : VisualDensity.standard,
     scaffoldBackgroundColor: scheme.surface,
+    // Clear press and hover feedback on every button, card and list row.
+    splashFactory: InkRipple.splashFactory,
+    splashColor: scheme.primary.withValues(alpha: 0.14),
+    highlightColor: scheme.primary.withValues(alpha: 0.08),
+    hoverColor: scheme.primary.withValues(alpha: 0.06),
+    focusColor: scheme.primary.withValues(alpha: 0.10),
     appBarTheme: AppBarTheme(
       backgroundColor: scheme.surface,
       surfaceTintColor: scheme.surfaceTint,
@@ -31,6 +37,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     cardTheme: CardThemeData(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: scheme.surfaceContainerLow,
       shape: shape,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -42,6 +49,9 @@ ThemeData buildTheme(ColorScheme scheme) {
       isDense: isWin || isLinux,
     ),
     filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: isWin ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)) : null)),
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(splashFactory: InkRipple.splashFactory)),
+    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(splashFactory: InkRipple.splashFactory)),
+    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(splashFactory: InkRipple.splashFactory)),
     snackBarTheme: SnackBarThemeData(shape: shape),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: scheme.surfaceContainer,

@@ -11,7 +11,7 @@ class PickedFolder {
   final String path;
 }
 
-/// Lets the user choose any folder in any of their data points.
+/// Lets the user choose any folder in any of their data folders.
 Future<PickedFolder?> pickFolder(BuildContext context, {String? initialPointId, String title = 'Choose destination', String? initialPath}) =>
     showDialog<PickedFolder>(context: context, builder: (_) => _FolderPickerDialog(initialPointId: initialPointId, title: title, initialPath: initialPath));
 
@@ -81,7 +81,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
 
   Future<void> _createFolder() async {
     if (_point == null) return;
-    final name = await promptText(context, 'New Folder', 'Folder Name', ok: 'Create');
+    final name = await promptText(context, 'New folder', 'Folder name', ok: 'Create');
     if (name == null || name.trim().isEmpty) return;
     try {
       await ref.read(vaultonProvider).mkdir(_point!.id, joinPath(_path, name.trim()));
@@ -103,7 +103,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
             : Column(children: [
                 DropdownButtonFormField<String>(
                   initialValue: _point?.id,
-                  decoration: const InputDecoration(labelText: 'Data Point'),
+                  decoration: const InputDecoration(labelText: 'Data folder'),
                   items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
                   onChanged: (id) {
                     _point = _points.firstWhere((p) => p.id == id);
@@ -146,11 +146,11 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
               ]),
       ),
       actions: [
-        TextButton.icon(onPressed: _point == null ? null : _createFolder, icon: const Icon(Icons.create_new_folder_outlined), label: const Text('New Folder')),
+        TextButton.icon(onPressed: _point == null ? null : _createFolder, icon: const Icon(Icons.create_new_folder_outlined), label: const Text('New folder')),
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(
           onPressed: _point == null ? null : () => Navigator.pop(context, PickedFolder(_point!, _path)),
-          child: const Text('Select This Folder'),
+          child: const Text('Select this folder'),
         ),
       ],
     );

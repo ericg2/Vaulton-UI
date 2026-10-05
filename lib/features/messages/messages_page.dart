@@ -26,8 +26,8 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   }
 
   Future<void> _compose({String? to, String? subject, String? replyTo}) async {
-    final f = await formDialog(context, replyTo == null ? 'New Message' : 'Reply', [
-      FieldSpec('to', 'To User Names, Comma Separated', initial: to ?? '', required: true),
+    final f = await formDialog(context, replyTo == null ? 'New message' : 'Reply', [
+      FieldSpec('to', 'To user names, comma separated', initial: to ?? '', required: true),
       FieldSpec('subject', 'Subject', initial: subject ?? '', required: true),
       const FieldSpec('body', 'Message', kind: 'multiline', required: true),
     ], ok: 'Send');
@@ -86,7 +86,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   Widget _list(bool inbox) {
     return CursorList<Msg>(
       key: ValueKey('${inbox}_${_unreadOnly}_$_gen'),
-      empty: inbox ? 'Inbox Is Empty' : 'No Sent Messages',
+      empty: inbox ? 'Inbox is empty' : 'No sent messages',
       emptyIcon: Icons.mail_outline,
       fetch: (c) => inbox ? _v.inbox(cursor: c, unread: _unreadOnly ? true : null) : _v.sent(cursor: c),
       itemBuilder: (ctx, m, i) => ListTile(
@@ -108,9 +108,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         appBar: AppBar(
           title: const Text('Messages'),
           actions: [
-            IconButton(tooltip: _unreadOnly ? 'Show All' : 'Unread Only', icon: Icon(_unreadOnly ? Icons.mark_email_unread : Icons.mark_email_unread_outlined), onPressed: () => setState(() => _unreadOnly = !_unreadOnly)),
+            IconButton(tooltip: _unreadOnly ? 'Show all' : 'Unread only', icon: Icon(_unreadOnly ? Icons.mark_email_unread : Icons.mark_email_unread_outlined), onPressed: () => setState(() => _unreadOnly = !_unreadOnly)),
             IconButton(
-              tooltip: 'Mark All Read',
+              tooltip: 'Mark all read',
               icon: const Icon(Icons.done_all),
               onPressed: () async {
                 await guarded(context, _v.readAll);
