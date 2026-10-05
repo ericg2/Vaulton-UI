@@ -359,7 +359,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                   Expanded(
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Text(_pwTitle ?? 'Password Change Required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
-                                      Text('Enter the temporary password above, then choose a permanent one to finish signing in.', style: TextStyle(color: cs.onTertiaryContainer)),
+                                      Text('Enter The Temporary Password Above, Then Choose A Permanent One To Finish Signing In.', style: TextStyle(color: cs.onTertiaryContainer)),
                                     ]),
                                   ),
                                 ]),
@@ -389,8 +389,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         controlAffinity: ListTileControlAffinity.leading,
                         value: _rememberPassword,
                         onChanged: (v) => setState(() => _rememberPassword = v ?? false),
-                        title: const Text('Remember password'),
-                        subtitle: const Text('Stored in the secure keystore on this device.'),
+                        title: const Text('Remember Password'),
+                        subtitle: const Text('Stored In The Secure Keystore On This Device.'),
                       ),
                     ),
                     AnimatedSize(
@@ -430,7 +430,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         ),
                       ),
                     ),
-                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need help?')))),
+                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need Help')))),
                   ]),
                 ),
               ),
