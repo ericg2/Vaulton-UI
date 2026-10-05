@@ -15,7 +15,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
   late final AnimationController _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
   late final AnimationController _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
   final _passFocus = FocusNode();
-  late final _url = TextEditingController(text: ref.read(sessionProvider).baseUrl);
+  late final _host = TextEditingController();
+  late final _port = TextEditingController();
   final _user = TextEditingController();
   final _pass = TextEditingController();
   final _new = TextEditingController();
@@ -29,7 +30,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     _in.dispose();
     _breath.dispose();
     _passFocus.dispose();
-    for (final c in [_url, _user, _pass, _new, _new2]) {
+    for (final c in [_host, _port, _user, _pass, _new, _new2]) {
       c.dispose();
     }
     super.dispose();
@@ -44,6 +45,23 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       opacity: a,
       child: SlideTransition(position: a.drive(Tween(begin: const Offset(0, 0.12), end: Offset.zero)), child: child),
     );
+  }
+
+  void _setServerUrl(String url) {
+    final normalized = SessionStore.normalizeUrl(url);
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) return;
+    _host.text = uri.host.isEmpty ? normalized : uri.host;
+    _port.text = uri.hasPort ? uri.port.toString() : '';
+  }
+
+  String _serverUrl() {
+    final host = _host.text.trim();
+    final port = _port.text.trim();
+    if (host.isEmpty) return '';
+    final current = SessionStore.normalizeUrl(ref.read(sessionProvider).baseUrl);
+    final scheme = current.startsWith('https://') ? 'https' : 'http';
+    return port.isEmpty ? '$scheme://$host' : '$scheme://$host:$port';
   }
 
   void _help() {
@@ -75,7 +93,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     super.initState();
     final last = ref.read(accountsProvider).firstOrNull;
     if (last != null) {
-      _url.text = last.url;
+      _setServerUrl(last.url);
       _user.text = last.user;
       _loadSavedPassword(last.url, last.user);
     }
@@ -84,7 +102,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
   Future<void> _loadSavedPassword(String url, String user) async {
     final pw = await ref.read(sessionProvider).savedPassword(url, user);
     if (!mounted) return;
-    if (_url.text == url && _user.text.trim().toLowerCase() == user.trim().toLowerCase()) {
+    if (_serverUrl() == SessionStore.normalizeUrl(url) && _user.text.trim().toLowerCase() == user.trim().toLowerCase()) {
       setState(() {
         _pass.text = pw ?? '';
         _rememberPassword = pw != null && pw.isNotEmpty;
@@ -94,7 +112,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
 
   void _pick(SavedAccount a) {
     setState(() {
-      _url.text = a.url;
+      _setServerUrl(a.url);
       _user.text = a.user;
       _pass.clear();
       _temp = false;
@@ -117,7 +135,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     FocusManager.instance.primaryFocus?.unfocus();
     try {
       final username = _user.text.trim();
-      final url = _url.text;
+      final url = _serverUrl();
       final password = _temp ? _new.text : _pass.text;
       final remember = _rememberPassword;
       // signIn() swaps this screen out on success, so only captured values are used afterwards.
@@ -165,7 +183,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
             for (final a in list.take(5))
               ListTile(
                 dense: true,
-                selected: a.url == SessionStore.normalizeUrl(_url.text) && a.user.toLowerCase() == _user.text.trim().toLowerCase(),
+                selected: a.url == SessionStore.normalizeUrl(_serverUrl()) && a.user.toLowerCase() == _user.text.trim().toLowerCase(),
                 leading: CircleAvatar(radius: 16, child: Text(a.user.isEmpty ? '?' : a.user[0].toUpperCase())),
                 title: Text(a.user),
                 subtitle: Text(a.host),
@@ -251,15 +269,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                     _stagger(
                       3,
                       TextFormField(
-                        controller: _url,
+                        controller: _host,
                         keyboardType: TextInputType.url,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         decoration: const InputDecoration(
                           labelText: 'Server Address',
                           prefixIcon: Icon(Icons.dns_outlined),
-                          hintText: 'https://vault.example.com',
-                          helperText: 'Include the port if needed, e.g. 192.168.1.10:5141',
+                          hintText: '192.168.1.10 or vault.example.com',
                         ),
                         validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your server address' : null,
                       ),
@@ -267,6 +284,27 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                     gap,
                     _stagger(
                       4,
+                      TextFormField(
+                        controller: _port,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: const InputDecoration(
+                          labelText: 'Port',
+                          prefixIcon: Icon(Icons.settings_ethernet_outlined),
+                          hintText: '5141',
+                        ),
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return null;
+                          final port = int.tryParse(value);
+                          return port == null || port < 1 || port > 65535 ? 'Enter a valid port' : null;
+                        },
+                      ),
+                    ),
+                    gap,
+                    _stagger(
+                      5,
                       TextFormField(
                         controller: _user,
                         autofillHints: const [AutofillHints.username],
@@ -279,7 +317,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                     ),
                     gap,
                     _stagger(
-                      5,
+                      6,
                       TextFormField(
                         controller: _pass,
                         focusNode: _passFocus,
@@ -345,7 +383,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                             ]),
                     ),
                     _stagger(
-                      6,
+                      7,
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
@@ -378,7 +416,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                     ),
                     const SizedBox(height: 16),
                     _stagger(
-                      7,
+                      8,
                       FilledButton(
                         onPressed: _busy ? null : _submit,
                         child: Padding(
@@ -392,7 +430,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         ),
                       ),
                     ),
-                    _stagger(8, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need help?')))),
+                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need help?')))),
                   ]),
                 ),
               ),
