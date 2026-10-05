@@ -15,18 +15,18 @@ Future<RepoJob?> startBackup(BuildContext context, WidgetRef ref, {Point? data, 
   final repos = await guarded(context, () => v.repos(limit: 200));
   if (datas == null || repos == null || !context.mounted) return null;
   if (datas.items.isEmpty) {
-    toast(context, 'Create a data point first (Storage → Data Points)', error: true);
+    toast(context, 'A Data Point is required. (Storage → Data Points)', error: true);
     return null;
   }
   if (repos.items.isEmpty) {
-    toast(context, 'Create a repository first (Storage → Repositories)', error: true);
+    toast(context, 'A Repository is required. (Storage → Repositories)', error: true);
     return null;
   }
   final dm = {for (final d in datas.items) d.name: d};
   final rm = {for (final r in repos.items) r.name: r};
   final f = await formDialog(context, 'Backup Data Point', [
-    FieldSpec('data', 'Data Point (What to Backup)', kind: 'choice', options: dm.keys.toList(), initial: data?.name ?? dm.keys.first),
-    FieldSpec('repo', 'Repository (Where to Store It)', kind: 'choice', options: rm.keys.toList(), initial: repo?.name ?? rm.keys.first),
+    FieldSpec('data', 'Data Point (Start Point)', kind: 'choice', options: dm.keys.toList(), initial: data?.name ?? dm.keys.first),
+    FieldSpec('repo', 'Repository (End Point)', kind: 'choice', options: rm.keys.toList(), initial: repo?.name ?? rm.keys.first),
     const FieldSpec('path', 'Starting Folder', kind: 'path', initial: '/', required: true, hint: '/ backs up everything'),
     const FieldSpec('dry', 'Dry Run (Test Only)', kind: 'bool'),
   ], ok: 'Start Backup', pick: (v) async {

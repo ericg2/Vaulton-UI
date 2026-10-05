@@ -100,7 +100,7 @@ class _JobsListState extends ConsumerState<JobsList> {
           Expanded(
             child: CursorList<RepoJob>(
               key: _key,
-              empty: _status == null ? 'No Jobs Yet' : 'No ${_status!.toLowerCase()} Jobs',
+              empty: _status == null ? 'No Jobs Created' : 'No ${_status!.toLowerCase()} Jobs',
               emptyIcon: Icons.work_history_outlined,
               onChanged: (l) => _anyActive = l.any((j) => j.active),
               fetch: (c) => v.jobs(cursor: c, repoId: widget.repoId, dataId: widget.dataId, admin: widget.admin, status: _status),
@@ -235,18 +235,18 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       if (isNew) FieldSpec('repo', 'Repository', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
       if (s == null || s.mode == 'backup') ...[
         if (isNew) const FieldSpec('mode', 'Job Type', kind: 'choice', options: ['backup', 'check']),
-        if (datas.items.isNotEmpty) FieldSpec('data', 'Data Point (for Backup)', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
+        if (datas.items.isNotEmpty) FieldSpec('data', 'Data Source', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
         FieldSpec('path', 'Folder to Backup', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
       ],
       FieldSpec('cron', 'Schedule', kind: 'cron', initial: s?.cron ?? '0 2 * * *'),
       FieldSpec('tz', 'Time Zone', kind: 'choice', options: timeZoneOptions(device: deviceTz, extra: s?.timeZone), initial: s?.timeZone.isNotEmpty == true ? s!.timeZone : (deviceTz ?? 'UTC')),
       FieldSpec('enabled', 'Enabled', kind: 'bool', initial: '${s?.enabled ?? true}'),
-      FieldSpec('skip', 'Skip If Still Running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
+      FieldSpec('skip', 'Skip Still Running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
     ], ok: 'Save', pick: (v) async {
       final d = dataMap[v['data']];
       final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose Folder to Backup');
       return r?.path;
-    }, intro: 'Choose how often this should run. Times use the time zone selected below.');
+    }, intro: 'Please set the frequency. Uses the selected Time Zone.');
     if (f == null || !mounted) return;
     try {
       final mode = s == null ? f['mode'] : s.mode;
@@ -287,7 +287,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       floatingActionButton: FloatingActionButton.extended(onPressed: _edit, icon: const Icon(Icons.add), label: const Text('New Schedule')),
       body: CursorList<Schedule>(
         key: _key,
-        empty: 'No Schedules',
+        empty: 'No Schedules Created.',
         emptyIcon: Icons.schedule,
         autoRefresh: const Duration(seconds: 30),
         fetch: (c) => _v.schedules(cursor: c, repoId: widget.repoId),
@@ -311,7 +311,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                   case 'preview':
                     _preview(s);
                   case 'del':
-                    if (await confirm(context, 'Delete Schedule?', 'Jobs it already created are not affected.', ok: 'Delete', danger: true)) {
+                    if (await confirm(context, 'Delete Schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
                       await guarded(context, () => _v.deleteSchedule(s.id));
                       _key.currentState?.refresh();
                     }

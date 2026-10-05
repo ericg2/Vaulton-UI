@@ -73,7 +73,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   Future<void> _backup() async {
     final datas = await guarded(context, () => _v.datas(limit: 200));
     if (datas == null || !mounted) return;
-    if (datas.items.isEmpty) return toast(context, 'No Data Points to Backup', error: true);
+    if (datas.items.isEmpty) return toast(context, 'No Data Points to Backup.', error: true);
     final map = {for (final d in datas.items) d.name: d};
     final f = await formDialog(context, 'Backup', [
       FieldSpec('data', 'Data Point', kind: 'choice', options: map.keys.toList()),

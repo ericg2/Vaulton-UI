@@ -32,7 +32,7 @@ String kindLabel(String kind) => switch (kind) {
       'backup' => 'Backup',
       'restore' => 'Restore',
       'check' => 'Start Check',
-      'forget' => 'Delete snapshots',
+      'forget' => 'Delete Snapshots',
       'retention' => 'View Retention',
       _ => kind.isEmpty ? 'Job' : '${kind[0].toUpperCase()}${kind.substring(1)}',
     };
@@ -51,7 +51,7 @@ String jobSummary(RepoJob j) {
       final n = (o['snapshots'] as List?)?.length ?? 0;
       return '$n snapshot${n == 1 ? '' : 's'}';
     case 'retention':
-      return o['dryRun'] == true ? 'Dry run' : 'Apply retention policy';
+      return o['dryRun'] == true ? 'Dry Run' : 'Apply Retention Policy';
     default:
       return '';
   }
