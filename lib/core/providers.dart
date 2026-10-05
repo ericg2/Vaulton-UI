@@ -84,8 +84,11 @@ class AuthState {
 }
 
 class AuthController extends Notifier<AuthState> {
+  int _restoreGeneration = 0;
   @override
   AuthState build() {
+    // No saved session -> go straight to the login form (no splash flash).
+    if (!ref.read(sessionProvider).isSignedIn) return const AuthState(AuthStatus.signedOut);
     Future.microtask(_restore);
     return const AuthState(AuthStatus.loading);
   }
@@ -94,20 +97,42 @@ class AuthController extends Notifier<AuthState> {
   Vaulton get _v => ref.read(vaultonProvider);
 
   Future<void> _restore() async {
+    final generation = ++_restoreGeneration;
     if (!_s.isSignedIn) {
       state = const AuthState(AuthStatus.signedOut);
       return;
     }
+    final started = DateTime.now();
+    // Keep the splash up for a moment even on a fast connection so the
+    // transition into the app is smooth instead of a hard flash.
+    Future<void> settle() async {
+      final left = const Duration(milliseconds: 900) - DateTime.now().difference(started);
+      if (left > Duration.zero) await Future.delayed(left);
+    }
+
     try {
-      final u = await _v.me();
+      final u = await _v.me().timeout(const Duration(seconds: 8));
+      await settle();
+      if (generation != _restoreGeneration) return;
       state = AuthState(AuthStatus.signedIn, user: u);
-    } on ApiException catch (e) {
-      // Network error: stay signed in locally so offline-capable screens work.
-      if (e.status == null) {
+    } catch (e) {
+      // Network/timeout errors should return control to the login screen quickly.
+      if (generation != _restoreGeneration) return;
+      await settle();
+      if (generation != _restoreGeneration) return;
+      final ex = ApiException.from(e);
+      if (ex.status == null) {
         state = const AuthState(AuthStatus.signedOut, message: 'Server unreachable. Check the address and sign in again.');
       } else {
         state = const AuthState(AuthStatus.signedOut);
       }
+    }
+  }
+
+  void cancelRestore() {
+    _restoreGeneration++;
+    if (state.status == AuthStatus.loading) {
+      state = const AuthState(AuthStatus.signedOut);
     }
   }
 
@@ -140,11 +165,23 @@ class AuthController extends Notifier<AuthState> {
 final authProvider = NotifierProvider<AuthController, AuthState>(AuthController.new);
 final userProvider = Provider<UserAccount?>((ref) => ref.watch(authProvider).user);
 
+/// True while a user is signed in. Pollers below watch it so they stop on sign-out
+/// and restart (with fresh data) when another account signs in.
+final _signedInUserProvider = Provider<String?>((ref) {
+  final a = ref.watch(authProvider);
+  return a.status == AuthStatus.signedIn ? a.user?.userName : null;
+});
+
 final unreadProvider = StreamProvider<int>((ref) async* {
   final v = ref.watch(vaultonProvider);
-  while (true) {
+  if (ref.watch(_signedInUserProvider) == null) return;
+  var alive = true;
+  ref.onDispose(() => alive = false);
+  while (alive) {
     try {
-      yield await v.unreadCount();
+      final n = await v.unreadCount();
+      if (!alive) return;
+      yield n;
     } catch (_) {}
     await Future.delayed(const Duration(seconds: 60));
   }
@@ -155,6 +192,7 @@ final unreadProvider = StreamProvider<int>((ref) async* {
 /// id -> display name for every data point and repository (used to label jobs).
 final pointNamesProvider = FutureProvider<Map<String, String>>((ref) async {
   final v = ref.watch(vaultonProvider);
+  ref.watch(_signedInUserProvider);
   final out = <String, String>{};
   for (final fetch in [(String? c) => v.datas(cursor: c, limit: 200), (String? c) => v.repos(cursor: c, limit: 200)]) {
     String? cur;
@@ -191,10 +229,14 @@ class ServerInfo {
 final serverInfoProvider = StreamProvider<ServerInfo>((ref) async* {
   final v = ref.watch(vaultonProvider);
   final session = ref.watch(sessionProvider);
+  if (ref.watch(_signedInUserProvider) == null) return;
   final host = Uri.tryParse(session.baseUrl)?.authority ?? session.baseUrl;
-  while (true) {
+  var alive = true;
+  ref.onDispose(() => alive = false);
+  while (alive) {
     try {
       final s = await v.status();
+      if (!alive) return;
       yield ServerInfo(
         host: host,
         version: toStr(s['version']),
@@ -203,10 +245,11 @@ final serverInfoProvider = StreamProvider<ServerInfo>((ref) async* {
         uptime: Duration(seconds: toInt(s['uptimeSeconds'])),
       );
     } catch (e) {
+      if (!alive) return;
       final ex = ApiException.from(e);
       yield ServerInfo(host: host, reachable: ex.status != null);
     }
-    await Future.delayed(const Duration(seconds: 30));
+    await Future.delayed(const Duration(seconds: 15));
   }
 });
 

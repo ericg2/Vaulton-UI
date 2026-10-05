@@ -63,7 +63,7 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient(this.session) {
     dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 20),
+      connectTimeout: const Duration(seconds: 8),
       headers: {'Accept': 'application/json'},
     ));
     dio.interceptors.add(InterceptorsWrapper(onRequest: _onRequest, onError: _onError));
@@ -123,7 +123,7 @@ class ApiClient {
     final rt = session.refreshToken;
     if (rt == null) return false;
     try {
-      final r = await Dio(BaseOptions(baseUrl: session.baseUrl, connectTimeout: const Duration(seconds: 20)))
+      final r = await Dio(BaseOptions(baseUrl: session.baseUrl, connectTimeout: const Duration(seconds: 8)))
           .post('/auth/refresh', data: {'refreshToken': rt});
       await session.setTokens(AuthTokens.fromJson(Map<String, dynamic>.from(r.data)));
       return true;

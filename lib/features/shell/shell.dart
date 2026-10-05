@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
+import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
 import '../admin/admin_page.dart';
 import '../backups/jobs_page.dart';
@@ -36,6 +39,7 @@ class HomeShell extends ConsumerStatefulWidget {
 
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
+  int _storageTab = 0;
   final _visited = <int>{0};
   late final AppLifecycleListener _life;
   Timer? _folderTimer;
@@ -90,6 +94,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _goto(String label, List<_Dest> dests, bool wide) {
+    if (label == 'Data Points' || label == 'Repositories') {
+      _storageTab = label == 'Data Points' ? 1 : 2;
+      final storage = dests.indexWhere((d) => d.label == 'Storage');
+      if (storage >= 0) {
+        setState(() {
+          _index = storage;
+          _visited.add(storage);
+        });
+      }
+      return;
+    }
     final i = dests.indexWhere((d) => d.label == label);
     if (i < 0) return;
     if (wide || i < 4) {
@@ -106,7 +121,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _Dest('Dashboard', Icons.dashboard_outlined, Icons.dashboard, () => DashboardPage(onNavigate: (l) => _goto(l, _dests(ref.read(userProvider)!, wide), wide))),
         _Dest('Files', Icons.folder_outlined, Icons.folder, () => const FilesPage()),
         _Dest('Transfers', Icons.swap_vert, Icons.swap_vert, () => const TransfersPage()),
-        _Dest('Storage', Icons.storage_outlined, Icons.storage, () => const StoragePage()),
+        _Dest('Storage', Icons.storage_outlined, Icons.storage, () => StoragePage(key: ValueKey(_storageTab), initialTab: _storageTab)),
         if (u.has(Scopes.jobsManage)) _Dest('Recent Jobs', Icons.history_outlined, Icons.history, () => const BackupsPage()),
         _Dest('Sync', Icons.cloud_sync_outlined, Icons.cloud_sync, () => const SyncPage()),
         _Dest('Messages', Icons.mail_outline, Icons.mail, () => const MessagesPage()),
@@ -119,6 +134,25 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (d.label == 'Messages' && unread > 0) return Badge(label: Text('$unread'), child: base);
     if (d.label == 'Transfers' && active > 0) return Badge(label: Text('$active'), child: base);
     return base;
+  }
+
+  Widget _withAndroidBack(Widget child) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return child;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_index != 0) {
+          setState(() {
+            _index = 0;
+            _visited.add(0);
+          });
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: child,
+    );
   }
 
   @override
@@ -135,7 +169,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     Widget body(int i) => _visited.contains(i) ? dests[i].build() : const SizedBox.shrink();
 
     if (wide) {
-      return Scaffold(
+      return _withAndroidBack(Scaffold(
         body: Row(children: [
           NavigationRail(
             extended: extended,
@@ -168,17 +202,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 ),
             ],
           ),
-          Expanded(child: IndexedStack(index: _index, children: [for (var i = 0; i < dests.length; i++) body(i)])),
+          Expanded(child: _FadeIndexed(index: _index, children: [for (var i = 0; i < dests.length; i++) body(i)])),
         ]),
-      );
+      ));
     }
 
     // Phones: 4 primary tabs + "More" which lists the rest.
     final primary = dests.take(4).toList();
     final rest = dests.skip(4).toList();
     final onMore = _index == 4;
-    return Scaffold(
-      body: IndexedStack(index: _index, children: [
+    return _withAndroidBack(Scaffold(
+      body: _FadeIndexed(index: _index, children: [
         for (var i = 0; i < 4; i++) body(i),
         _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref)),
       ]),
@@ -194,8 +228,41 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           NavigationDestination(icon: Icon(onMore ? Icons.apps : Icons.apps_outlined), label: 'More'),
         ],
       ),
-    );
+    ));
   }
+}
+
+/// IndexedStack that keeps every visited tab alive (scroll position, loaded data)
+/// but fades the newly selected one in, so switching tabs is smooth, not a hard cut.
+class _FadeIndexed extends StatefulWidget {
+  const _FadeIndexed({required this.index, required this.children});
+  final int index;
+  final List<Widget> children;
+  @override
+  State<_FadeIndexed> createState() => _FadeIndexedState();
+}
+
+class _FadeIndexedState extends State<_FadeIndexed> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
+  late final Animation<double> _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
+
+  @override
+  void didUpdateWidget(covariant _FadeIndexed old) {
+    super.didUpdateWidget(old);
+    if (old.index != widget.index) _c.forward(from: 0.0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(_fade),
+        child: IndexedStack(index: widget.index, children: widget.children),
+      );
 }
 
 class _MorePage extends StatelessWidget {
@@ -206,6 +273,7 @@ class _MorePage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('More')),
         body: ListView(children: [
+          const HintBanner(id: 'more_tab', text: 'Everything else lives here: sync, messages, settings and (if you have access) admin tools.'),
           for (final d in items)
             ListTile(
               leading: Icon(d.icon),

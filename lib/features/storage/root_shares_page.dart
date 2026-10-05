@@ -50,6 +50,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
   TextEditingController? _fieldCtl; // controller of the dropdown's text field
   List<ShareUser>? _directory;
   bool _loading = true, _saving = false;
+  int _pointAllocated = 0;
   Object? _error;
   String _initial = '';
   int _pickerEpoch = 0;
@@ -79,6 +80,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
   String _snapshot() => ([for (final r in _rows) '${normUser(r.userName)}|${r.bytes}']..sort()).join(';');
   bool get _dirty => !_loading && _error == null && _snapshot() != _initial;
   int get _allocated => _rows.fold(0, (sum, r) => sum + r.bytes);
+  int get _shareCapacity => _root.maxBytes > 0 ? (_root.maxBytes - _pointAllocated).clamp(0, _root.maxBytes).toInt() : 0;
 
   Future<void> _load() async {
     setState(() {
@@ -86,14 +88,17 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
       _error = null;
     });
     try {
-      final shares = await _v.shares(_root.id);
-      final dir = await _loadDirectory();
+      final results = await Future.wait([_v.shares(_root.id), _loadDirectory(), _loadPointAllocation()]);
+      final shares = results[0] as List<Json>;
+      final dir = results[1] as List<ShareUser>;
+      final pointAllocated = results[2] as int;
       if (!mounted) return;
       setState(() {
         _rows
           ..clear()
           ..addAll([for (final s in shares) _ShareRow('${s['userName']}', toInt(s['maxBytes']))]);
         _directory = dir;
+        _pointAllocated = pointAllocated;
         _initial = _snapshot();
         _loading = false;
       });
@@ -105,6 +110,21 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
         });
       }
     }
+  }
+
+  Future<int> _loadPointAllocation() async {
+    var total = 0;
+    for (final fetch in <Future<Paged<Point>> Function(String?)>[(cursor) => _v.datas(cursor: cursor, limit: 200), (cursor) => _v.repos(cursor: cursor, limit: 200)]) {
+      String? cursor;
+      do {
+        final page = await fetch(cursor);
+        for (final p in page.items.where((x) => x.rootId == _root.id)) {
+          total += p.maxBytes;
+        }
+        cursor = page.hasMore ? page.nextCursor : null;
+      } while (cursor != null);
+    }
+    return total;
   }
 
   Future<List<ShareUser>> _loadDirectory() async {
@@ -163,7 +183,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
   }
 
   Future<void> _save() async {
-    if (_rows.any((r) => r.overInvalid || r.overLimit(_root.maxBytes))) {
+    if (_rows.any((r) => r.overInvalid || r.overLimit(_shareCapacity))) {
       return toast(context, 'Fix the highlighted quotas first', error: true);
     }
     final payload = buildSharePayload([for (final r in _rows) (userName: r.userName, maxBytes: r.bytes)]);
@@ -215,7 +235,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     final dir = _directory;
     final avail = dir == null ? const <ShareUser>[] : availableUsers(all: dir, taken: _rows.map((r) => r.userName), exclude: _excluded);
     final allocated = _allocated;
-    final over = overAllocated(_root.maxBytes, allocated);
+    final over = overAllocated(_shareCapacity, allocated);
     final note = theme.textTheme.bodySmall?.copyWith(color: cs.outline);
 
     return ListView(
@@ -227,16 +247,24 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Quota Allocation', style: theme.textTheme.titleSmall),
               const SizedBox(height: 8),
-              UsageBar(used: allocated, max: _root.maxBytes),
+              UsageBar(used: _pointAllocated + allocated, max: _root.maxBytes),
               const SizedBox(height: 6),
               Text(
-                _root.maxBytes > 0 ? '${fmtBytes(allocated)} allocated of ${fmtBytes(_root.maxBytes)}' : '${fmtBytes(allocated)} allocated',
+                _root.maxBytes > 0 ? '${fmtBytes(_pointAllocated + allocated)} allocated of ${fmtBytes(_root.maxBytes)}' : '${fmtBytes(_pointAllocated + allocated)} allocated',
                 style: theme.textTheme.bodySmall,
               ),
+              if (_pointAllocated > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    '${fmtBytes(_pointAllocated)} is already allocated to existing data points/repositories, leaving ${fmtBytes(_shareCapacity)} available for sharing.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
+                  ),
+                ),
               if (over)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text('The quotas add up to more than this root’s capacity.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
+                  child: Text('The shared quotas exceed the capacity remaining after existing point allocations.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
                 ),
             ]),
           ),
@@ -246,7 +274,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Text(
             avail.isEmpty
-                ? 'Everyone else already has access.'
+                ? 'There are no additional users available to add.'
                 : 'Pick a person, then set how much of the root they may use.',
             style: note,
           ),
@@ -304,7 +332,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 focusNode: r.focus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: 'Quota', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_root.maxBytes) ? 'Over root capacity' : null)),
+                decoration: InputDecoration(labelText: 'Quota', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
                 onChanged: (_) => setState(() {}),
               )),
               const SizedBox(width: 6),

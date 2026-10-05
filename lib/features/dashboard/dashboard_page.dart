@@ -33,7 +33,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   _Data? _data;
   Object? _error;
   Timer? _t;
-  bool _busy = false;
+  bool _busy = false, _wasVisible = true, _dirty = false;
 
   bool get _canJobs => ref.read(userProvider)?.has(Scopes.jobsManage) ?? false;
 
@@ -47,14 +47,29 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The dashboard sits under other pages (Files, Jobs...) and in a tab stack.
+    // When it becomes visible again, reload right away so usage is never stale
+    // after an upload, delete or backup done elsewhere.
+    final visible = TickerMode.of(context);
+    if (visible && !_wasVisible) _load();
+    _wasVisible = visible;
+  }
+
+  @override
   void dispose() {
     _t?.cancel();
     super.dispose();
   }
 
   Future<void> _load() async {
-    if (_busy) return;
+    if (_busy) {
+      _dirty = true; // something changed mid-request: reload once more when it finishes
+      return;
+    }
     _busy = true;
+    _dirty = false;
     final v = ref.read(vaultonProvider);
     try {
       final r = await Future.wait([
@@ -71,6 +86,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       if (mounted && _data == null) setState(() => _error = e);
     } finally {
       _busy = false;
+      if (_dirty && mounted) {
+        _dirty = false;
+        _load();
+      }
     }
   }
 
@@ -86,9 +105,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
     Widget body;
     if (_error != null && d == null) {
-      body = ErrorView(_error!, onRetry: _load);
+      body = KeyedSubtree(key: const ValueKey('err'), child: ErrorView(_error!, onRetry: _load));
     } else if (d == null) {
-      body = const Center(child: CircularProgressIndicator());
+      body = const Center(key: ValueKey('load'), child: CircularProgressIndicator());
     } else {
       final failedPoints = [...d.datas, ...d.repos].where((p) => p.isError).length;
       final running = d.jobs.where((j) => j.phase == JobPhase.running).toList();
@@ -100,42 +119,80 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final cap = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.maxBytes);
 
       final stats = [
-        _Stat(Icons.folder_outlined, '${d.datas.length}', 'Data Points', () => widget.onNavigate?.call('Storage')),
-        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', 'Repositories', () => widget.onNavigate?.call('Storage')),
+        _Stat(Icons.folder_outlined, '${d.datas.length}', 'Data Points', () => widget.onNavigate?.call('Data Points')),
+        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', 'Repositories', () => widget.onNavigate?.call('Repositories')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Recent Jobs'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Recent Jobs'), bad: failed > 0),
       ];
 
       body = RefreshIndicator(
+        key: const ValueKey('data'),
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             if (MediaQuery.sizeOf(context).width < 800)
-              Card(margin: const EdgeInsets.only(bottom: 12), child: const Align(alignment: Alignment.centerLeft, child: ServerBadge())),
-            Text('$greet, ${u.displayName}', style: t.headlineSmall),
-            const SizedBox(height: 2),
-            Text(
-              failedPoints > 0
-                  ? '$failedPoints storage point${failedPoints == 1 ? ' needs' : 's need'} attention'
-                  : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours' : 'Everything looks healthy'),
-              style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
+              FadeSlideIn(key: const ValueKey('badge'), child: Card(margin: const EdgeInsets.only(bottom: 12), child: const Align(alignment: Alignment.centerLeft, child: ServerBadge()))),
+            FadeSlideIn(
+              key: const ValueKey('greet'),
+              delay: const Duration(milliseconds: 60),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('$greet, ${u.displayName}', style: t.headlineSmall),
+                const SizedBox(height: 2),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Row(key: ValueKey(failedPoints > 0 || failed > 0), children: [
+                    Icon((failedPoints > 0 || failed > 0) ? Icons.warning_amber_rounded : Icons.check_circle_outline, size: 16, color: (failedPoints > 0 || failed > 0) ? cs.error : cs.primary),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        failedPoints > 0
+                            ? '$failedPoints storage point${failedPoints == 1 ? ' needs' : 's need'} attention. Open Storage to see details.'
+                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours. Tap Failed to review.' : 'Everything looks healthy'),
+                        style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
             ),
             const SizedBox(height: 16),
-            LayoutBuilder(builder: (ctx, c) {
+            LayoutBuilder(key: const ValueKey('stats'), builder: (ctx, c) {
               final cols = c.maxWidth > 700 ? stats.length : 2;
               final w = (c.maxWidth - 12 * (cols - 1)) / cols;
-              return Wrap(spacing: 12, runSpacing: 12, children: [for (final s in stats) SizedBox(width: w, child: s)]);
+              return Wrap(spacing: 12, runSpacing: 12, children: [
+                for (var i = 0; i < stats.length; i++)
+                  FadeSlideIn(key: ValueKey('stat$i'), delay: Duration(milliseconds: 120 + 70 * i), child: SizedBox(width: w, child: stats[i])),
+              ]);
             }),
             const SizedBox(height: 16),
+            if (d.datas.isEmpty)
+              FadeSlideIn(
+                key: const ValueKey('firstrun'),
+                delay: const Duration(milliseconds: 300),
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  color: cs.tertiaryContainer,
+                  child: ListTile(
+                    leading: Icon(Icons.rocket_launch_outlined, color: cs.onTertiaryContainer),
+                    title: Text('Get Started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Create a data point under Storage first. It is the place your files are kept.', style: TextStyle(color: cs.onTertiaryContainer)),
+                    trailing: Icon(Icons.chevron_right, color: cs.onTertiaryContainer),
+                    onTap: () => widget.onNavigate?.call('Data Points'),
+                  ),
+                ),
+              ),
             Section('Quick Actions', children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup), label: const Text('Backup Now')),
                   FilledButton.tonalIcon(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FilesPage())),
+                    onPressed: () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (_) => const FilesPage()));
+                      if (mounted) _load(); // usage may have changed while you were in Files
+                    },
                     icon: const Icon(Icons.upload_file),
                     label: const Text('Upload Files'),
                   ),
@@ -155,6 +212,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         UsageBar(used: used, max: cap),
                         const SizedBox(height: 8),
                         Text('${fmtBytes(used)} used of ${fmtBytes(cap)} allocated', style: t.bodySmall),
+                        const SizedBox(height: 2),
+                        Text('Total across all data points and repositories you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         if (lastOk != null) ...[
                           const SizedBox(height: 4),
                           Text('Last successful backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
@@ -193,7 +252,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       appBar: AppBar(title: const Text('Dashboard'), actions: [
         IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _load),
       ]),
-      body: Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 980), child: body)),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 980),
+          child: AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: body),
+        ),
+      ),
     );
   }
 }
@@ -222,7 +287,18 @@ class _Stat extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: fg)),
+                // Numbers count up when they first appear and whenever they change.
+                Builder(builder: (_) {
+                  final n = int.tryParse(value);
+                  final style = Theme.of(context).textTheme.headlineSmall?.copyWith(color: fg);
+                  if (n == null) return Text(value, style: style);
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: n.toDouble()),
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, v, _) => Text('${v.round()}', style: style),
+                  );
+                }),
                 Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg)),
               ]),
             ),

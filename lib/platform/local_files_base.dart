@@ -23,6 +23,11 @@ abstract class LocalFilesApi {
   Future<bool> isDirectory(String path);
   Future<List<LocalEntry>> listRecursive(String dir);
   Future<String> downloadsDir();
-  Future<void> open(String path);
+  /// Reveals [path] in the OS file manager (selecting the file where supported).
+  /// Returns false when the platform cannot do that, so the UI can show the path instead.
+  Future<bool> openContainingFolder(String path);
+
+  /// Opens the file with the default app. Returns false when nothing could open it.
+  Future<bool> open(String path);
   Future<void> saveBytes(String name, Uint8List bytes);
 }

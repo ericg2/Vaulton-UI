@@ -16,10 +16,12 @@ import 'root_shares_page.dart';
 import 'share_logic.dart';
 
 class StoragePage extends StatelessWidget {
-  const StoragePage({super.key});
+  const StoragePage({super.key, this.initialTab = 0});
+  final int initialTab;
   @override
   Widget build(BuildContext context) => DefaultTabController(
         length: 3,
+        initialIndex: initialTab.clamp(0, 2).toInt(),
         child: Scaffold(
           appBar: AppBar(title: const Text('Storage'), bottom: const TabBar(tabs: [
             Tab(text: 'Roots'),
@@ -127,6 +129,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(epochProvider, (_, _) => _key.currentState?.silentRefresh(force: true));
     final u = ref.watch(userProvider)!;
     final canCreate = u.has(Scopes.rootsManage);
     return Scaffold(
@@ -134,6 +137,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
       body: CursorList<Root>(
         key: _key,
         empty: 'No Storage Roots',
+        emptyHint: canCreate ? 'A root is a storage location (disk, share or cloud). Tap New Root to connect one.' : 'Ask an administrator to share a storage root with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
         fetch: (c) => _v.roots(cursor: c),
@@ -260,11 +264,17 @@ class _PointsTabState extends ConsumerState<PointsTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Upload / delete / move finished somewhere else: refresh usage numbers in place.
+    ref.listen(epochProvider, (_, _) {
+      _key.currentState?.silentRefresh(force: true);
+      _loadRoots();
+    });
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New $_noun')),
       body: CursorList<Point>(
         key: _key,
         empty: 'No ${widget.repo ? 'Repositories' : 'Data Points'} Yet',
+        emptyHint: widget.repo ? 'A repository stores backups. Tap New Repository to create one.' : 'A data point is a folder with a quota where your files live. Tap New Data Point to create one.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
@@ -313,8 +323,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(p.name, style: Theme.of(ctx).textTheme.titleMedium),
               Text(
-                'Root: ${_roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ?? (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId)}',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.outline),
+                'Root: ${_roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ??
+    (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId)}',                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.outline),
               ),
             ])),
             PopupMenuButton<String>(

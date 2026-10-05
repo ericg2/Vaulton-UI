@@ -19,6 +19,7 @@ class TransferTask {
     this.overwrite = false,
     this.attempts = 0,
     DateTime? createdAt,
+    this.completedAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
   final String id;
@@ -28,6 +29,7 @@ class TransferTask {
   final String? snapshotId;
   final String? localPath;
   final DateTime createdAt;
+  DateTime? completedAt;
   int total, done, attempts;
   TState state;
   String? error;
@@ -39,7 +41,7 @@ class TransferTask {
   Map<String, dynamic> toJson() => {
         'id': id, 'kind': kind.name, 'pointId': pointId, 'remotePath': remotePath, 'name': name,
         'localPath': localPath, 'total': total, 'done': done, 'state': state.name, 'error': error,
-        'origin': origin, 'snapshotId': snapshotId, 'overwrite': overwrite, 'attempts': attempts, 'createdAt': createdAt.toIso8601String(),
+        'origin': origin, 'snapshotId': snapshotId, 'overwrite': overwrite, 'attempts': attempts, 'createdAt': createdAt.toIso8601String(), 'completedAt': completedAt?.toIso8601String(),
       };
 
   factory TransferTask.fromJson(Map<String, dynamic> j) => TransferTask(
@@ -58,5 +60,6 @@ class TransferTask {
         overwrite: j['overwrite'] ?? false,
         attempts: j['attempts'] ?? 0,
         createdAt: DateTime.tryParse(j['createdAt'] ?? ''),
+        completedAt: DateTime.tryParse(j['completedAt'] ?? ''),
       );
 }

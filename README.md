@@ -45,7 +45,7 @@ To pick up newer package releases later: `flutter pub upgrade --major-versions`.
 |---|---|
 | Auth | Sign-in with server URL + recent-accounts list, temporary-password flow (`newPassword`), single-use refresh-token rotation (shared across isolates), tokens in Keychain/Keystore/libsecret |
 | Files | Browse/search/sort, breadcrumbs, multi-select, bulk download (folders are expanded recursively), bulk move/copy (between data points, with job polling), recursive delete, rename, new folder, previews (images/text), drag-and-drop upload (desktop/web), folder upload (desktop) |
-| Transfers | Persistent queue, parallel transfers, resumable downloads (HTTP Range), auto-retry with back-off, overwrite prompt on 409, per-item cancel/retry |
+| Transfers | Uploads appear as rows in the file list with their own progress ring; downloads open a bottom sheet (progress, Open, Show in Folder). Persistent queue, parallel transfers, resumable downloads (HTTP Range), auto-retry with back-off, overwrite prompt on 409, per-item cancel/retry |
 | Background (Android) | If you leave the app with transfers running they are handed to a WorkManager worker and keep going with the app closed; the UI re-attaches when you return |
 | Photo backup (Android) | Google-Photos-style: periodic WorkManager job, album selection, year/month folders, Wi‑Fi / charging constraints, dedupe by HEAD + size, resumable, "back up now" |
 | Folder sync (desktop) | One-way mirror of local folders into a data point on a schedule while the app is open/minimised; closing with active transfers offers "minimise" |

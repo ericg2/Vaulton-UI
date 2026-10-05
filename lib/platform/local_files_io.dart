@@ -75,8 +75,50 @@ class _IoFiles implements LocalFilesApi {
   }
 
   @override
-  Future<void> open(String path) async {
-    await OpenFilex.open(path);
+  Future<bool> open(String path) async {
+    try {
+      if (!await File(path).exists()) return false;
+      final r = await OpenFilex.open(path);
+      return r.type == ResultType.done;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> openContainingFolder(String path) async {
+    try {
+      final file = File(path);
+      final dir = p.dirname(path);
+      final fileExists = await file.exists();
+      if (!fileExists && !await Directory(dir).exists()) return false;
+
+      if (Platform.isWindows) {
+        // Explorer returns exit code 1 even on success, so the code is ignored.
+        // OpenFilex cannot open directories on Windows, which is why this used to do nothing.
+        if (fileExists) {
+          await Process.run('explorer.exe', ['/select,', p.windows.normalize(path)]);
+        } else {
+          await Process.run('explorer.exe', [p.windows.normalize(dir)]);
+        }
+        return true;
+      }
+      if (Platform.isMacOS) {
+        final r = await Process.run('open', fileExists ? ['-R', path] : [dir]);
+        return r.exitCode == 0;
+      }
+      if (Platform.isLinux) {
+        final r = await Process.run('xdg-open', [dir]);
+        return r.exitCode == 0;
+      }
+      // Android / iOS: ask a file manager to show the folder. Downloads live in
+      // app-specific storage, which many file managers cannot browse; the caller
+      // falls back to showing the path in that case.
+      final r = await OpenFilex.open(dir, type: 'resource/folder');
+      return r.type == ResultType.done;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override

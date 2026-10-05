@@ -85,6 +85,7 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
         await engine.download(t, onProgress: prog);
       }
       t.state = TState.done;
+      t.completedAt = DateTime.now();
       if (t.total > 0) t.done = t.total;
     } on ApiException catch (e) {
       final retry = (e.status == null || e.status! >= 500) && ++t.attempts < 4;

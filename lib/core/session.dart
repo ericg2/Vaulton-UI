@@ -71,6 +71,17 @@ class SessionStore {
     await _st.write(key: 'exp', value: '${t.expiresAt.millisecondsSinceEpoch}');
   }
 
+  String _credentialKey(String url, String user) => 'savedPw:${Uri.encodeComponent(normalizeUrl(url))}:${Uri.encodeComponent(user.trim().toLowerCase())}';
+
+  Future<void> savePassword(String url, String user, String password) =>
+      _st.write(key: _credentialKey(url, user), value: password);
+
+  Future<String?> savedPassword(String url, String user) =>
+      _st.read(key: _credentialKey(url, user));
+
+  Future<void> deleteSavedPassword(String url, String user) =>
+      _st.delete(key: _credentialKey(url, user));
+
   Future<void> clear() async {
     accessToken = null;
     refreshToken = null;

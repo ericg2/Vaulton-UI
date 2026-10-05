@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers.dart';
 import 'core/theme.dart';
 import 'features/auth/login_page.dart';
+import 'features/auth/splash_page.dart';
 import 'features/shell/shell.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -30,15 +31,28 @@ class VaultonApp extends ConsumerWidget {
   }
 }
 
+/// Chooses between splash / login / home and cross-fades between them so
+/// screen changes never pop. Only the status is watched, so token refreshes or
+/// profile updates do not rebuild the gate.
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
-    return switch (auth.status) {
-      AuthStatus.loading => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      AuthStatus.signedOut => const LoginPage(),
-      AuthStatus.signedIn => const HomeShell(),
+    final status = ref.watch(authProvider.select((a) => a.status));
+    final Widget child = switch (status) {
+      AuthStatus.loading => const SplashPage(key: ValueKey('splash')),
+      AuthStatus.signedOut => const LoginPage(key: ValueKey('login')),
+      AuthStatus.signedIn => const HomeShell(key: ValueKey('home')),
     };
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 450),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (c, a) => FadeTransition(
+        opacity: a,
+        child: ScaleTransition(scale: Tween<double>(begin: 0.98, end: 1).animate(a), child: c),
+      ),
+      child: child,
+    );
   }
 }

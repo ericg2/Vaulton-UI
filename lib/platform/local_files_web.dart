@@ -24,7 +24,9 @@ class _WebFiles implements LocalFilesApi {
   @override
   Future<String> downloadsDir() async => '';
   @override
-  Future<void> open(String path) async {}
+  Future<bool> open(String path) async => false;
+  @override
+  Future<bool> openContainingFolder(String path) async => false;
 
   @override
   Future<void> saveBytes(String name, Uint8List bytes) async {

@@ -8,12 +8,14 @@ import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
-import '../../platform/local_files.dart';
 import '../../platform/desktop_window.dart';
 import '../files/files_page.dart' show iconFor;
 import '../files/folder_picker.dart';
+import '../files/download_location.dart';
 import '../files/preview_page.dart';
+import '../transfers/download_sheet.dart';
 import '../transfers/transfer_manager.dart';
+import '../transfers/transfers_page.dart';
 import 'job_detail_page.dart';
 import 'job_widgets.dart';
 
@@ -148,13 +150,13 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
               icon: const Icon(Icons.arrow_upward),
             ),
             Expanded(child: Text(_path, overflow: TextOverflow.ellipsis)),
-FilledButton.tonal(
-  onPressed: () => Navigator.pop(
-    context,
-    [(path: _path, isDir: true, name: _path == '/' ? 'snapshot' : baseName(_path))],
-  ),
-  child: const Text('Select Folder'),
-),
+            FilledButton.tonal(
+              onPressed: () => Navigator.pop(
+                context,
+                [(path: _path, isDir: true, name: _path == '/' ? 'snapshot' : baseName(_path))],
+              ),
+              child: const Text('Select Folder'),
+            ),          
           ]),
           const Divider(height: 1),
           Expanded(
@@ -288,10 +290,11 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
   Future<void> _download(List<Node> nodes) async {
     final snap = _snap!;
     try {
-      final root = localFiles.supportsFilesystem ? (ref.read(settingsProvider).downloadDir ?? await localFiles.downloadsDir()) : '';
+      final root = await chooseDownloadBase(context, ref);
+      if (root == null || !mounted) return;
       final stamp = snap.time == null ? shortId(snap.id) : DateFormat('yyyy-MM-dd_HHmm').format(snap.time!);
       final base = p.join(root, widget.repo.name, stamp, p.joinAll(_trail.map((t) => t.name)));
-      var count = 0;
+      final ids = <String>[];
 
       void enqueue(String path, String rel, int size) {
         final t = _mgr.addDownload(
@@ -302,7 +305,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
           localPath: p.join(base, p.joinAll(rel.split('/'))),
           size: size,
         );
-        if (t != null) count++;
+        if (t != null) ids.add(t.id);
       }
 
       Future<void> walk(String dirPath, String rel) async {
@@ -331,7 +334,12 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
       }
       if (!mounted) return;
       setState(_sel.clear);
-      toast(context, count == 0 ? 'Nothing to download' : 'Queued $count download${count == 1 ? '' : 's'}${localFiles.supportsFilesystem ? ' → $root' : ''}');
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (ids.isEmpty) {
+        toast(context, 'Nothing new to download. These files are already queued.');
+      } else {
+        showDownloadSheet(context, ids, onOpenTransfers: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransfersPage())));
+      }
     } catch (e) {
       if (mounted) toastError(context, e);
     }

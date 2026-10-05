@@ -26,7 +26,7 @@ class RepoPage extends ConsumerStatefulWidget {
 
 class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderStateMixin {
   final _key = GlobalKey<CursorListState<Snapshot>>();
-  late final TabController _tc = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.clamp(0, 2));
+  late final TabController _tc = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.clamp(0, 2).toInt());
   Point? _repo;
   Timer? _usageTimer;
   Vaulton get _v => ref.read(vaultonProvider);

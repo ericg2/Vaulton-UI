@@ -25,9 +25,12 @@ String fmtShort(DateTime? d) {
 }
 
 String fmtDuration(Duration d) {
-  if (d.inSeconds < 60) return '${d.inSeconds}s';
-  if (d.inMinutes < 60) return '${d.inMinutes}m ${d.inSeconds % 60}s';
-  return '${d.inHours}h ${d.inMinutes % 60}m';
+  final days = d.inDays;
+  final hours = d.inHours % 24;
+  final minutes = d.inMinutes % 60;
+  if (days > 0) return '${days}d ${hours.toString().padLeft(2, '0')}h ${minutes.toString().padLeft(2, '0')}m';
+  if (d.inHours > 0) return '${d.inHours}h ${minutes.toString().padLeft(2, '0')}m';
+  return '${minutes}m';
 }
 
 String pretty(String camel) {
@@ -52,15 +55,26 @@ String baseName(String p) {
   return i < 0 ? p : p.substring(i + 1);
 }
 
+/// Compact, auto-dismissing message. Errors get an icon and a short timeout
+/// instead of a tall block; long messages are clamped to three lines.
 void toast(BuildContext c, String m, {bool error = false}) {
   final cs = Theme.of(c).colorScheme;
+  final wide = MediaQuery.sizeOf(c).width > 640;
+  final fg = error ? cs.onErrorContainer : cs.onInverseSurface;
   ScaffoldMessenger.of(c)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: Text(m, style: error ? TextStyle(color: cs.onErrorContainer) : null),
+      content: Row(children: [
+        if (error) ...[Icon(Icons.error_outline, size: 18, color: fg), const SizedBox(width: 10)],
+        Expanded(child: Text(m, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: fg))),
+      ]),
       backgroundColor: error ? cs.errorContainer : null,
       behavior: SnackBarBehavior.floating,
-      width: MediaQuery.sizeOf(c).width > 640 ? 520 : null,
+      duration: Duration(seconds: error ? 4 : 2),
+      dismissDirection: DismissDirection.down,
+      margin: wide ? null : const EdgeInsets.fromLTRB(12, 0, 12, 80),
+      width: wide ? 420 : null,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     ));
 }
 

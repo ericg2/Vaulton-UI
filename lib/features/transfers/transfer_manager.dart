@@ -59,6 +59,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
       _hb?.cancel();
       _watch?.cancel();
       _handoffTimer?.cancel();
+      _epochTimer?.cancel();
     });
     Future.microtask(_pump);
     return List.of(_tasks);
@@ -130,6 +131,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
     if (t == null || t.active) return;
     t.state = TState.queued;
     t.error = null;
+    t.completedAt = null;
     t.attempts = 0;
     if (overwrite) t.overwrite = true;
     if (t.kind == TKind.upload) t.done = 0;
@@ -188,8 +190,10 @@ class TransferManager extends Notifier<List<TransferTask>> {
         await _engine.download(t, onProgress: prog, cancel: token);
       }
       t.state = TState.done;
+      t.completedAt = DateTime.now();
       if (t.total > 0) t.done = t.total;
       _webBytes.remove(t.id);
+      _scheduleEpochBump();
     } on ApiException catch (e) {
       if (token.isCancelled) {
         t.state = _handedOff ? TState.queued : TState.canceled;
@@ -210,6 +214,18 @@ class TransferManager extends Notifier<List<TransferTask>> {
       _changed(persist: true);
       _pump();
     }
+  }
+
+  /// Tells dashboards / storage lists that server-side data changed. Debounced so
+  /// a batch of uploads finishing together triggers a single reload.
+  Timer? _epochTimer;
+  void _scheduleEpochBump() {
+    _epochTimer?.cancel();
+    _epochTimer = Timer(const Duration(milliseconds: 800), () {
+      try {
+        ref.read(epochProvider.notifier).bump();
+      } catch (_) {}
+    });
   }
 
   void _changed({bool persist = false}) {

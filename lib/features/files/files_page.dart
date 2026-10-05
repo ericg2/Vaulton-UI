@@ -13,10 +13,13 @@ import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
 import '../../platform/local_files.dart';
+import '../transfers/download_sheet.dart';
 import '../transfers/transfer_manager.dart';
 import '../transfers/transfer_models.dart';
+import '../transfers/transfers_page.dart';
 import 'file_ops.dart';
 import 'folder_picker.dart';
+import 'download_location.dart';
 import 'preview_page.dart';
 
 IconData iconFor(Node n) {
@@ -71,12 +74,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   void initState() {
     super.initState();
     _initPoints();
-    // Reload the listing when an upload / move finishes, and quietly every 20s.
-    _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted && TickerMode.of(context) && _point != null) {
-        _listKey.currentState?.refresh();
-        _refreshUsage();
-      }
+    // Quietly re-sync the listing and usage in the background. This never clears
+    // the list or shows a spinner, so there is no flicker while you browse.
+    _autoTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted && TickerMode.of(context) && _point != null) _silent();
     });
   }
 
@@ -118,6 +119,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     _refreshUsage();
   }
 
+  /// Refresh without clearing the list (used after uploads and by the poller).
+  void _silent() {
+    _listKey.currentState?.silentRefresh(force: true);
+    _refreshUsage();
+  }
+
   Future<void> _refreshUsage() async {
     final pt = _point;
     if (pt == null) return;
@@ -148,27 +155,31 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Future<void> _download(List<Node> nodes) async {
     final pt = _point!;
     try {
-      final root = localFiles.supportsFilesystem
-          ? (ref.read(settingsProvider).downloadDir ?? await localFiles.downloadsDir())
-          : '';
+      final root = await chooseDownloadBase(context, ref);
+      if (root == null || !mounted) return;
       final base = p.join(root, pt.name, p.joinAll(_segs));
-      var count = 0;
+      final ids = <String>[];
       for (final n in nodes) {
         if (!n.isDir) {
-          _mgr.addDownload(pointId: pt.id, remotePath: joinPath(_path, n.name), name: n.name, localPath: p.join(base, n.name), size: n.bytes);
-          count++;
+          final t = _mgr.addDownload(pointId: pt.id, remotePath: joinPath(_path, n.name), name: n.name, localPath: p.join(base, n.name), size: n.bytes);
+          if (t != null) ids.add(t.id);
         } else {
           if (mounted) toast(context, 'Reading folder “${n.name}”…');
           final files = await collectFiles(_v, pt.id, joinPath(_path, n.name), n.name);
           for (final f in files) {
-            _mgr.addDownload(pointId: pt.id, remotePath: f.path, name: baseName(f.path), localPath: p.join(base, p.joinAll(f.relative.split('/'))), size: f.size);
-            count++;
+            final t = _mgr.addDownload(pointId: pt.id, remotePath: f.path, name: baseName(f.path), localPath: p.join(base, p.joinAll(f.relative.split('/'))), size: f.size);
+            if (t != null) ids.add(t.id);
           }
         }
       }
       if (!mounted) return;
       setState(_sel.clear);
-      toast(context, count == 0 ? 'Nothing to download' : 'Queued $count download${count == 1 ? '' : 's'}${localFiles.supportsFilesystem ? ' → $root' : ''}');
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (ids.isEmpty) {
+        toast(context, 'Nothing new to download. These files are already queued.');
+      } else {
+        showDownloadSheet(context, ids, onOpenTransfers: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransfersPage())));
+      }
     } catch (e) {
       if (mounted) toastError(context, e);
     }
@@ -177,21 +188,32 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Future<void> _pickFiles() async {
     final files = await FilePicker.pickFiles(); // empty list when cancelled
     if (files.isEmpty) return;
-    var n = 0;
+    var n = 0, dup = 0;
     for (final f in files) {
       final remote = joinPath(_path, f.name);
+      TransferTask? t;
       if (kIsWeb) {
         final bytes = await f.readAsBytes();
-        _mgr.addUpload(pointId: _point!.id, remotePath: remote, bytes: bytes, size: bytes.length);
+        t = _mgr.addUpload(pointId: _point!.id, remotePath: remote, bytes: bytes, size: bytes.length);
       } else if (f.path != null) {
         final size = f.lengthSync() ?? await f.length() ?? 0;
-        _mgr.addUpload(pointId: _point!.id, remotePath: remote, localPath: f.path, size: size);
+        t = _mgr.addUpload(pointId: _point!.id, remotePath: remote, localPath: f.path, size: size);
       } else {
         continue;
       }
-      n++;
+      if (t == null) {
+        dup++;
+      } else {
+        n++;
+      }
     }
-    if (mounted) toast(context, 'Queued $n upload${n == 1 ? '' : 's'}');
+    if (!mounted) return;
+    if (n == 0 && dup > 0) {
+      toast(context, 'Already uploading ${dup == 1 ? 'that file' : 'those files'}');
+    } else if (dup > 0) {
+      toast(context, 'Uploading $n file${n == 1 ? '' : 's'} ($dup already in progress)');
+    }
+    // Otherwise no toast: the files appear at the top of the list with their own progress.
   }
 
   Future<void> _pickFolder() async {
@@ -205,7 +227,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     for (final e in entries) {
       _mgr.addUpload(pointId: _point!.id, remotePath: joinPath(joinPath(_path, root), e.relative), localPath: e.path, size: e.size);
     }
-    if (mounted) toast(context, 'Queued ${entries.length} file${entries.length == 1 ? '' : 's'} from “$root”');
+    if (mounted && entries.isEmpty) toast(context, '“$root” has no files to upload');
   }
 
   Future<void> _newFolder() async {
@@ -243,6 +265,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       }
       if (err != null) break;
     }
+    ref.read(epochProvider.notifier).bump(); // usage may have changed (dashboard, storage)
     if (!mounted) return;
     setState(_sel.clear);
     _refresh();
@@ -281,6 +304,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     } catch (e) {
       err = ApiException.from(e).message;
     }
+    ref.read(epochProvider.notifier).bump();
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
     setState(_sel.clear);
@@ -341,19 +365,16 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     }
     final pt = _point!;
     final selecting = _sel.isNotEmpty;
-    // An upload to this data point just finished -> refresh the list automatically.
+    // An upload to this data point just finished -> refresh the list in place (no spinner).
     final doneUploads = ref.watch(transferProvider.select((l) => l.where((t) => t.kind == TKind.upload && t.state == TState.done && t.pointId == pt.id).length));
     if (_doneUploads >= 0 && doneUploads != _doneUploads) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _refresh();
-          ref.read(epochProvider.notifier).bump();
-        }
+        if (mounted) _silent();
       });
     }
     _doneUploads = doneUploads;
-    final ups = ref.watch(transferProvider).where((t) => t.kind == TKind.upload && t.pointId == pt.id && (t.active || t.createdAt.isAfter(_panelSince))).toList();
-    final upActive = ups.where((t) => t.active).length;
+    // Only the count is watched here, so progress ticks do not rebuild the whole page.
+    final upActive = ref.watch(transferProvider.select((l) => l.where((t) => t.kind == TKind.upload && t.pointId == pt.id && t.active).length));
 
     final appBar = selecting
         ? AppBar(
@@ -382,7 +403,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                       items: [for (final x in _points!) DropdownMenuItem(value: x.id, child: Text(x.name))],
                       onChanged: (id) {
                         ref.read(settingsProvider.notifier).setLastPoint(id!);
-                        setState(() => _point = _points!.firstWhere((x) => x.id == id)); _refresh();
+                        setState(() => _point = _points!.firstWhere((x) => x.id == id));
                         _go([]);
                       },
                     ),
@@ -427,7 +448,6 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           onDragExited: (_) => setState(() => _drag = false),
           onDragDone: (d) async {
             setState(() => _drag = false);
-            if (d.files.isNotEmpty) toast(context, 'Uploading ${d.files.length} item${d.files.length == 1 ? '' : 's'} to ${pt.name}…');
             for (final f in d.files) {
               if (kIsWeb) {
                 _mgr.addUpload(pointId: pt.id, remotePath: joinPath(_path, f.name), bytes: await f.readAsBytes(), size: await f.length());
@@ -441,12 +461,16 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           child: Stack(children: [
             Column(children: [
               _Breadcrumbs(point: pt, segs: _segs, onTap: (i) => _go(_segs.sublist(0, i))),
-              if (upActive > 0) const LinearProgressIndicator(minHeight: 3),
+              if (!kIsWeb && !isDesktop) const HintBanner(id: 'files_select', text: 'Long-press a file to select several. Tap ⋮ on a row for more actions.'),
               Expanded(
                 child: CursorList<Node>(
                   key: _listKey,
                   empty: _search.isEmpty ? 'This Folder Is Empty' : 'No Matches',
+                  emptyHint: _search.isEmpty
+                      ? (isDesktop || kIsWeb ? 'Tap Add to upload files or create a folder, or drag and drop files here.' : 'Tap Add to upload files or create a folder.')
+                      : 'Try a different word, or clear the search.',
                   emptyIcon: Icons.folder_open,
+                  header: _PendingUploads(pointId: pt.id, dir: _path, since: _panelSince, onDismiss: () => setState(() => _panelSince = DateTime.now())),
                   fetch: (c) => _v.list(pt.id, _path, search: _search, cursor: c, order: _desc ? 'Desc' : 'Asc'),
                   onChanged: (l) => _loaded = l,
                   itemBuilder: (c, n, i) {
@@ -493,12 +517,6 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 ),
               ),
             ]),
-            if (ups.isNotEmpty)
-              Positioned(
-                left: 16,
-                bottom: 16,
-                child: _UploadPanel(tasks: ups, onClose: () => setState(() => _panelSince = DateTime.now())),
-              ),
             if (_drag)
               Positioned.fill(
                 child: Container(
@@ -547,70 +565,130 @@ class _Breadcrumbs extends StatelessWidget {
   }
 }
 
-/// Floating upload status card: overall state plus per-file progress.
-class _UploadPanel extends StatelessWidget {
-  const _UploadPanel({required this.tasks, required this.onClose});
+/// Uploads shown as rows at the top of the file list, each with its own spinning
+/// progress ring, instead of a floating panel that covers the list. A folder
+/// upload is grouped into one row. Finished uploads disappear because the real
+/// file appears in the list; failed ones stay with Retry / Overwrite / Dismiss.
+class _PendingUploads extends ConsumerWidget {
+  const _PendingUploads({required this.pointId, required this.dir, required this.since, required this.onDismiss});
+  final String pointId, dir;
+  final DateTime since;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final all = ref.watch(transferProvider);
+    final prefix = dir == '/' ? '/' : '$dir/';
+    final groups = <String, List<TransferTask>>{};
+    for (final t in all) {
+      if (t.kind != TKind.upload || t.pointId != pointId || !t.remotePath.startsWith(prefix)) continue;
+      final show = t.active || (t.state == TState.failed && t.createdAt.isAfter(since));
+      if (!show) continue;
+      final rel = t.remotePath.substring(prefix.length);
+      final slash = rel.indexOf('/');
+      groups.putIfAbsent(slash < 0 ? rel : rel.substring(0, slash), () => []).add(t);
+    }
+    if (groups.isEmpty) return const SizedBox(width: double.infinity);
+    final mgr = ref.read(transferProvider.notifier);
+    final entries = groups.entries.toList();
+    return Column(children: [
+      for (final e in entries)
+        _PendingRow(
+          key: ValueKey('pending:${e.key}'),
+          name: e.key,
+          tasks: e.value,
+          isFolder: e.value.any((t) => t.remotePath.substring(prefix.length).contains('/')),
+          onCancel: () {
+            for (final t in e.value.where((t) => t.active)) {
+              mgr.cancel(t.id);
+            }
+          },
+          onRetry: ({bool overwrite = false}) {
+            for (final t in e.value.where((t) => t.state == TState.failed)) {
+              mgr.retry(t.id, overwrite: overwrite);
+            }
+          },
+          onDismiss: () {
+            for (final t in e.value.where((t) => !t.active)) {
+              mgr.remove(t.id);
+            }
+            onDismiss();
+          },
+        ),
+      const Divider(height: 1),
+    ]);
+  }
+}
+
+class _PendingRow extends StatelessWidget {
+  const _PendingRow({super.key, required this.name, required this.tasks, required this.isFolder, required this.onCancel, required this.onRetry, required this.onDismiss});
+  final String name;
   final List<TransferTask> tasks;
-  final VoidCallback onClose;
+  final bool isFolder;
+  final VoidCallback onCancel, onDismiss;
+  final void Function({bool overwrite}) onRetry;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
-    final active = tasks.where((x) => x.active).length;
-    final failed = tasks.where((x) => x.state == TState.failed).length;
-    final done = tasks.where((x) => x.state == TState.done).length;
-    final title = active > 0
-        ? 'Uploading ${done + 1 > tasks.length ? tasks.length : done + 1} of ${tasks.length}…'
-        : (failed > 0 ? '$failed Upload${failed == 1 ? '' : 's'} Failed' : 'Upload Complete');
-    // Active first, then failed, then done.
-    final sorted = [...tasks]..sort((a, b) => _rank(a).compareTo(_rank(b)));
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360, minWidth: 280),
-      child: Card(
-        elevation: 6,
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 4, 12),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              if (active > 0)
-                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5))
-              else
-                Icon(failed > 0 ? Icons.error_outline : Icons.check_circle, size: 20, color: failed > 0 ? cs.error : cs.primary),
-              const SizedBox(width: 10),
-              Expanded(child: Text(title, style: t.titleSmall)),
-              IconButton(tooltip: 'Dismiss', icon: const Icon(Icons.close, size: 18), onPressed: onClose),
-            ]),
-            for (final x in sorted.take(5))
-              Padding(
-                padding: const EdgeInsets.only(top: 6, right: 12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: Text(x.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall)),
-                    const SizedBox(width: 8),
-                    Text(
-                      switch (x.state) {
-                        TState.done => 'Done',
-                        TState.failed => 'Failed',
-                        TState.canceled => 'Cancelled',
-                        TState.queued => 'Waiting',
-                        TState.running => x.fraction == null ? 'Uploading' : '${(x.fraction! * 100).round()}%',
-                      },
-                      style: t.labelSmall?.copyWith(color: x.state == TState.failed ? cs.error : cs.onSurfaceVariant),
+    final active = tasks.where((x) => x.active).toList();
+    final failed = tasks.where((x) => x.state == TState.failed).toList();
+    final busy = active.isNotEmpty;
+
+    // One ring for the whole row: bytes sent / bytes total across its files.
+    final total = tasks.fold<int>(0, (a, x) => a + x.total);
+    final sent = tasks.fold<int>(0, (a, x) => a + x.done);
+    final fraction = total > 0 ? (sent / total).clamp(0, 1).toDouble() : null;
+    final running = active.any((x) => x.state == TState.running);
+
+    final String subtitle;
+    if (busy) {
+      if (isFolder) {
+        subtitle = '${active.length} file${active.length == 1 ? '' : 's'} uploading${fraction != null && running ? ' · ${(fraction * 100).round()}%' : ''}';
+      } else if (!running) {
+        subtitle = active.first.error ?? 'Waiting to upload…';
+      } else {
+        subtitle = fraction == null ? 'Uploading…' : 'Uploading · ${(fraction * 100).round()}% · ${fmtBytes(sent)} of ${fmtBytes(total)}';
+      }
+    } else {
+      final err = failed.isEmpty ? null : failed.first.error;
+      subtitle = isFolder ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload failed');
+    }
+    final exists = failed.any((x) => x.error?.toLowerCase().contains('exist') ?? false);
+
+    return Container(
+      color: busy ? cs.primaryContainer.withValues(alpha: 0.35) : cs.errorContainer.withValues(alpha: 0.5),
+      child: ListTile(
+        leading: SizedBox(
+          width: 40,
+          height: 40,
+          child: busy
+              ? Stack(alignment: Alignment.center, children: [
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: fraction ?? 0),
+                      duration: const Duration(milliseconds: 250),
+                      // value == null spins freely (waiting / size unknown); otherwise a determinate ring.
+                      builder: (_, v, _) => CircularProgressIndicator(value: (running && fraction != null) ? v : null, strokeWidth: 3),
                     ),
-                  ]),
-                  if (x.active) Padding(padding: const EdgeInsets.only(top: 3), child: LinearProgressIndicator(value: x.state == TState.running ? x.fraction : null, minHeight: 4)),
-                  if (x.state == TState.failed && x.error != null) Text(x.error!, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: cs.error)),
-                ]),
-              ),
-            if (sorted.length > 5)
-              Padding(padding: const EdgeInsets.only(top: 6), child: Text('+ ${sorted.length - 5} more', style: t.labelSmall?.copyWith(color: cs.onSurfaceVariant))),
-          ]),
+                  ),
+                  Icon(isFolder ? Icons.folder : Icons.upload, size: 16, color: cs.primary),
+                ])
+              : Icon(Icons.error_outline, color: cs.error),
         ),
+        title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: busy ? cs.onSurfaceVariant : cs.error)),
+        trailing: busy
+            ? IconButton(tooltip: 'Cancel Upload', icon: const Icon(Icons.close), onPressed: onCancel)
+            : Row(mainAxisSize: MainAxisSize.min, children: [
+                if (exists && !isFolder) TextButton(onPressed: () => onRetry(overwrite: true), child: const Text('Overwrite')),
+                IconButton(tooltip: 'Retry', icon: const Icon(Icons.refresh), onPressed: () => onRetry()),
+                IconButton(tooltip: 'Dismiss', icon: const Icon(Icons.close), onPressed: onDismiss),
+              ]),
       ),
     );
   }
-
-  static int _rank(TransferTask t) => t.active ? 0 : (t.state == TState.failed ? 1 : 2);
 }

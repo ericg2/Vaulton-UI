@@ -63,7 +63,8 @@ class _JobsListState extends ConsumerState<JobsList> {
     var tick = 0;
     _t = Timer.periodic(const Duration(seconds: 3), (_) {
       tick++;
-      if (mounted && (_anyActive || tick % 5 == 0)) _key.currentState?.refresh();
+      // Silent: updates rows in place instead of clearing the list and showing a spinner.
+      if (mounted && TickerMode.of(context) && (_anyActive || tick % 5 == 0)) _key.currentState?.silentRefresh();
     });
   }
 

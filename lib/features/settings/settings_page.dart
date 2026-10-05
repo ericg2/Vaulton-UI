@@ -8,6 +8,9 @@ import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
 import '../transfers/transfer_manager.dart';
 
+/// Keep in sync with `version:` in pubspec.yaml.
+const kAppVersion = '1.3.0';
+
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -24,7 +27,7 @@ class SettingsPage extends ConsumerWidget {
         if (u != null)
           Card(
             child: ListTile(
-              leading: CircleAvatar(child: Text(u.userName[0].toUpperCase())),
+              leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
               title: Text(u.displayName),
               subtitle: Text('${u.userName} · ${session.baseUrl}'),
               trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit Profile', onPressed: () async {
@@ -58,7 +61,10 @@ class SettingsPage extends ConsumerWidget {
         Section('Transfers', children: [
           ListTile(
             title: const Text('Parallel Transfers'),
-            subtitle: Slider(value: s.concurrency.toDouble(), min: 1, max: 8, divisions: 7, label: '${s.concurrency}', onChanged: (v) => c.setConcurrency(v.round())),
+            subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Slider(value: s.concurrency.toDouble(), min: 1, max: 8, divisions: 7, label: '${s.concurrency}', onChanged: (v) => c.setConcurrency(v.round())),
+              Text('How many files upload or download at once. Lower it on slow or metered connections.', style: Theme.of(context).textTheme.bodySmall),
+            ]),
             trailing: Text('${s.concurrency}'),
           ),
           // Desktop only: on Android, scoped storage stops the app from writing to an
@@ -123,8 +129,8 @@ class SettingsPage extends ConsumerWidget {
             },
           ),
         ]),
-        const Section('About', children: [
-          ListTile(leading: Icon(Icons.info_outline), title: Text('Vaulton Client'), subtitle: Text('Version 1.1.0')),
+        Section('About', children: [
+          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Vaulton Client'), subtitle: const Text('Version $kAppVersion')),
         ]),
       ]),
     );
