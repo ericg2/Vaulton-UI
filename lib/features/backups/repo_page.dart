@@ -254,7 +254,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             onSelected: (a) {
               if (a == 'pw') _password();
             },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Change Stored password…'))],
+            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Change Stored Password…'))],
           ),
         ],
         bottom: TabBar(controller: _tc, tabs: const [Tab(text: 'Snapshots'), Tab(text: 'Jobs'), Tab(text: 'Schedules')]),
