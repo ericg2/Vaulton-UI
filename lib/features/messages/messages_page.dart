@@ -25,14 +25,92 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     ref.invalidate(unreadProvider);
   }
 
+  Future<List<String>?> _selectRecipients() async {
+    final page = await guarded(context, () => _v.users(limit: 200));
+    if (page == null || !mounted) return null;
+    final selected = <String>{};
+    String search = '';
+
+    return showDialog<List<String>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) {
+          final q = search.toLowerCase();
+          final users = page.items.where((u) {
+            final text = '${u.displayName} ${u.userName} ${u.email ?? ''}'.toLowerCase();
+            return q.isEmpty || text.contains(q);
+          }).toList();
+          return AlertDialog(
+            title: const Text('Select Recipients'),
+            content: SizedBox(
+              width: 520,
+              height: 520,
+              child: Column(children: [
+                TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Search Users',
+                  ),
+                  onChanged: (v) => set(() => search = v),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    selected.isEmpty ? 'No Recipients Selected' : '${selected.length} Selected',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: users.length,
+                    itemBuilder: (_, i) {
+                      final u = users[i];
+                      final checked = selected.contains(u.userName);
+                      return CheckboxListTile(
+                        value: checked,
+                        onChanged: (v) => set(() => v == true ? selected.add(u.userName) : selected.remove(u.userName)),
+                        secondary: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
+                        title: Text(u.displayName),
+                        subtitle: Text(u.userName),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                      );
+                    },
+                  ),
+                ),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: selected.isEmpty ? null : () => Navigator.pop(ctx, selected.toList()),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _compose({String? to, String? subject, String? replyTo}) async {
-    final f = await formDialog(context, replyTo == null ? 'New message' : 'Reply', [
-      FieldSpec('to', 'To user names, comma separated', initial: to ?? '', required: true),
+    List<String> recipients;
+    if (to != null && to.isNotEmpty) {
+      recipients = splitList(to);
+    } else {
+      final picked = await _selectRecipients();
+      if (picked == null || picked.isEmpty || !mounted) return;
+      recipients = picked;
+    }
+
+    final f = await formDialog(context, replyTo == null ? 'New Message' : 'Reply', [
       FieldSpec('subject', 'Subject', initial: subject ?? '', required: true),
       const FieldSpec('body', 'Message', kind: 'multiline', required: true),
     ], ok: 'Send');
     if (f == null) return;
-    await guarded(context, () => _v.send(splitList(f['to']!), f['subject']!, f['body']!, replyTo: replyTo));
+    await guarded(context, () => _v.send(recipients, f['subject']!, f['body']!, replyTo: replyTo));
     if (!mounted) return;
     toast(context, 'Sent');
     _refreshAll();
