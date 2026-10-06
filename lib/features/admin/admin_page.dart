@@ -149,6 +149,7 @@ class _UsersTab extends ConsumerStatefulWidget {
 
 class _UsersTabState extends ConsumerState<_UsersTab> {
   final _key = GlobalKey<CursorListState<UserAccount>>();
+  final _searchCtl = TextEditingController();
   String _search = '';
   Vaulton get _v => ref.read(vaultonProvider);
   bool get _manage => ref.read(userProvider)!.has(Scopes.usersManage);
@@ -378,11 +379,17 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
   }
 
   @override
+  void dispose() {
+    _searchCtl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final v = ref.read(vaultonProvider);
     return Column(children: [
       LogFilterBar(
-        searchController: TextEditingController(text: _search),
+        searchController: _searchCtl,
         search: _search,
         priority: _priority,
         onSearch: (s) => setState(() => _search = s),
@@ -419,4 +426,5 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
       ),
     ]);
 
+}
 }
