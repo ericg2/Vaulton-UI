@@ -125,7 +125,7 @@ class CursorListState<T> extends State<CursorList<T>> {
     final d = widget.autoRefresh;
     if (d != null) {
       _timer = Timer.periodic(d, (_) {
-        if (!mounted || _loading || !TickerMode.valuesOf(context)) return;
+        if (!mounted || _loading || !TickerMode.valuesOf(context).enabled) return;
         final now = DateTime.now();
         if (now.difference(_lastUserScroll) < const Duration(seconds: 6)) return;
         if (now.difference(_lastRefresh) < const Duration(seconds: 5)) return;
