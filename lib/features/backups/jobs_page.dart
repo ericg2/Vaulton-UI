@@ -45,9 +45,18 @@ const _statusFilters = <(String label, String? value)>[
 
 /// Job history with status filter chips and live refresh while anything is running.
 class JobsList extends ConsumerStatefulWidget {
-  const JobsList({super.key, this.repoId, this.dataId, this.admin = false});
+  const JobsList({
+    super.key,
+    this.repoId,
+    this.dataId,
+    this.admin = false,
+    this.showFilters = true,
+    this.externalStatus,
+  });
   final String? repoId, dataId;
   final bool admin;
+  final bool showFilters;
+  final String? externalStatus;
   @override
   ConsumerState<JobsList> createState() => _JobsListState();
 }
@@ -71,6 +80,15 @@ class _JobsListState extends ConsumerState<JobsList> {
   }
 
   @override
+  void didUpdateWidget(covariant JobsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.externalStatus != widget.externalStatus && widget.externalStatus != _status) {
+      _status = widget.externalStatus;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _key.currentState?.refresh());
+    }
+  }
+
+  @override
   void dispose() {
     _t?.cancel();
     super.dispose();
@@ -89,23 +107,24 @@ class _JobsListState extends ConsumerState<JobsList> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 920),
         child: Column(children: [
-          SizedBox(
-            height: 52,
-            child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), children: [
-              for (final f in _statusFilters)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(label: Text(f.$1), selected: _status == f.$2, onSelected: (_) => _setStatus(f.$2)),
-                ),
-            ]),
-          ),
+          if (widget.showFilters)
+            SizedBox(
+              height: 52,
+              child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), children: [
+                for (final f in _statusFilters)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(label: Text(f.$1), selected: _status == f.$2, onSelected: (_) => _setStatus(f.$2)),
+                  ),
+              ]),
+            ),
           Expanded(
             child: CursorList<RepoJob>(
               key: _key,
               empty: _status == null ? 'No jobs created' : 'No ${_status!.toLowerCase()} Jobs',
               emptyIcon: Icons.work_history_outlined,
               onChanged: (l) => _anyActive = l.any((j) => j.active),
-              fetch: (c) => v.jobs(cursor: c, repoId: widget.repoId, dataId: widget.dataId, admin: widget.admin, status: _status),
+              fetch: (c) => v.jobs(cursor: c, repoId: widget.repoId, dataId: widget.dataId, admin: widget.admin, status: widget.externalStatus ?? _status),
               itemBuilder: (ctx, j, i) => JobCard(
                 job: j,
                 onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id, admin: widget.admin)))
