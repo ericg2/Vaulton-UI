@@ -318,11 +318,28 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverPersistentHeader(
             pinned: false,
-            delegate: _CollapsingTopBarDelegate(_topBar()),
+            delegate: _CollapsingTopBarDelegate(
+              _topBar(),
+              kToolbarHeight + MediaQuery.paddingOf(context).top,
+            ),
           ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _PinnedTabBarDelegate(_tabs()),
+          ),
+          SliverPersistentHeader(
+            pinned: false,
+            delegate: _CollapsingHeaderDelegate(_header()),
+          ),
+          SliverPersistentHeader(
+            pinned: false,
+            delegate: _CollapsingCleanupDelegate(
+              CleanupCard(
+                key: _cleanupKey,
+                repoId: widget.repoId,
+                onRunNow: _retention,
+              ),
+            ),
           ),
           if (jobs)
             SliverPersistentHeader(
@@ -334,17 +351,6 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                 ),
               ),
             ),
-          SliverToBoxAdapter(child: _header()),
-          SliverPersistentHeader(
-            pinned: false,
-            delegate: _CollapsingCleanupDelegate(
-              CleanupCard(
-                key: _cleanupKey,
-                repoId: widget.repoId,
-                onRunNow: _retention,
-              ),
-            ),
-          ),
         ],
         body: _tabView(),
       ),
@@ -406,7 +412,7 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 0;
 
   @override
-  double get maxExtent => 190;
+  double get maxExtent => 170;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -428,15 +434,15 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
 }
 
 
-class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
-  _CollapsingTopBarDelegate(this.child);
+class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _CollapsingHeaderDelegate(this.child);
   final Widget child;
 
   @override
   double get minExtent => 0;
 
   @override
-  double get maxExtent => kToolbarHeight + 24;
+  double get maxExtent => 180;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -455,6 +461,37 @@ class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _CollapsingTopBarDelegate oldDelegate) => oldDelegate.child != child;
+}
+
+class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
+  _CollapsingTopBarDelegate(this.child, this.extent);
+  final Widget child;
+  final double extent;
+
+  @override
+  double get minExtent => 0;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress = (shrinkOffset / maxExtent).clamp(0, 1).toDouble();
+    return ClipRect(
+      child: Opacity(
+        opacity: 1 - progress,
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: 1 - progress,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CollapsingTopBarDelegate oldDelegate) =>
+      oldDelegate.child != child || oldDelegate.extent != extent;
 }
 
 class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
