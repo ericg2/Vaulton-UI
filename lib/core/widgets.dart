@@ -113,7 +113,7 @@ class CursorListState<T> extends State<CursorList<T>> {
     super.didChangeDependencies();
     // Coming back to this list (tab switch, or a pushed page was popped):
     // reload quietly so numbers such as data usage are never stale.
-    final visible = TickerMode.valuesOf(context);
+    final visible = TickerMode.valuesOf(context).enabled;
     if (visible && !_wasVisible && _loadedOnce) silentRefresh(force: true);
     _wasVisible = visible;
   }
