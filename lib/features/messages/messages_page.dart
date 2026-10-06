@@ -186,9 +186,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         appBar: AppBar(
           title: const Text('Messages'),
           actions: [
-            IconButton(tooltip: _unreadOnly ? 'Show all' : 'Unread only', icon: Icon(_unreadOnly ? Icons.mark_email_unread : Icons.mark_email_unread_outlined), onPressed: () => setState(() => _unreadOnly = !_unreadOnly)),
+            IconButton(tooltip: _unreadOnly ? 'Show All' : 'Unread Only', icon: Icon(_unreadOnly ? Icons.mark_email_unread : Icons.mark_email_unread_outlined), onPressed: () => setState(() => _unreadOnly = !_unreadOnly)),
             IconButton(
-              tooltip: 'Mark all read',
+              tooltip: 'Mark All Read',
               icon: const Icon(Icons.done_all),
               onPressed: () async {
                 await guarded(context, _v.readAll);
