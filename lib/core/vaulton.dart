@@ -236,7 +236,7 @@ class Vaulton {
   Future<void> syncVfs() => _req('POST', '/admin/vfs/sync');
   Future<Paged<Json>> logs({
     String? search,
-    String? priority,
+    String? minPriority,
     DateTime? from,
     DateTime? to,
     String? cursor,
@@ -249,7 +249,7 @@ class Vaulton {
           '/admin/logs',
           q: _pg(cursor, limit, order, {
             'search': search,
-            'priority': priority,
+            'minPriority': minPriority,
             'from': from?.toUtc().toIso8601String(),
             'to': to?.toUtc().toIso8601String(),
           }),
