@@ -384,7 +384,6 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
         from: _from,
         to: _to,
         onDates: _pickDates,
-        onClear: _clearFilters,
       ),
       Expanded(
         child: CursorList<Json>(
