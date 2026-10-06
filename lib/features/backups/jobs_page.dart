@@ -304,8 +304,12 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final names = ref.watch(pointNamesProvider).value ?? const <String, String>{};
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(onPressed: _edit, icon: const Icon(Icons.add), label: const Text('New Schedule')),
-      body: CursorList<Schedule>(
-        key: _key,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 920),
+          child: CursorList<Schedule>(
+            key: _key,
         empty: 'No Schedules Created.',
         emptyIcon: Icons.schedule,
         autoRefresh: const Duration(seconds: 30),
@@ -360,6 +364,8 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
             ),
           );
         },
+          ),
+        ),
       ),
     );
   }
