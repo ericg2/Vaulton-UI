@@ -94,8 +94,8 @@ class _StatusTab extends ConsumerWidget {
             Section('Overview', children: [
               tile('Users', s['users'], Icons.people_outline),
               tile('Locations', s['roots'], Icons.dns_outlined),
-              tile('Data folders', s['dataPoints'], Icons.folder_outlined),
-              tile('Backup vaults', s['repoPoints'], Icons.inventory_2_outlined),
+              tile('Data Folders', s['dataPoints'], Icons.folder_outlined),
+              tile('Backup Vaults', s['repoPoints'], Icons.inventory_2_outlined),
               _statusCountsTile(ctx, 'Point Health', [
                 _StatusCount(Icons.check_circle_outline, 'Healthy', toInt(s['pointsHealthy']), cs.primary),
                 _StatusCount(Icons.error_outline, 'Failed', toInt(s['pointsFailed']), cs.error),
@@ -105,8 +105,8 @@ class _StatusTab extends ConsumerWidget {
                 _StatusCount(Icons.schedule, 'Waiting', toInt(s['jobsPending']), cs.secondary),
                 _StatusCount(Icons.sync, 'Running', toInt(s['jobsRunning']), cs.tertiary),
               ], Icons.work_outline),
-              tile('Failed jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
-              tile('Enabled schedules', s['schedulesEnabled'], Icons.schedule),
+              tile('Failed Jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
+              tile('Enabled Schedules', s['schedulesEnabled'], Icons.schedule),
               tile('SMB', toBool(s['smbRunning']) ? 'running · ${s['smbShares']} shares' : 'stopped', Icons.folder_shared_outlined),
               tile('Email', toBool(s['emailEnabled']) ? 'enabled · ${s['emailPending']} queued' : 'disabled', Icons.email_outlined),
             ]),

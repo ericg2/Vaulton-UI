@@ -316,61 +316,6 @@ class _PointsTabState extends ConsumerState<PointsTab> {
   void _openRepo(Point p, {int tab = 0}) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: p.id, repo: p, initialTab: tab)));
 
-  void _openData(Point p) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      constraints: const BoxConstraints(maxWidth: 640),
-      builder: (sheetCtx) {
-        final cs = Theme.of(sheetCtx).colorScheme;
-        final rootName = _roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ?? p.rootId;
-        void then(VoidCallback run) {
-          Navigator.pop(sheetCtx);
-          run();
-        }
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(p.name, style: Theme.of(sheetCtx).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              chip(sheetCtx, p.healthLabel, color: p.isError ? cs.errorContainer : null),
-              chip(sheetCtx, rootName),
-            ]),
-            const SizedBox(height: 16),
-            Text('Location: $rootName'),
-            const SizedBox(height: 4),
-            Text('${fmtBytes(p.usedBytes)} of ${fmtBytes(p.maxBytes)} used'),
-            if (p.error != null) ...[
-              const SizedBox(height: 8),
-              Text(p.error!, style: TextStyle(color: cs.error)),
-            ],
-            const SizedBox(height: 16),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              FilledButton.icon(
-                onPressed: () => then(() => Navigator.push(context, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)))),
-                icon: const Icon(Icons.folder_open),
-                label: const Text('Open Files'),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: () => then(() => startBackup(context, ref, data: p)),
-                icon: const Icon(Icons.backup_outlined),
-                label: const Text('Backup'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => then(() => Navigator.push(context, MaterialPageRoute(builder: (_) => DataJobsPage(data: p)))),
-                icon: const Icon(Icons.history),
-                label: const Text('Jobs'),
-              ),
-            ]),
-          ]),
-        );
-      },
-    );
-  }
   Widget _pointCard(BuildContext ctx, Point p) {
     final cs = Theme.of(ctx).colorScheme;
     final actions = widget.repo
@@ -400,7 +345,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           ];
     return Card(
       child: InkWell(
-        onTap: () => widget.repo ? _openRepo(p) : _openData(p),
+        onTap: () => widget.repo ? _openRepo(p) : Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
         child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -121,7 +121,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final stats = [
         _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data Folders', () => widget.onNavigate?.call('Data folders')),
         _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup vaults')),
-        if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
+        if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
       ];
 
@@ -149,7 +149,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       child: Text(
                         failedPoints > 0
                             ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention. Open Storage to see details.'
-                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours. Tap failed to review.' : 'Everything looks healthy'),
+                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours. Tap to review.' : 'Everything looks healthy'),
                         style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
                       ),
                     ),
