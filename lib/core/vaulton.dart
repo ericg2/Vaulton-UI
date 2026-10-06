@@ -104,6 +104,13 @@ class Vaulton {
   Future<Paged<Snapshot>> snapshots(String id, {String? tag, String? path, bool? locked, String? idPrefix, String? cursor, int limit = 50}) async =>
       Paged.from(await _req('GET', '/repos/$id/snapshots', q: _pg(cursor, limit, 'Desc', {'tag': tag, 'path': path, 'locked': locked, 'idPrefix': idPrefix})), Snapshot.fromJson);
 
+  Future<String> _fullSnapshotId(String repoId, String snapshotId) async {
+    final exact = await snapshots(repoId, idPrefix: snapshotId, limit: 2);
+    if (exact.items.length == 1) return exact.items.single.id;
+    if (exact.items.any((s) => s.id == snapshotId)) return snapshotId;
+    throw Exception('Snapshot ID "$snapshotId" could not be resolved uniquely.');
+  }
+
   /// Resolves a snapshot ID/prefix to the full snapshot ID required by snapshot operations.
   /// Lists one directory of a snapshot (omit [path] for the top level).
   Future<Paged<Node>> browseSnapshot(String repoId, String snapshotId,
@@ -113,7 +120,7 @@ class Vaulton {
               q: _pg(cursor, limit, order, {'path': path, 'search': search, 'type': type == 'All' ? null : type})),
           Node.fromJson);
   Future<Json> lockSnapshot(String id, String snap, bool lock) async {
-    final fullId = snap;
+    final fullId = await _fullSnapshotId(id, snap);
     return toJson(await _req('POST', '/repos/$id/snapshots/${_e(fullId)}/${lock ? 'lock' : 'unlock'}'));
   }
   Future<RepoJob> backup(String repoId, Json body, {DateTime? runAt}) async =>
