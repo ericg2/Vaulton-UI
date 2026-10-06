@@ -329,7 +329,10 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           ),
           SliverPersistentHeader(
             pinned: false,
-            delegate: _CollapsingHeaderDelegate(_header()),
+            delegate: _CollapsingHeaderDelegate(
+              _header(),
+              MediaQuery.sizeOf(context).width < 600 ? 176 : 128,
+            ),
           ),
           SliverPersistentHeader(
             pinned: false,
@@ -412,7 +415,7 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 0;
 
   @override
-  double get maxExtent => 156;
+  double get maxExtent => extent;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -438,8 +441,9 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
 
 
 class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _CollapsingHeaderDelegate(this.child);
+  _CollapsingHeaderDelegate(this.child, this.extent);
   final Widget child;
+  final double extent;
 
   @override
   double get minExtent => 0;
@@ -466,7 +470,8 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) => oldDelegate.child != child;
+  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) =>
+      oldDelegate.child != child || oldDelegate.extent != extent;
 }
 
 class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
