@@ -31,7 +31,13 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   late final TabController _tc = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.clamp(0, 2).toInt());
   Point? _repo;
   Timer? _usageTimer;
+  String? _jobStatus;
   Vaulton get _v => ref.read(vaultonProvider);
+
+  void _setJobStatus(String? status) {
+    if (_jobStatus == status) return;
+    setState(() => _jobStatus = status);
+  }
 
   @override
   void initState() {
@@ -256,7 +262,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             ),
           ),
         ),
-        JobsList(repoId: widget.repoId),
+        JobsList(repoId: widget.repoId, externalStatus: _jobStatus, showFilters: false),
         SchedulesList(repoId: widget.repoId),
       ]);
 
@@ -273,21 +279,36 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         bottom: _tabs(),
       );
 
-  SliverAppBar _scrollingAppBar() => SliverAppBar(
-        title: Text(_repo?.name ?? 'Backup Vault'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (a) {
-              if (a == 'pw') _password();
-            },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
+  Widget _topBar() => Material(
+        color: Theme.of(context).colorScheme.surface,
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: Row(children: [
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _repo?.name ?? 'Backup Vault',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (a) {
+                  if (a == 'pw') _password();
+                },
+                itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
+              ),
+            ]),
           ),
-        ],
+        ),
       );
 
   @override
   Widget build(BuildContext context) {
-    final schedules = _tc.index == 2;
+    final jobs = _tc.index == 1;
 
     return Scaffold(
       floatingActionButton: _tc.index == 0
@@ -295,29 +316,34 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           : null,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          _scrollingAppBar(),
+          SliverPersistentHeader(
+            pinned: false,
+            delegate: _CollapsingTopBarDelegate(_topBar()),
+          ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _PinnedTabBarDelegate(_tabs()),
           ),
+          if (jobs)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _PinnedJobFiltersDelegate(
+                _JobFilters(
+                  status: _jobStatus,
+                  onChanged: _setJobStatus,
+                ),
+              ),
+            ),
           SliverToBoxAdapter(child: _header()),
           SliverPersistentHeader(
-            pinned: schedules,
-            delegate: schedules
-                ? _PinnedCleanupDelegate(
-                    CleanupCard(
-                      key: _cleanupKey,
-                      repoId: widget.repoId,
-                      onRunNow: _retention,
-                    ),
-                  )
-                : _CollapsingCleanupDelegate(
-                    CleanupCard(
-                      key: _cleanupKey,
-                      repoId: widget.repoId,
-                      onRunNow: _retention,
-                    ),
-                  ),
+            pinned: false,
+            delegate: _CollapsingCleanupDelegate(
+              CleanupCard(
+                key: _cleanupKey,
+                repoId: widget.repoId,
+                onRunNow: _retention,
+              ),
+            ),
           ),
         ],
         body: _tabView(),
@@ -399,4 +425,83 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _CollapsingCleanupDelegate oldDelegate) => oldDelegate.child != child;
+}
+
+
+class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
+  _CollapsingTopBarDelegate(this.child);
+  final Widget child;
+
+  @override
+  double get minExtent => 0;
+
+  @override
+  double get maxExtent => kToolbarHeight + 24;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress = (shrinkOffset / maxExtent).clamp(0, 1).toDouble();
+    return ClipRect(
+      child: Opacity(
+        opacity: 1 - progress,
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: 1 - progress,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CollapsingTopBarDelegate oldDelegate) => oldDelegate.child != child;
+}
+
+class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedJobFiltersDelegate(this.child);
+  final Widget child;
+
+  @override
+  double get minExtent => 52;
+
+  @override
+  double get maxExtent => 52;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: overlapsContent ? 2 : 0,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedJobFiltersDelegate oldDelegate) => oldDelegate.child != child;
+}
+
+class _JobFilters extends StatelessWidget {
+  const _JobFilters({required this.status, required this.onChanged});
+  final String? status;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 52,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          children: [
+            for (final f in _statusFilters)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(f.$1),
+                  selected: status == f.$2,
+                  onSelected: (_) => onChanged(f.$2),
+                ),
+              ),
+          ],
+        ),
+      );
 }
