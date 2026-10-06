@@ -36,6 +36,24 @@ typedef _Crumb = ({String name, String path});
 
 typedef SnapshotRestoreTarget = ({String path, bool isDir, String name});
 
+class SnapshotLockBadge extends StatelessWidget {
+  const SnapshotLockBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 6, height: 6, decoration: BoxDecoration(color: cs.error, shape: BoxShape.circle)),
+        const SizedBox(width: 5),
+        Text('Locked', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.error, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
+}
+
 Future<void> restoreSnapshotFlow({
   required BuildContext context,
   required Vaulton vaulton,
@@ -248,7 +266,35 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     }
   }
 
-  String _snapLabel(Snapshot s) => '${fmtDate(s.time)}  ·  ${shortId(s.id)}${s.locked ? '  🔒' : ''}';
+  String _snapLabel(Snapshot s) => '${fmtDate(s.time)}  ·  ${shortId(s.id)}';
+
+  Widget _snapshotDropdownLabel(Snapshot s) => Row(children: [
+        Expanded(child: Text(_snapLabel(s), overflow: TextOverflow.ellipsis)),
+        if (s.locked) const SnapshotLockBadge(),
+      ]);
+
+  Future<void> _toggleLock() async {
+    final snap = _snap;
+    if (snap == null) return;
+    final locked = !snap.locked;
+    final result = await guarded(context, () => _v.lockSnapshot(widget.repo.id, snap.id, locked));
+    if (result == null || !mounted) return;
+    final message = toStr(result['message']) ?? (locked ? 'Snapshot locked' : 'Snapshot unlocked');
+    toast(context, message);
+    await _init();
+  }
+
+  Future<void> _openJobDetails() async {
+    final snap = _snap;
+    if (snap == null) return;
+    final job = await guarded(context, () => _v.snapshotJob(widget.repo.id, snap.id));
+    if (!mounted) return;
+    if (job == null) {
+      toast(context, 'No job was found for this snapshot.', error: true);
+      return;
+    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: job.id)));
+  }
 
   void _go(List<_Crumb> trail) => setState(() {
         _trail
@@ -428,6 +474,16 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                 : title,
             actions: [
               IconButton(
+                tooltip: 'View Job Details',
+                icon: const Icon(Icons.work_history_outlined),
+                onPressed: _openJobDetails,
+              ),
+              IconButton(
+                tooltip: snap.locked ? 'Unlock Snapshot' : 'Lock Snapshot',
+                icon: Icon(snap.locked ? Icons.lock_open_outlined : Icons.lock_outline),
+                onPressed: _toggleLock,
+              ),
+              IconButton(
                 tooltip: 'Search',
                 icon: Icon(_searching ? Icons.search_off : Icons.search),
                 onPressed: () => setState(() {
@@ -472,7 +528,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                     isExpanded: true,
                     value: snap.id,
                     borderRadius: BorderRadius.circular(12),
-                    items: [for (final s in _snaps!) DropdownMenuItem(value: s.id, child: Text(_snapLabel(s), overflow: TextOverflow.ellipsis))],
+                    items: [for (final s in _snaps!) DropdownMenuItem(value: s.id, child: _snapshotDropdownLabel(s))],
                     onChanged: (id) {
                       setState(() => _snap = _snaps!.firstWhere((s) => s.id == id));
                       _go(List.of(_trail));
