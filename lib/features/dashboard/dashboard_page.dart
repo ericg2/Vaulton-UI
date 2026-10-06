@@ -119,8 +119,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final cap = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.maxBytes);
 
       final stats = [
-        _Stat(Icons.folder_outlined, '${d.datas.length}', 'Data folders', () => widget.onNavigate?.call('Data folders')),
-        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', 'Backup vaults', () => widget.onNavigate?.call('Backup vaults')),
+        _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data Folders', () => widget.onNavigate?.call('Data folders')),
+        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup vaults')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
       ];
@@ -187,16 +187,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup), label: const Text('Backup now')),
+                  if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup), label: const Text('Backup Now')),
                   FilledButton.tonalIcon(
                     onPressed: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => const FilesPage()));
                       if (mounted) _load(); // usage may have changed while you were in Files
                     },
                     icon: const Icon(Icons.upload_file),
-                    label: const Text('Upload files'),
+                    label: const Text('Upload Files'),
                   ),
-                  OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Manage storage')),
+                  OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Manage Storage')),
                 ]),
               ),
             ]),
@@ -239,7 +239,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('View all jobs')),
+                  child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('Show More')),
                 ),
               ]),
             ],
