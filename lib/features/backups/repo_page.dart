@@ -233,8 +233,10 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
     final sum = s.summary;
+    final locked = s.locked;
     return Card(
       clipBehavior: Clip.antiAlias,
+      color: locked ? cs.errorContainer.withValues(alpha: 0.45) : null,
       child: InkWell(
         onTap: () => _browse(s),
         child: Padding(
@@ -242,14 +244,17 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: cs.secondaryContainer,
-              foregroundColor: cs.onSecondaryContainer,
-              child: Icon(s.locked ? Icons.lock_outline : Icons.camera_alt_outlined, size: 20),
+              backgroundColor: locked ? cs.error : cs.secondaryContainer,
+              foregroundColor: locked ? cs.onError : cs.onSecondaryContainer,
+              child: Icon(locked ? Icons.lock : Icons.camera_alt_outlined, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(fmtDate(s.time), style: t.titleMedium),
+                Row(children: [
+                  Expanded(child: Text(fmtDate(s.time), style: t.titleMedium)),
+                  if (locked) const SnapshotLockBadge(),
+                ]),
                 const SizedBox(height: 2),
                 Text(shortId(s.id), style: t.bodySmall?.copyWith(color: cs.outline, fontFamily: 'monospace')),
                 if (s.paths.isNotEmpty) ...[
