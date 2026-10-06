@@ -181,10 +181,10 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         header: CleanupCard(key: _cleanupKey, repoId: widget.repoId, onRunNow: _retention),
       );
 
-  TabBar _tabs({bool scrollable = false}) => TabBar(
+  TabBar _tabs() => TabBar(
         controller: _tc,
-        isScrollable: scrollable,
-        tabAlignment: scrollable ? TabAlignment.start : TabAlignment.fill,
+        isScrollable: false,
+        tabAlignment: TabAlignment.fill,
         tabs: const [Tab(text: 'History'), Tab(text: 'Automation')],
       );
 
@@ -213,7 +213,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             VerticalDivider(width: 1, color: cs.outlineVariant),
             Expanded(
               child: Column(children: [
-                Align(alignment: Alignment.centerLeft, child: _tabs(scrollable: true)),
+                Align(alignment: Alignment.centerLeft, child: _tabs()),
                 Expanded(
                   child: TabBarView(controller: _tc, children: [
                     VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false),
