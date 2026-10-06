@@ -188,6 +188,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   Future<void> _scopes(UserAccount u) async {
     final all = await guarded(context, _v.scopes);
     if (all == null || !mounted) return;
+    final available = all.where((s) => s.name != 'Users.List').toList();
     final chosen = {...u.scopes};
     final ok = await showDialog<bool>(
       context: context,
@@ -197,7 +198,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
           content: SizedBox(
             width: 460,
             child: ListView(shrinkWrap: true, children: [
-              for (final s in all)
+              for (final s in available)
                 CheckboxListTile(
                   title: Text(s.name),
                   subtitle: Text(s.description),
