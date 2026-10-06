@@ -104,6 +104,17 @@ class Vaulton {
   Future<Paged<Snapshot>> snapshots(String id, {String? tag, String? path, bool? locked, String? idPrefix, String? cursor, int limit = 50}) async =>
       Paged.from(await _req('GET', '/repos/$id/snapshots', q: _pg(cursor, limit, 'Desc', {'tag': tag, 'path': path, 'locked': locked, 'idPrefix': idPrefix})), Snapshot.fromJson);
 
+  /// Resolves a snapshot ID/prefix to the full snapshot ID required by snapshot operations.
+  Future<String> _fullSnapshotId(String repoId, String snapshotId) async {
+    if (snapshotId.length >= 64) return snapshotId;
+    final page = await snapshots(repoId, idPrefix: snapshotId, limit: 1);
+    final match = page.items.firstOrNull;
+    if (match == null) {
+      throw ApiException('Snapshot "$snapshotId" was not found.');
+    }
+    return match.id;
+  }
+
   /// Lists one directory of a snapshot (omit [path] for the top level).
   Future<Paged<Node>> browseSnapshot(String repoId, String snapshotId,
           {String? path, String? search, String type = 'All', String? cursor, int limit = 200, String order = 'Asc'}) async =>
@@ -111,16 +122,23 @@ class Vaulton {
           await _req('GET', '/repos/$repoId/snapshots/${_e(snapshotId)}/browse',
               q: _pg(cursor, limit, order, {'path': path, 'search': search, 'type': type == 'All' ? null : type})),
           Node.fromJson);
-  Future<Json> lockSnapshot(String id, String snap, bool lock) async =>
-      toJson(await _req('POST', '/repos/$id/snapshots/${_e(snap)}/${lock ? 'lock' : 'unlock'}'));
+  Future<Json> lockSnapshot(String id, String snap, bool lock) async {
+    final fullId = await _fullSnapshotId(id, snap);
+    return toJson(await _req('POST', '/repos/$id/snapshots/${_e(fullId)}/${lock ? 'lock' : 'unlock'}'));
+  }
   Future<RepoJob> backup(String repoId, Json body, {DateTime? runAt}) async =>
       RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/backup', body: body, q: {'runAt': runAt?.toUtc().toIso8601String()})));
   Future<RepoJob> restore(String repoId, Json body, {DateTime? runAt}) async =>
       RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/restore', body: body, q: {'runAt': runAt?.toUtc().toIso8601String()})));
   Future<RepoJob> check(String repoId, {DateTime? runAt}) async =>
       RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/check', q: {'runAt': runAt?.toUtc().toIso8601String()})));
-  Future<RepoJob> forget(String repoId, List<String> snaps) async =>
-      RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/forget', body: {'snapshots': snaps})));
+  Future<RepoJob> forget(String repoId, List<String> snaps) async {
+    final fullIds = <String>[];
+    for (final snap in snaps) {
+      fullIds.add(await _fullSnapshotId(repoId, snap));
+    }
+    return RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/forget', body: {'snapshots': fullIds})));
+  }
   Future<RepoJob> retention(String repoId, Json policy, {bool dryRun = false}) async =>
       RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/retention', body: {'policy': policy, 'dryRun': dryRun})));
 
