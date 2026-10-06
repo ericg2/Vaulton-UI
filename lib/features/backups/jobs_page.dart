@@ -234,7 +234,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
       if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
-      if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean up snapshots', 'Health check'], initial: startMode ?? 'Backup'),
+      if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean Up Snapshots', 'Health Check'], initial: startMode ?? 'Backup'),
       if ((s == null && startMode == null) || s?.mode == 'backup') ...[
         if (datas.items.isNotEmpty) FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
         FieldSpec('path', 'Folder to Back Up', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
@@ -250,7 +250,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     }, intro: 'Choose how often this runs. Times follow the selected time zone.${isNew ? '\n\nTip: pair each backup schedule with a “Clean up snapshots” schedule, or old snapshots will slowly fill your vault.' : ''}');
     if (f == null || !mounted) return;
     try {
-      final mode = s == null ? (f['mode'] == 'Backup' ? 'backup' : (f['mode'] == 'Clean up snapshots' ? 'retention' : 'check')) : s.mode;
+      final mode = s == null ? (f['mode'] == 'Backup' ? 'backup' : (f['mode'] == 'Clean Up Snapshots' ? 'retention' : 'check')) : s.mode;
       Map<String, dynamic>? policy;
       if (mode == 'retention') {
         final req = await showRetentionSheet(context, forSchedule: true, initial: s == null ? null : toJson(s.options['policy']));
@@ -282,8 +282,8 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     if (!mounted || existing.items.any((x) => x.mode == 'retention')) return;
     final go = await confirm(context, 'Your vault will fill up without cleanup',
         'Every scheduled backup adds a snapshot, and nothing removes the old ones. Without a cleanup schedule this vault will eventually run out of space and backups will start failing.',
-        ok: 'Set up cleanup now');
-    if (go && mounted) await _edit(null, 'Clean up snapshots', repoId);
+        ok: 'Set Up Cleanup Now');
+    if (go && mounted) await _edit(null, 'Clean Up Snapshots', repoId);
   }
 
   Future<void> _preview(Schedule s) async {
@@ -292,7 +292,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Next runs'),
+        title: const Text('Next Runs'),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [for (final t in times) Text(fmtDate(t))]),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
       ),
