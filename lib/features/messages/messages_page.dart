@@ -83,7 +83,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
               ]),
             ),
             actions: [
-          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
                 onPressed: selected.isEmpty ? null : () => Navigator.pop(ctx, selected.toList()),
@@ -146,6 +145,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
           ),
         ),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          if (inbox && !full.isSystem)
+            TextButton(onPressed: () { Navigator.pop(ctx); _compose(to: full.sender, subject: full.subject.startsWith('Re: ') ? full.subject : 'Re: ${full.subject}', replyTo: full.id); }, child: const Text('Reply')),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -154,8 +156,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
             },
             child: const Text('Delete'),
           ),
-          if (inbox && !full.isSystem)
-            TextButton(onPressed: () { Navigator.pop(ctx); _compose(to: full.sender, subject: full.subject.startsWith('Re: ') ? full.subject : 'Re: ${full.subject}', replyTo: full.id); }, child: const Text('Reply')),
         ],
       ),
     );
