@@ -232,7 +232,6 @@ class PointsTab extends ConsumerStatefulWidget {
 class _PointsTabState extends ConsumerState<PointsTab> {
   final _key = GlobalKey<CursorListState<Point>>();
   Vaulton get _v => ref.read(vaultonProvider);
-  String get _noun => widget.repo ? 'backup vault' : 'data folder';
   List<Root> _roots = const [];
 
   @override
