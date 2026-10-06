@@ -25,8 +25,8 @@ class StoragePage extends StatelessWidget {
         child: Scaffold(
           appBar: AppBar(title: const Text('Storage'), bottom: const TabBar(tabs: [
             Tab(text: 'Locations'),
-            Tab(text: 'Data folders'),
-            Tab(text: 'Backup vaults'),
+            Tab(text: 'Data Folders'),
+            Tab(text: 'Backup Vaults'),
           ])),
           body: const TabBarView(physics: NeverScrollableScrollPhysics(), children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)]),
         ),
@@ -73,7 +73,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
   }
 
   Future<void> _create() async {
-    final r = await formDialog(context, 'New location', [
+    final r = await formDialog(context, 'New Location', [
       const FieldSpec('name', 'Name', required: true),
       FieldSpec('scheme', 'Storage type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
       const FieldSpec('capacity', 'Capacity', kind: 'capacity', required: true),
@@ -161,10 +161,10 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
     final u = ref.watch(userProvider)!;
     final canCreate = u.has(Scopes.rootsManage);
     return Scaffold(
-      floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New location')) : null,
+      floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New Location')) : null,
       body: CursorList<Root>(
         key: _key,
-        empty: 'No storage locations',
+        empty: 'No Storage Locations',
         emptyHint: canCreate ? 'A location is where your data is stored, such as a disk, network share or cloud account. Tap “New location” to connect one.' : 'Ask an administrator to share a storage location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
@@ -194,7 +194,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
                       },
                       itemBuilder: (_) => const [
                         PopupMenuItem(value: 'edit', child: Text('Edit')),
-                        PopupMenuItem(value: 'src', child: Text('Edit connection')),
+                        PopupMenuItem(value: 'src', child: Text('Edit Connection')),
                         PopupMenuItem(value: 'share', child: Text('Sharing…')),
                         PopupMenuDivider(),
                         PopupMenuItem(value: 'del', child: Text('Delete')),
@@ -204,8 +204,8 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
                 Wrap(children: [
                   if (scheme.isNotEmpty) chip(ctx, scheme.toUpperCase()),
                   chip(ctx, r.isOwner ? 'Owner' : 'Shared by ${r.userName}'),
-                  if (r.isDataAllowed) chip(ctx, 'Data folders'),
-                  if (r.isRepoAllowed) chip(ctx, 'Backup vaults'),
+                  if (r.isDataAllowed) chip(ctx, 'Data Folders'),
+                  if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
                 ]),
                 const SizedBox(height: 10),
                 Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: used, max: r.maxBytes)),
@@ -254,11 +254,11 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     final usable = roots.items.where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed).toList();
     if (usable.isEmpty) return toast(context, 'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Create or share one first.', error: true);
     final labels = {for (final r in usable) '${r.name}${usable.where((x) => x.name == r.name).length > 1 ? ' (${r.id.substring(0, 6)})' : ''}': r};
-    final f = await formDialog(context, 'New $_noun', [
+    final f = await formDialog(context, 'New ${widget.repo ? 'Backup Vault' : 'Data Folder'}', [
       FieldSpec('root', 'Location', kind: 'choice', options: labels.keys.toList()),
       const FieldSpec('name', 'Name', required: true),
-      FieldSpec('capacity', 'Space limit', kind: 'capacity', required: true, maxBytes: usable.map((r) => r.maxBytes).where((x) => x > 0).fold<int?>(null, (m, x) => m == null || x > m ? x : m)),
-      if (widget.repo) const FieldSpec('pw', 'Vault password (at least 8 characters)', kind: 'secret', required: true),
+      FieldSpec('capacity', 'Space Limit', kind: 'capacity', required: true, maxBytes: usable.map((r) => r.maxBytes).where((x) => x > 0).fold<int?>(null, (m, x) => m == null || x > m ? x : m)),
+      if (widget.repo) const FieldSpec('pw', 'Vault Password (at least 8 characters)', kind: 'secret', required: true),
     ], ok: 'Create');
     if (f == null) return;
     final body = {'rootId': labels[f['root']]!.id, 'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0, if (widget.repo) 'password': f['pw']};
@@ -273,7 +273,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (root == null || !mounted) return;
     final f = await formDialog(context, 'Edit ${p.name}', [
       FieldSpec('name', 'Name', initial: p.name, required: true),
-      FieldSpec('capacity', 'Space limit', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null),
+      FieldSpec('capacity', 'Space Limit', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null),
     ]);
     if (f == null) return;
     final body = {'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0};
@@ -301,10 +301,10 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       _loadRoots();
     });
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New $_noun')),
+      floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New ${widget.repo ? 'Backup Vault' : 'Data Folder'}')),
       body: CursorList<Point>(
         key: _key,
-        empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet',
+        empty: 'No ${widget.repo ? 'Backup Vaults' : 'Data Folders'} Yet',
         emptyHint: widget.repo ? 'A backup vault is where your backups are kept safely. Tap “New backup vault” to create one.' : 'A data folder is where your files live. You set how much space it can use. Tap “New data folder” to create one.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
@@ -326,7 +326,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               icon: const Icon(Icons.folder_open),
               label: const Text('Browse'),
             ),
-            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup here')),
+            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup Here')),
             OutlinedButton.icon(onPressed: () => _openRepo(p), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Snapshots')),
             OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 1), icon: const Icon(Icons.work_history_outlined), label: const Text('Jobs')),
             OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 2), icon: const Icon(Icons.schedule), label: const Text('Schedules')),
@@ -335,7 +335,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             FilledButton.tonalIcon(
               onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
               icon: const Icon(Icons.folder_open),
-              label: const Text('Open files'),
+              label: const Text('Open Files'),
             ),
             FilledButton.icon(onPressed: () => startBackup(ctx, ref, data: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup')),
             OutlinedButton.icon(
@@ -362,7 +362,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             ])),
             PopupMenuButton<String>(
               onSelected: (a) => a == 'edit' ? _edit(p) : _delete(p),
-              itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Rename or change limit')), PopupMenuItem(value: 'del', child: Text('Delete'))],
+              itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Rename or Change Limit')), PopupMenuItem(value: 'del', child: Text('Delete'))],
             ),
           ]),
           Wrap(children: [chip(ctx, p.healthLabel, color: p.isError ? cs.errorContainer : null)]),
@@ -442,7 +442,7 @@ class _RootSheetState extends State<_RootSheet> {
     final cs = Theme.of(context).colorScheme;
     final used = (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes > 0 ? r.maxBytes : 1 << 62).toInt();
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
-    final holds = [if (r.isDataAllowed) 'Data folders', if (r.isRepoAllowed) 'Backup vaults'];
+    final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -490,13 +490,13 @@ class _RootSheetState extends State<_RootSheet> {
             child: FilledButton.icon(
               onPressed: widget.onShare,
               icon: const Icon(Icons.group_add_outlined),
-              label: Text(_shares != null && _shares!.isNotEmpty ? 'Manage sharing' : 'Share this location'),
+              label: Text(_shares != null && _shares!.isNotEmpty ? 'Manage Sharing' : 'Share This Location'),
             ),
           ),
           const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            OutlinedButton.icon(onPressed: widget.onEdit, icon: const Icon(Icons.edit_outlined), label: const Text('Edit details')),
-            OutlinedButton.icon(onPressed: widget.onEditConnection, icon: const Icon(Icons.link), label: const Text('Edit connection')),
+            OutlinedButton.icon(onPressed: widget.onEdit, icon: const Icon(Icons.edit_outlined), label: const Text('Edit Details')),
+            OutlinedButton.icon(onPressed: widget.onEditConnection, icon: const Icon(Icons.link), label: const Text('Edit Connection')),
             TextButton.icon(
               onPressed: widget.onDelete,
               style: TextButton.styleFrom(foregroundColor: cs.error),
