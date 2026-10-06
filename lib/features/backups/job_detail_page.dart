@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
+import 'job_text.dart';
 import 'job_widgets.dart';
 import 'repo_page.dart';
 import 'snapshot_browser.dart';
@@ -23,9 +24,12 @@ _Level _levelOf(String p) {
 
 /// Two tabs: an overview (status, progress, stages, details, options) and a live log.
 class JobDetailPage extends ConsumerStatefulWidget {
-  const JobDetailPage({super.key, required this.jobId, this.admin = false});
+  /// [showVaultLink]: null (default) hides "Open Backup Vault" automatically when that
+  /// vault's page is already open, which avoids vault -> job -> vault loops.
+  const JobDetailPage({super.key, required this.jobId, this.admin = false, this.showVaultLink});
   final String jobId;
   final bool admin;
+  final bool? showVaultLink;
   @override
   ConsumerState<JobDetailPage> createState() => _JobDetailPageState();
 }
@@ -219,6 +223,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     final cs = Theme.of(context).colorScheme;
     final st = phaseStyle(context, j.phase);
     final summary = jobSummary(j);
+    final err = cleanJobError(j.error);
+    final showVault = widget.showVaultLink ?? !RepoPage.isOpen(j.repoId);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -254,7 +260,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               style: t.bodySmall,
             ),
           ],
-          if (j.error != null && j.error!.isNotEmpty) ...[
+          if (err.isNotEmpty) ...[
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
@@ -263,8 +269,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Icon(Icons.error_outline, color: cs.onErrorContainer),
                 const SizedBox(width: 10),
-                Expanded(child: SelectableText(j.error!, style: TextStyle(color: cs.onErrorContainer))),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: Icon(Icons.copy, size: 18, color: cs.onErrorContainer), onPressed: () => copyText(context, j.error!)),
+                Expanded(child: SelectableText(err, style: TextStyle(color: cs.onErrorContainer))),
+                IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: Icon(Icons.copy, size: 18, color: cs.onErrorContainer), onPressed: () => copyText(context, err)),
               ]),
             ),
           ],
@@ -272,7 +278,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (j.kind == 'backup' && j.phase == JobPhase.succeeded && j.snapshotId != null && j.options['dryRun'] != true)
               FilledButton.icon(onPressed: () => _browse(j), icon: const Icon(Icons.folder_open), label: const Text('Browse Snapshot')),
-            OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Backup Vault')),
+            if (showVault) OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Backup Vault')),
             if (j.active) OutlinedButton.icon(onPressed: () => _cancel(j), icon: const Icon(Icons.stop_circle_outlined), label: const Text('Cancel')),
           ]),
         ]),
@@ -307,8 +313,10 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(child: Text(s.title)),
-                if (s.finished) Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
-                else if (s.fraction != null) Text('${(s.fraction! * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.labelMedium),
+                if (s.finished)
+                  Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
+                else if (s.fraction != null)
+                  Text('${(s.fraction! * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.labelMedium),
               ]),
               const SizedBox(height: 6),
               ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: s.finished ? 1 : (j.active ? s.fraction : s.fraction ?? 0), minHeight: 6)),

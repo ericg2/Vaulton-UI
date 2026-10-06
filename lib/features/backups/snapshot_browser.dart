@@ -33,7 +33,6 @@ class SnapshotBrowserPage extends ConsumerStatefulWidget {
 
 typedef _Crumb = ({String name, String path});
 
-
 typedef SnapshotRestoreTarget = ({String path, bool isDir, String name});
 
 class SnapshotLockBadge extends StatelessWidget {
@@ -174,7 +173,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
                 [(path: _path, isDir: true, name: _path == '/' ? 'snapshot' : baseName(_path))],
               ),
               child: const Text('Select folder'),
-            ),          
+            ),
           ]),
           const Divider(height: 1),
           Expanded(
@@ -212,7 +211,6 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
   }
 }
 
-
 class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
   List<Snapshot>? _snaps;
   Snapshot? _snap;
@@ -221,7 +219,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
   final Set<String> _sel = {};
   List<Node> _loaded = [];
   String _search = '';
-  bool _searching = false, _desc = false;
+  bool _searching = false, _desc = false, _locking = false;
   int _reload = 0;
   final _searchCtl = TextEditingController();
 
@@ -241,14 +239,17 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     super.dispose();
   }
 
-  Future<void> _init() async {
+  /// Loads snapshots. With [keep], the snapshot with the same time stays selected
+  /// (locking changes a snapshot's id, so the id can't be used).
+  Future<void> _init({Snapshot? keep}) async {
     setState(() => _error = null);
     try {
       final pg = await _v.snapshots(widget.repo.id, limit: 100);
       var list = pg.items;
       Snapshot? pick;
+      if (keep?.time != null) pick = list.where((s) => s.time == keep!.time).firstOrNull;
       final want = widget.snapshotId;
-      if (want != null && want.isNotEmpty && want != 'latest') {
+      if (pick == null && keep == null && want != null && want.isNotEmpty && want != 'latest') {
         pick = list.where((s) => s.id == want || s.id.startsWith(want)).firstOrNull;
         if (pick == null) {
           pick = (await _v.snapshots(widget.repo.id, idPrefix: want, limit: 1)).items.firstOrNull;
@@ -275,25 +276,17 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
 
   Future<void> _toggleLock() async {
     final snap = _snap;
-    if (snap == null) return;
-    final locked = !snap.locked;
-    final result = await guarded(context, () => _v.lockSnapshot(widget.repo.id, snap.id, locked));
-    if (result == null || !mounted) return;
-    final message = toStr(result['message']) ?? (locked ? 'Snapshot locked' : 'Snapshot unlocked');
-    toast(context, message);
-    await _init();
-  }
-
-  Future<void> _openJobDetails() async {
-    final snap = _snap;
-    if (snap == null) return;
-    final job = await guarded(context, () => _v.snapshotJob(widget.repo.id, snap.id));
-    if (!mounted) return;
-    if (job == null) {
-      toast(context, 'No job was found for this snapshot.', error: true);
-      return;
+    if (snap == null || _locking) return;
+    setState(() => _locking = true);
+    try {
+      final locked = !snap.locked;
+      final result = await guarded(context, () => _v.lockSnapshot(widget.repo.id, snap.id, locked));
+      if (result == null || !mounted) return;
+      toast(context, toStr(result['message']) ?? (locked ? 'Snapshot locked' : 'Snapshot unlocked'));
+      await _init(keep: snap);
+    } finally {
+      if (mounted) setState(() => _locking = false);
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: job.id)));
   }
 
   void _go(List<_Crumb> trail) => setState(() {
@@ -472,16 +465,14 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                     onSubmitted: (v) => setState(() => _search = v.trim()),
                   )
                 : title,
+            bottom: _locking ? const PreferredSize(preferredSize: Size.fromHeight(3), child: LinearProgressIndicator(minHeight: 3)) : null,
             actions: [
               IconButton(
-                tooltip: 'View Job Details',
-                icon: const Icon(Icons.work_history_outlined),
-                onPressed: _openJobDetails,
-              ),
-              IconButton(
-                tooltip: snap.locked ? 'Unlock Snapshot' : 'Lock Snapshot',
-                icon: Icon(snap.locked ? Icons.lock_open_outlined : Icons.lock_outline),
-                onPressed: _toggleLock,
+                tooltip: _locking ? (snap.locked ? 'Unlocking…' : 'Locking…') : (snap.locked ? 'Unlock Snapshot' : 'Lock Snapshot'),
+                icon: _locking
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(snap.locked ? Icons.lock_open_outlined : Icons.lock_outline),
+                onPressed: _locking ? null : _toggleLock,
               ),
               IconButton(
                 tooltip: 'Search',

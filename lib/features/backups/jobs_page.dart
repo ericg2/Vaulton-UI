@@ -11,6 +11,7 @@ import '../../core/timezones.dart';
 import '../files/folder_picker.dart';
 import 'backup_flow.dart';
 import 'backup_options.dart';
+import 'job_text.dart';
 import 'job_widgets.dart';
 import 'repo_page.dart';
 
@@ -199,10 +200,10 @@ class JobCard extends ConsumerWidget {
                   const SizedBox(height: 10),
                   ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: job.liveFraction, minHeight: 6)),
                 ],
-                if (job.error != null && job.error!.isNotEmpty)
+                if (cleanJobError(job.error).isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text(job.error!, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: cs.error)),
+                    child: Text(cleanJobError(job.error), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: cs.error)),
                   ),
               ]),
             ),
@@ -228,8 +229,9 @@ Widget _tag(BuildContext c, IconData icon, String text) {
 
 // ============================================================== SCHEDULES
 class SchedulesList extends ConsumerStatefulWidget {
-  const SchedulesList({super.key, this.repoId});
+  const SchedulesList({super.key, this.repoId, this.header});
   final String? repoId;
+  final Widget? header;
   @override
   ConsumerState<SchedulesList> createState() => _SchedulesListState();
 }
@@ -330,64 +332,73 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
           constraints: const BoxConstraints(maxWidth: 920),
           child: CursorList<Schedule>(
             key: _key,
-        empty: 'No Schedules Created.',
-        emptyIcon: Icons.schedule,
-        autoRefresh: const Duration(seconds: 30),
-        fetch: (c) => _v.schedules(cursor: c, repoId: widget.repoId),
-        itemBuilder: (ctx, s, i) {
-          final repoName = names[s.repoId] ?? 'Backup Vault';
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
-                  title: Text(s.name),
-                  subtitle: Text('${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}'),
-                  isThreeLine: true,
-                  onTap: () => _edit(s),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (a) async {
-                      switch (a) {
-                        case 'run':
-                          await guarded(context, () => _v.runSchedule(s.id));
-                          ref.read(epochProvider.notifier).bump();
-                          if (context.mounted) toast(context, 'Job queued');
-                        case 'toggle':
-                          await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
-                          _key.currentState?.refresh();
-                        case 'preview':
-                          _preview(s);
-                        case 'del':
-                          if (await confirm(context, 'Delete Schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
-                            await guarded(context, () => _v.deleteSchedule(s.id));
-                            _key.currentState?.refresh();
+            header: widget.header,
+            empty: 'No Schedules Created.',
+            emptyIcon: Icons.schedule,
+            autoRefresh: const Duration(seconds: 30),
+            fetch: (c) => _v.schedules(cursor: c, repoId: widget.repoId),
+            itemBuilder: (ctx, s, i) {
+              final repoName = names[s.repoId] ?? 'Backup Vault';
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
+                      title: Text(s.name),
+                      subtitle: Text('${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}'),
+                      isThreeLine: true,
+                      onTap: () => _edit(s),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (a) async {
+                          switch (a) {
+                            case 'run':
+                              await guarded(context, () => _v.runSchedule(s.id));
+                              ref.read(epochProvider.notifier).bump();
+                              if (context.mounted) toast(context, 'Job queued');
+                            case 'toggle':
+                              await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
+                              _key.currentState?.refresh();
+                            case 'preview':
+                              _preview(s);
+                            case 'del':
+                              if (await confirm(context, 'Delete Schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
+                                await guarded(context, () => _v.deleteSchedule(s.id));
+                                _key.currentState?.refresh();
+                              }
                           }
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(value: 'run', child: Text('Run Now')),
-                      PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
-                      const PopupMenuItem(value: 'preview', child: Text('Preview Next Runs')),
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(value: 'del', child: Text('Delete')),
-                    ],
-                  ),
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(value: 'run', child: Text('Run Now')),
+                          PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
+                          const PopupMenuItem(value: 'preview', child: Text('Preview Next Runs')),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(value: 'del', child: Text('Delete')),
+                        ],
+                      ),
+                    ),
+                    Wrap(spacing: 8, children: [
+                      if (s.lastJobId != null)
+                        TextButton.icon(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: s.lastJobId!, showVaultLink: widget.repoId == null))),
+                          icon: const Icon(Icons.history, size: 18),
+                          label: const Text('Last run'),
+                        ),
+                      if (widget.repoId == null)
+                        TextButton.icon(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: s.repoId, initialTab: 2))),
+                          icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                          label: Text('Open $repoName'),
+                        ),
+                    ]),
+                  ]),
                 ),
-                TextButton.icon(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: s.repoId, initialTab: 2))),
-                  icon: const Icon(Icons.inventory_2_outlined, size: 18),
-                  label: Text('Open $repoName'),
-                ),
-              ]),
-            ),
-          );
-        },
+              );
+            },
           ),
         ),
       ),
     );
   }
 }
-
