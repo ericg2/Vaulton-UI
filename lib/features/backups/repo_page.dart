@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
@@ -12,6 +13,12 @@ import 'job_detail_page.dart';
 import 'job_widgets.dart';
 import 'jobs_page.dart';
 import 'snapshot_browser.dart';
+
+/// Width below which the page uses the compact (phone) layout.
+const double _kCompactWidth = 600;
+
+/// Max content width on large screens.
+const double _kMaxContentWidth = 920;
 
 /// Everything about one backup vault: browse, snapshots, jobs, schedules and maintenance.
 class RepoPage extends ConsumerStatefulWidget {
@@ -109,6 +116,11 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (j != null) _queued(j);
   }
 
+  Future<void> _healthCheck() async {
+    final j = await guarded(context, () => _v.check(widget.repoId));
+    if (j != null) _queued(j);
+  }
+
   Future<void> _password() async {
     final f = await formDialog(context, 'Update vault password', [
       const FieldSpec('cur', 'Current password', kind: 'secret', required: true),
@@ -122,61 +134,101 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   Widget _header() {
     final r = _repo;
     final cs = Theme.of(context).colorScheme;
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 920),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (r != null) ...[
-                Row(children: [
-                  Expanded(child: UsageBar(used: r.usedBytes, max: r.maxBytes)),
-                  const SizedBox(width: 12),
-                  Text('${fmtBytes(r.usedBytes)} of ${fmtBytes(r.maxBytes)}', style: Theme.of(context).textTheme.labelMedium),
-                  const SizedBox(width: 8),
-                  chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null),
-                ]),
-                if (r.error != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(r.error!, style: TextStyle(color: cs.error, fontSize: 12))),
-                const SizedBox(height: 12),
-              ],
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final narrow = constraints.maxWidth < 600;
-                  final buttons = [
-                    FilledButton.icon(onPressed: _repo == null ? null : () => _browse(), icon: const Icon(Icons.folder_open), label: const Text('Browse')),
-                    FilledButton.tonalIcon(onPressed: _backup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup Now')),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final j = await guarded(context, () => _v.check(widget.repoId));
-                        if (j != null) _queued(j);
-                      },
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text('Health Check'),
-                    ),
-                    OutlinedButton.icon(onPressed: _retention, icon: const Icon(Icons.auto_delete_outlined), label: const Text('Clean up')),
-                  ];
-                  if (!narrow) return Wrap(spacing: 8, runSpacing: 8, children: buttons);
-                  return Column(children: [
-                    Row(children: [
-                      Expanded(child: buttons[0]),
-                      const SizedBox(width: 8),
-                      Expanded(child: buttons[1]),
-                    ]),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Expanded(child: buttons[2]),
-                      const SizedBox(width: 8),
-                      Expanded(child: buttons[3]),
-                    ]),
-                  ]);
-                },
-              ),
-            ]),
+    final tt = Theme.of(context).textTheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < _kCompactWidth;
+        final pad = compact ? 12.0 : 20.0;
+        final gap = compact ? 8.0 : 12.0;
+
+        final buttons = <Widget>[
+          FilledButton.icon(
+            onPressed: r == null ? null : () => _browse(),
+            icon: const Icon(Icons.folder_open),
+            label: const Text('Browse'),
           ),
-        ),
-      ),
+          FilledButton.tonalIcon(
+            onPressed: _backup,
+            icon: const Icon(Icons.backup_outlined),
+            label: const Text('Backup Now'),
+          ),
+          OutlinedButton.icon(
+            onPressed: _healthCheck,
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Health Check'),
+          ),
+          OutlinedButton.icon(
+            onPressed: _retention,
+            icon: const Icon(Icons.auto_delete_outlined),
+            label: const Text('Clean up'),
+          ),
+        ];
+
+        Widget usage() {
+          if (r == null) return const SizedBox.shrink();
+          final label = Text('${fmtBytes(r.usedBytes)} of ${fmtBytes(r.maxBytes)}', style: tt.labelMedium);
+          final health = chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null);
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (compact) ...[
+              UsageBar(used: r.usedBytes, max: r.maxBytes),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: label),
+                health,
+              ]),
+            ] else
+              Row(children: [
+                Expanded(child: UsageBar(used: r.usedBytes, max: r.maxBytes)),
+                const SizedBox(width: 16),
+                label,
+                const SizedBox(width: 12),
+                health,
+              ]),
+            if (r.error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(r.error!, style: TextStyle(color: cs.error, fontSize: 12)),
+              ),
+            SizedBox(height: gap + 4),
+          ]);
+        }
+
+        Widget actions() {
+          if (!compact) return Wrap(spacing: gap, runSpacing: gap, children: buttons);
+          return Column(mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
+              Expanded(child: buttons[0]),
+              SizedBox(width: gap),
+              Expanded(child: buttons[1]),
+            ]),
+            SizedBox(height: gap),
+            Row(children: [
+              Expanded(child: buttons[2]),
+              SizedBox(width: gap),
+              Expanded(child: buttons[3]),
+            ]),
+          ]);
+        }
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
+            child: Card(
+              margin: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: 4),
+              child: Padding(
+                padding: EdgeInsets.all(pad),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [usage(), actions()],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -251,7 +303,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 920),
+            constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
             child: CursorList<Snapshot>(
               key: _key,
               empty: 'No snapshots yet',
@@ -265,85 +317,101 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         JobsList(repoId: widget.repoId, externalStatus: _jobStatus, showFilters: false),
         SchedulesList(repoId: widget.repoId),
       ]);
-
-  PreferredSizeWidget _appBar() => AppBar(
-        title: Text(_repo?.name ?? 'Backup Vault'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (a) {
-              if (a == 'pw') _password();
-            },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
-          ),
-        ],
-        bottom: _tabs(),
-      );
-
-  Widget _topBar() => Material(
-        color: Theme.of(context).colorScheme.surface,
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: kToolbarHeight,
-            child: Row(children: [
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  _repo?.name ?? 'Backup Vault',
-                  style: Theme.of(context).textTheme.titleLarge,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      
+  Widget _topBar() {
+    final canPop = Navigator.of(context).canPop();
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: kToolbarHeight,
+          child: Row(children: [
+            // Same 56px leading slot AppBar uses, so the arrow lines up with other screens.
+            if (canPop)
+              SizedBox(
+                width: 56,
+                child: Center(
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
                 ),
+              )
+            else
+              const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                _repo?.name ?? 'Backup Vault',
+                style: theme.textTheme.titleLarge,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              PopupMenuButton<String>(
-                onSelected: (a) {
-                  if (a == 'pw') _password();
-                },
-                itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
-              ),
-            ]),
-          ),
+            ),
+            PopupMenuButton<String>(
+              onSelected: (a) {
+                if (a == 'pw') _password();
+              },
+              itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
+            ),
+            const SizedBox(width: 4),
+          ]),
         ),
+      ),
+    );
+  }
+
+  Widget _cleanup() => CleanupCard(
+        key: _cleanupKey,
+        repoId: widget.repoId,
+        onRunNow: _retention,
       );
 
   @override
   Widget build(BuildContext context) {
     final jobs = _tc.index == 1;
+    final compact = MediaQuery.sizeOf(context).width < _kCompactWidth;
+
+    // Wide screens: nothing collapses, it all just scrolls. Only the tab bar stays pinned.
+    // Phones: the top bar, vault card and cleanup card fade away to save space.
+    final topSlivers = compact
+        ? <Widget>[
+            SliverPersistentHeader(
+              pinned: false,
+              delegate: _CollapsingTopBarDelegate(
+                _topBar(),
+                kToolbarHeight + MediaQuery.paddingOf(context).top,
+              ),
+            ),
+            SliverPersistentHeader(pinned: true, delegate: _PinnedTabBarDelegate(_tabs())),
+            _AutoHeightHeader(initialHeight: 190, child: _header()),
+            _AutoHeightHeader(initialHeight: 156, child: _cleanup()),
+          ]
+        : <Widget>[
+            SliverToBoxAdapter(child: _topBar()),
+            SliverToBoxAdapter(child: _header()),
+            SliverToBoxAdapter(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
+                  child: _cleanup(),
+                ),
+              ),
+            ),
+            SliverPersistentHeader(pinned: true, delegate: _PinnedTabBarDelegate(_tabs())),
+          ];
 
     return Scaffold(
-      floatingActionButton: _tc.index == 0
+      // On wide screens "Backup Now" is already in the header, so the FAB is phone-only.
+      floatingActionButton: (_tc.index == 0 && compact)
           ? FloatingActionButton.extended(onPressed: _backup, icon: const Icon(Icons.backup), label: const Text('Backup'))
           : null,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverPersistentHeader(
-            pinned: false,
-            delegate: _CollapsingTopBarDelegate(
-              _topBar(),
-              kToolbarHeight + MediaQuery.paddingOf(context).top,
-            ),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PinnedTabBarDelegate(_tabs()),
-          ),
-          SliverPersistentHeader(
-            pinned: false,
-            delegate: _CollapsingHeaderDelegate(
-              _header(),
-              MediaQuery.sizeOf(context).width < 600 ? 176 : 124,
-            ),
-          ),
-          SliverPersistentHeader(
-            pinned: false,
-            delegate: _CollapsingCleanupDelegate(
-              CleanupCard(
-                key: _cleanupKey,
-                repoId: widget.repoId,
-                onRunNow: _retention,
-              ),
-            ),
-          ),
+          ...topSlivers,
           if (jobs)
             SliverPersistentHeader(
               pinned: true,
@@ -384,66 +452,41 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
 }
 
-
-class _PinnedCleanupDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedCleanupDelegate(this.child);
+/// A collapsing (fade + slide) sliver header whose height follows its child's
+/// real height, instead of a hardcoded extent. Used on phones only.
+class _AutoHeightHeader extends StatefulWidget {
+  const _AutoHeightHeader({required this.child, this.initialHeight = 0});
   final Widget child;
 
-  @override
-  double get minExtent => maxExtent;
+  /// Used only until the child has been measured once.
+  final double initialHeight;
 
   @override
-  double get maxExtent => 190;
+  State<_AutoHeightHeader> createState() => _AutoHeightHeaderState();
+}
 
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: child,
-    );
+class _AutoHeightHeaderState extends State<_AutoHeightHeader> {
+  late double _height = widget.initialHeight;
+
+  void _onMeasured(double h) {
+    if (!mounted || (h - _height).abs() < 0.5) return;
+    setState(() => _height = h);
   }
 
   @override
-  bool shouldRebuild(covariant _PinnedCleanupDelegate oldDelegate) => oldDelegate.child != child;
-}
-
-class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
-  _CollapsingCleanupDelegate(this.child);
-  final Widget child;
-
-  @override
-  double get minExtent => 0;
-
-  @override
-  double get maxExtent => 156;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final progress = (shrinkOffset / maxExtent).clamp(0, 1).toDouble();
-    return ClipRect(
-      child: Opacity(
-        opacity: 1 - progress,
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: 1 - progress,
-          child: Transform.translate(
-            offset: Offset(0, -20 * progress),
-            child: child,
-          ),
-        ),
-      ),
+  Widget build(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: false,
+      delegate: _AutoHeightDelegate(widget.child, _height, _onMeasured),
     );
   }
-
-  @override
-  bool shouldRebuild(covariant _CollapsingCleanupDelegate oldDelegate) => oldDelegate.child != child;
 }
 
-
-class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _CollapsingHeaderDelegate(this.child, this.extent);
+class _AutoHeightDelegate extends SliverPersistentHeaderDelegate {
+  _AutoHeightDelegate(this.child, this.extent, this.onMeasured);
   final Widget child;
   final double extent;
+  final ValueChanged<double> onMeasured;
 
   @override
   double get minExtent => 0;
@@ -453,7 +496,7 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final progress = (shrinkOffset / maxExtent).clamp(0, 1).toDouble();
+    final progress = extent <= 0 ? 0.0 : (shrinkOffset / extent).clamp(0, 1).toDouble();
     return ClipRect(
       child: Opacity(
         opacity: 1 - progress,
@@ -462,7 +505,13 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
           heightFactor: 1 - progress,
           child: Transform.translate(
             offset: Offset(0, -20 * progress),
-            child: child,
+            // Let the child take its natural height, and report it.
+            child: OverflowBox(
+              alignment: Alignment.topCenter,
+              minHeight: 0,
+              maxHeight: double.infinity,
+              child: _MeasureSize(onChange: onMeasured, child: child),
+            ),
           ),
         ),
       ),
@@ -470,8 +519,37 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) =>
+  bool shouldRebuild(covariant _AutoHeightDelegate oldDelegate) =>
       oldDelegate.child != child || oldDelegate.extent != extent;
+}
+
+/// Reports its child's height after layout.
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  const _MeasureSize({required this.onChange, required Widget super.child});
+  final ValueChanged<double> onChange;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderMeasureSize(onChange);
+
+  @override
+  void updateRenderObject(BuildContext context, covariant _RenderMeasureSize renderObject) {
+    renderObject.onChange = onChange;
+  }
+}
+
+class _RenderMeasureSize extends RenderProxyBox {
+  _RenderMeasureSize(this.onChange);
+  ValueChanged<double> onChange;
+  double? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final h = size.height;
+    if (h == _last) return;
+    _last = h;
+    WidgetsBinding.instance.addPostFrameCallback((_) => onChange(h));
+  }
 }
 
 class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
@@ -523,7 +601,7 @@ class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
       child: Align(
         alignment: Alignment.center,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
+          constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
           child: child,
         ),
       ),
