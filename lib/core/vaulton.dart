@@ -105,19 +105,6 @@ class Vaulton {
       Paged.from(await _req('GET', '/repos/$id/snapshots', q: _pg(cursor, limit, 'Desc', {'tag': tag, 'path': path, 'locked': locked, 'idPrefix': idPrefix})), Snapshot.fromJson);
 
   /// Resolves a snapshot ID/prefix to the full snapshot ID required by snapshot operations.
-  Future<String> _fullSnapshotId(String repoId, String snapshotId) async {
-    final requested = snapshotId.trim();
-    String? cursor;
-    do {
-      final page = await snapshots(repoId, cursor: cursor, limit: 200);
-      final match = page.items.where((s) => s.id == requested || s.id.startsWith(requested)).firstOrNull;
-      if (match != null) return match.id;
-      cursor = page.hasMore ? page.nextCursor : null;
-    } while (cursor != null);
-
-    throw ApiException('Snapshot "$snapshotId" was not found.');
-  }
-
   /// Lists one directory of a snapshot (omit [path] for the top level).
   Future<Paged<Node>> browseSnapshot(String repoId, String snapshotId,
           {String? path, String? search, String type = 'All', String? cursor, int limit = 200, String order = 'Asc'}) async =>
@@ -126,7 +113,7 @@ class Vaulton {
               q: _pg(cursor, limit, order, {'path': path, 'search': search, 'type': type == 'All' ? null : type})),
           Node.fromJson);
   Future<Json> lockSnapshot(String id, String snap, bool lock) async {
-    final fullId = await _fullSnapshotId(id, snap);
+    final fullId = snap;
     return toJson(await _req('POST', '/repos/$id/snapshots/${_e(fullId)}/${lock ? 'lock' : 'unlock'}'));
   }
   Future<RepoJob> backup(String repoId, Json body, {DateTime? runAt}) async =>
