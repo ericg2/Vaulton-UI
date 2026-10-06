@@ -287,40 +287,38 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final snapshots = _tc.index == 0;
+    final schedules = _tc.index == 2;
 
     return Scaffold(
-      appBar: snapshots ? _appBar() : null,
-      floatingActionButton: snapshots
+      floatingActionButton: _tc.index == 0
           ? FloatingActionButton.extended(onPressed: _backup, icon: const Icon(Icons.backup), label: const Text('Backup'))
           : null,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          if (!snapshots) _scrollingAppBar(),
-          if (!snapshots)
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _PinnedTabBarDelegate(_tabs()),
-            ),
+          _scrollingAppBar(),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PinnedTabBarDelegate(_tabs()),
+          ),
           SliverToBoxAdapter(child: _header()),
-          snapshots
-              ? SliverPersistentHeader(
-                  pinned: false,
-                  delegate: _CollapsingCleanupDelegate(
+          SliverPersistentHeader(
+            pinned: schedules,
+            delegate: schedules
+                ? _PinnedCleanupDelegate(
+                    CleanupCard(
+                      key: _cleanupKey,
+                      repoId: widget.repoId,
+                      onRunNow: _retention,
+                    ),
+                  )
+                : _CollapsingCleanupDelegate(
                     CleanupCard(
                       key: _cleanupKey,
                       repoId: widget.repoId,
                       onRunNow: _retention,
                     ),
                   ),
-                )
-              : SliverToBoxAdapter(
-                  child: CleanupCard(
-                    key: _cleanupKey,
-                    repoId: widget.repoId,
-                    onRunNow: _retention,
-                  ),
-                ),
+          ),
         ],
         body: _tabView(),
       ),
@@ -351,6 +349,28 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
 }
 
+
+class _PinnedCleanupDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedCleanupDelegate(this.child);
+  final Widget child;
+
+  @override
+  double get minExtent => maxExtent;
+
+  @override
+  double get maxExtent => 190;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedCleanupDelegate oldDelegate) => oldDelegate.child != child;
+}
 
 class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
   _CollapsingCleanupDelegate(this.child);
