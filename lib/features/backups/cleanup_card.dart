@@ -100,12 +100,15 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
                 Expanded(child: Text(on ? 'Automatic cleanup is on' : (s == null ? 'Old snapshots aren’t being cleaned up' : 'Automatic cleanup is paused'), style: t.titleSmall?.copyWith(color: fg))),
               ]),
               const SizedBox(height: 6),
-              Text(
-                on
-                    ? '${describeRetention(_policyOf(s))}\nNext run: ${fmtDate(s.nextRunAt)}'
-                    : 'Every backup adds a snapshot, so this vault will keep growing until it’s full. Turn on automatic cleanup to keep only the snapshots you need.',
-                style: t.bodyMedium?.copyWith(color: fg),
-              ),
+              if (on) ...[
+                Text(describeRetention(_policyOf(s)), style: t.bodyMedium?.copyWith(color: fg)),
+                const SizedBox(height: 4),
+                Text('Next run: ${fmtDate(s.nextRunAt)}', style: t.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w700)),
+              ] else
+                Text(
+                  'Every backup adds a snapshot, so this vault will keep growing until it’s full. Turn on automatic cleanup to keep only the snapshots you need.',
+                  style: t.bodyMedium?.copyWith(color: fg),
+                ),
               const SizedBox(height: 10),
               LayoutBuilder(
                 builder: (context, constraints) {
