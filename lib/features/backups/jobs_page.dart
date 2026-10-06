@@ -231,16 +231,16 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final isNew = s == null;
     final curRepo = repos.items.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.items.first;
     final curData = datas.items.where((d) => d.id == s?.dataId).firstOrNull;
-    final f = await formDialog(context, isNew ? 'New schedule' : 'Edit schedule', [
+    final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
-      if (isNew) FieldSpec('repo', 'Backup vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
-      if (isNew) FieldSpec('mode', 'What to run', kind: 'choice', options: ['Backup', 'Clean up snapshots', 'Health check'], initial: startMode ?? 'Backup'),
+      if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
+      if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean up snapshots', 'Health check'], initial: startMode ?? 'Backup'),
       if ((s == null && startMode == null) || s?.mode == 'backup') ...[
-        if (datas.items.isNotEmpty) FieldSpec('data', 'Back up from', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
-        FieldSpec('path', 'Folder to back up', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
+        if (datas.items.isNotEmpty) FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
+        FieldSpec('path', 'Folder to Back Up', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
       ],
       FieldSpec('cron', 'Schedule', kind: 'cron', initial: s?.cron ?? '0 2 * * *'),
-      FieldSpec('tz', 'Time zone', kind: 'choice', options: timeZoneOptions(device: deviceTz, extra: s?.timeZone), initial: s?.timeZone.isNotEmpty == true ? s!.timeZone : (deviceTz ?? 'UTC')),
+      FieldSpec('tz', 'Time Zone', kind: 'choice', options: timeZoneOptions(device: deviceTz, extra: s?.timeZone), initial: s?.timeZone.isNotEmpty == true ? s!.timeZone : (deviceTz ?? 'UTC')),
       FieldSpec('enabled', 'Enabled', kind: 'bool', initial: '${s?.enabled ?? true}'),
       FieldSpec('skip', 'Skip if the last run is still going', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
     ], ok: 'Save', pick: (v) async {
@@ -301,50 +301,65 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
 
   @override
   Widget build(BuildContext context) {
+    final names = ref.watch(pointNamesProvider).value ?? const <String, String>{};
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(onPressed: _edit, icon: const Icon(Icons.add), label: const Text('New schedule')),
+      floatingActionButton: FloatingActionButton.extended(onPressed: _edit, icon: const Icon(Icons.add), label: const Text('New Schedule')),
       body: CursorList<Schedule>(
         key: _key,
-        empty: 'No schedules created.',
+        empty: 'No Schedules Created.',
         emptyIcon: Icons.schedule,
         autoRefresh: const Duration(seconds: 30),
         fetch: (c) => _v.schedules(cursor: c, repoId: widget.repoId),
-        itemBuilder: (ctx, s, i) => Card(
-          child: ListTile(
-            leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
-            title: Text(s.name),
-            subtitle: Text('${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}'),
-            isThreeLine: true,
-            onTap: () => _edit(s),
-            trailing: PopupMenuButton<String>(
-              onSelected: (a) async {
-                switch (a) {
-                  case 'run':
-                    await guarded(context, () => _v.runSchedule(s.id));
-                    ref.read(epochProvider.notifier).bump();
-                    if (context.mounted) toast(context, 'Job queued');
-                  case 'toggle':
-                    await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
-                    _key.currentState?.refresh();
-                  case 'preview':
-                    _preview(s);
-                  case 'del':
-                    if (await confirm(context, 'Delete schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
-                      await guarded(context, () => _v.deleteSchedule(s.id));
-                      _key.currentState?.refresh();
-                    }
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'run', child: Text('Run now')),
-                PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
-                const PopupMenuItem(value: 'preview', child: Text('Preview next runs')),
-                const PopupMenuDivider(),
-                const PopupMenuItem(value: 'del', child: Text('Delete')),
-              ],
+        itemBuilder: (ctx, s, i) {
+          final repoName = names[s.repoId] ?? 'Backup Vault';
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
+                  title: Text(s.name),
+                  subtitle: Text('${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}'),
+                  isThreeLine: true,
+                  onTap: () => _edit(s),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (a) async {
+                      switch (a) {
+                        case 'run':
+                          await guarded(context, () => _v.runSchedule(s.id));
+                          ref.read(epochProvider.notifier).bump();
+                          if (context.mounted) toast(context, 'Job queued');
+                        case 'toggle':
+                          await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
+                          _key.currentState?.refresh();
+                        case 'preview':
+                          _preview(s);
+                        case 'del':
+                          if (await confirm(context, 'Delete Schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
+                            await guarded(context, () => _v.deleteSchedule(s.id));
+                            _key.currentState?.refresh();
+                          }
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'run', child: Text('Run Now')),
+                      PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
+                      const PopupMenuItem(value: 'preview', child: Text('Preview Next Runs')),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(value: 'del', child: Text('Delete')),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: s.repoId, initialTab: 2))),
+                  icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                  label: Text('Open $repoName'),
+                ),
+              ]),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
