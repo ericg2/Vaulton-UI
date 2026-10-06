@@ -140,14 +140,14 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                   final narrow = constraints.maxWidth < 600;
                   final buttons = [
                     FilledButton.icon(onPressed: _repo == null ? null : () => _browse(), icon: const Icon(Icons.folder_open), label: const Text('Browse')),
-                    FilledButton.tonalIcon(onPressed: _backup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup now')),
+                    FilledButton.tonalIcon(onPressed: _backup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup Now')),
                     OutlinedButton.icon(
                       onPressed: () async {
                         final j = await guarded(context, () => _v.check(widget.repoId));
                         if (j != null) _queued(j);
                       },
                       icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text('Health check'),
+                      label: const Text('Health Check'),
                     ),
                     OutlinedButton.icon(onPressed: _retention, icon: const Icon(Icons.auto_delete_outlined), label: const Text('Clean up')),
                   ];
@@ -230,7 +230,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
               ]),
             ),
             OverflowBar(alignment: MainAxisAlignment.start, children: [
-              TextButton.icon(onPressed: () => _browse(s), icon: const Icon(Icons.folder_open), label: const Text('Browse files')),
+              TextButton.icon(onPressed: () => _browse(s), icon: const Icon(Icons.folder_open), label: const Text('Browse Files')),
               TextButton.icon(onPressed: () => _restore(s), icon: const Icon(Icons.settings_backup_restore), label: const Text('Restore…')),
             ]),
           ]),
