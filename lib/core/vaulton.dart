@@ -234,8 +234,28 @@ class Vaulton {
       Paged.from(await _req('GET', '/admin/vfs', q: _pg(cursor, limit, null, {'user': user, 'search': search})), (j) => j);
   Future<void> reloadVfs(String user) => _req('POST', '/admin/vfs/users/${_e(user)}/reload');
   Future<void> syncVfs() => _req('POST', '/admin/vfs/sync');
-  Future<Paged<Json>> logs({String? search, String? cursor, int limit = 100, String order = 'Desc'}) async =>
-      Paged.from(await _req('GET', '/admin/logs', q: _pg(cursor, limit, order, {'search': search})), (j) => j);
+  Future<Paged<Json>> logs({
+    String? search,
+    String? priority,
+    DateTime? from,
+    DateTime? to,
+    String? cursor,
+    int limit = 100,
+    String order = 'Desc',
+  }) async =>
+      Paged.from(
+        await _req(
+          'GET',
+          '/admin/logs',
+          q: _pg(cursor, limit, order, {
+            'search': search,
+            'priority': priority,
+            'from': from?.toUtc().toIso8601String(),
+            'to': to?.toUtc().toIso8601String(),
+          }),
+        ),
+        (j) => j,
+      );
   Future<Paged<Json>> events({String? user, String? cursor, int limit = 100}) async =>
       Paged.from(await _req('GET', '/admin/events', q: _pg(cursor, limit, 'Desc', {'user': user})), (j) => j);
   Future<void> testEmail() => _req('POST', '/admin/email/test');
