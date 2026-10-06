@@ -460,7 +460,7 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _CollapsingTopBarDelegate oldDelegate) => oldDelegate.child != child;
+  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) => oldDelegate.child != child;
 }
 
 class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
