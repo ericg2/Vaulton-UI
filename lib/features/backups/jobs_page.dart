@@ -12,6 +12,7 @@ import '../files/folder_picker.dart';
 import 'backup_flow.dart';
 import 'backup_options.dart';
 import 'job_widgets.dart';
+import 'repo_page.dart';
 
 class BackupsPage extends ConsumerWidget {
   const BackupsPage({super.key});
@@ -65,7 +66,7 @@ class _JobsListState extends ConsumerState<JobsList> {
     _t = Timer.periodic(const Duration(seconds: 3), (_) {
       tick++;
       // Silent: updates rows in place instead of clearing the list and showing a spinner.
-      if (mounted && TickerMode.of(context) && (_anyActive || tick % 5 == 0)) _key.currentState?.silentRefresh();
+      if (mounted && TickerMode.valuesOf(context).enabled && (_anyActive || tick % 5 == 0)) _key.currentState?.silentRefresh();
     });
   }
 
