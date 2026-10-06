@@ -370,6 +370,7 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
   }
 
   void _clearFilters() {
+    _searchCtl.clear();
     setState(() {
       _search = '';
       _priority = null;
