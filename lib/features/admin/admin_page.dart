@@ -19,7 +19,6 @@ class AdminPage extends ConsumerWidget {
       ('Users', const _UsersTab()),
       if (u.has(Scopes.jobsManage)) ('All Jobs', const JobsList(admin: true)),
       if (u.has(Scopes.adminVfs)) ('VFS', const _VfsTab()),
-      if (u.has(Scopes.adminVfs)) ('Health Events', const _EventsTab()),
       if (u.has(Scopes.adminLogs)) ('Logs', const _LogsTab()),
     ];
     return DefaultTabController(
@@ -115,14 +114,6 @@ class _StatusTab extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Wrap(spacing: 8, children: [
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.sync),
-                    label: const Text('Push Config to Backend'),
-                    onPressed: () async {
-                      await guarded(ctx, v.syncVfs);
-                      if (ctx.mounted) toast(ctx, 'Sync requested');
-                    },
-                  ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.mark_email_read_outlined),
                     label: const Text('Send Test Email'),
@@ -304,40 +295,35 @@ class _VfsTab extends ConsumerWidget {
       fetch: (c) => v.vfs(cursor: c),
       itemBuilder: (ctx, p, i) {
         final err = toStr(p['error']);
-        return ListTile(
-          leading: Icon(err != null ? Icons.error_outline : Icons.storage_outlined, color: err != null ? Theme.of(ctx).colorScheme.error : null),
-          title: Text('${p['user']} / ${p['name']}'),
-          subtitle: Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · health ${p['health']} · ${toBool(p['canWrite']) ? 'read/write' : 'read-only'}${err != null ? '\n$err' : ''}'),
-          trailing: IconButton(
-            tooltip: 'Reload user VFS',
-            icon: const Icon(Icons.refresh),
-            onPressed: () async {
-              await guarded(ctx, () => v.reloadVfs('${p['user']}'));
-              if (ctx.mounted) toast(ctx, 'Reloaded ${p['user']}');
-            },
+        final health = '${p['health'] ?? 'Unknown'}';
+        final updatedRaw = p['healthUpdatedAt'] ?? p['updatedAt'] ?? p['updated'] ?? p['lastHealthCheck'];
+        final updated = updatedRaw == null ? null : toDate(updatedRaw);
+        final cs = Theme.of(ctx).colorScheme;
+        return Card(
+          child: ListTile(
+            leading: Icon(err != null ? Icons.error_outline : Icons.storage_outlined, color: err != null ? cs.error : null),
+            title: Text('${p['name']}'),
+            subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                chip(ctx, '${p['user']}'),
+                chip(ctx, updated == null ? health : '$health · ${fmtDate(updated)}', color: err != null ? cs.errorContainer : null),
+              ]),
+              const SizedBox(height: 4),
+              Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'read/write' : 'read-only'}${err != null ? '\n$err' : ''}'),
+            ]),
+            isThreeLine: true,
+            trailing: IconButton(
+              tooltip: 'Reload user VFS',
+              icon: const Icon(Icons.refresh),
+              onPressed: () async {
+                await guarded(ctx, () => v.reloadVfs('${p['user']}'));
+                if (ctx.mounted) toast(ctx, 'Reloaded ${p['user']}');
+              },
+            ),
           ),
         );
       },
     );
-  }
-}
-
-class _EventsTab extends ConsumerWidget {
-  const _EventsTab();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final v = ref.read(vaultonProvider);
-    return CursorList<Json>(
-      empty: 'No health events',
-      fetch: (c) => v.events(cursor: c),
-      itemBuilder: (ctx, e, i) => ListTile(
-        dense: true,
-        leading: const Icon(Icons.monitor_heart_outlined),
-        title: Text('${e['user']} / ${e['pointName']} → ${e['health']}'),
-        subtitle: Text('${fmtDate(toDate(e['time']))}${e['error'] != null ? '\n${e['error']}' : ''}'),
-      ),
-    );
-  }
 }
 
 class _LogsTab extends ConsumerStatefulWidget {
