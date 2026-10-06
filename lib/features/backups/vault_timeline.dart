@@ -71,7 +71,7 @@ List<TimelineEntry> buildTimeline(Iterable<RepoJob> jobs, Iterable<Snapshot> sna
   ]..sort((a, b) => b.time.compareTo(a.time));
 }
 
-const _filters = ['Backups', 'Other activity', 'Failed', 'All'];
+const _filters = ['Backups', 'Other Activity', 'Failed', 'All'];
 
 class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
   const _TimelineFilterDelegate(this.child);
@@ -349,7 +349,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                 PopupMenuButton<String>(
                   onSelected: (a) => _menu(a, s),
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'browse', child: Text('Browse files')),
+                    const PopupMenuItem(value: 'browse', child: Text('Browse Files')),
                     const PopupMenuItem(value: 'restore', child: Text('Restore…')),
                     PopupMenuItem(value: 'lock', child: Text(s.locked ? 'Unlock' : 'Lock')),
                     const PopupMenuItem(value: 'copy', child: Text('Copy snapshot ID')),
@@ -384,14 +384,14 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                         style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                         onPressed: () => _browse(browseId),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('Browse files'),
+                        label: const Text('Browse Files'),
                       ),
                     if (j != null)
                       TextButton.icon(
                         style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                         onPressed: () => _openJob(j),
                         icon: const Icon(Icons.notes, size: 18),
-                        label: const Text('Job log'),
+                        label: const Text('Job Log'),
                       ),
                   ]),
                 ] else
