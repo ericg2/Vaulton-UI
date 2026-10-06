@@ -47,7 +47,6 @@ class LogFilterBar extends StatelessWidget {
     this.from,
     this.to,
     this.onDates,
-    this.onClear,
     this.onCopy,
     this.copyEnabled = false,
   });
@@ -60,7 +59,6 @@ class LogFilterBar extends StatelessWidget {
   final DateTime? from;
   final DateTime? to;
   final VoidCallback? onDates;
-  final VoidCallback? onClear;
   final VoidCallback? onCopy;
   final bool copyEnabled;
 
@@ -108,8 +106,6 @@ class LogFilterBar extends StatelessWidget {
               icon: const Icon(Icons.date_range),
               label: Text(dateLabel),
             ),
-          if (onClear != null && (search.isNotEmpty || priority != null || from != null))
-            TextButton(onPressed: onClear, child: const Text('Clear Filters')),
           if (onCopy != null)
             IconButton(
               tooltip: 'Copy visible lines',
