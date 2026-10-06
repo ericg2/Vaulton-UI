@@ -16,8 +16,14 @@ import 'snapshot_browser.dart';
 /// Width below which the page uses the compact (phone) layout.
 const double _kCompactWidth = 600;
 
-/// Max content width on large screens.
+/// Max content width of the phone-style single column.
 const double _kMaxContentWidth = 920;
+
+/// Max overall width of the two-pane desktop layout.
+const double _kMaxWideWidth = 1280;
+
+/// Width of the left sidebar on desktop.
+const double _kSidebarWidth = 360;
 
 /// Everything about one backup vault: browse, snapshots, jobs, schedules and maintenance.
 class RepoPage extends ConsumerStatefulWidget {
@@ -130,7 +136,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (mounted) toast(context, 'Password updated');
   }
 
-  /// Centers a sliver's content and caps its width on large screens.
+  /// Centers a sliver's content and caps its width (phone layout).
   Widget _centered(Widget child) => Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -164,58 +170,65 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       const SizedBox(height: 16),
     ]);
   }
-
   Widget _header() {
     final r = _repo;
-    return LayoutBuilder(builder: (context, constraints) {
-      // The card's own padding (16 + 16) is already excluded from what the buttons see.
-      final compact = constraints.maxWidth < _kCompactWidth;
 
-      final backup = FilledButton.icon(
-        onPressed: r == null ? null : _backup,
-        icon: const Icon(Icons.backup_outlined),
-        label: const Text('Backup Now'),
-      );
-      final browse = FilledButton.tonalIcon(
-        onPressed: r == null ? null : () => _browse(),
-        icon: const Icon(Icons.folder_open),
-        label: const Text('Browse'),
-      );
-      final health = OutlinedButton.icon(
-        onPressed: _healthCheck,
-        icon: const Icon(Icons.fact_check_outlined),
-        label: const Text('Health Check'),
-      );
-      final cleanup = OutlinedButton.icon(
-        onPressed: _retention,
-        icon: const Icon(Icons.auto_delete_outlined),
-        label: const Text('Clean up'),
-      );
+    final style = ButtonStyle(
+      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+      minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+    );
+    Widget label(String t) => Text(t, maxLines: 1, overflow: TextOverflow.ellipsis);
 
-      final actions = compact
-          ? Column(mainAxisSize: MainAxisSize.min, children: [
-              Row(children: [Expanded(child: backup), const SizedBox(width: 8), Expanded(child: browse)]),
-              const SizedBox(height: 8),
-              Row(children: [Expanded(child: health), const SizedBox(width: 8), Expanded(child: cleanup)]),
-            ])
-          : Wrap(spacing: 8, runSpacing: 8, children: [backup, browse, health, cleanup]);
+    final backup = FilledButton.icon(
+      style: style,
+      onPressed: r == null ? null : _backup,
+      icon: const Icon(Icons.backup_outlined, size: 18),
+      label: label('Backup Now'),
+    );
+    final browse = FilledButton.tonalIcon(
+      style: style,
+      onPressed: r == null ? null : () => _browse(),
+      icon: const Icon(Icons.folder_open, size: 18),
+      label: label('Browse'),
+    );
+    final health = OutlinedButton.icon(
+      style: style,
+      onPressed: _healthCheck,
+      icon: const Icon(Icons.fact_check_outlined, size: 18),
+      label: label('Health Check'),
+    );
+    final cleanup = OutlinedButton.icon(
+      style: style,
+      onPressed: _retention,
+      icon: const Icon(Icons.auto_delete_outlined, size: 18),
+      label: label('Clean up'),
+    );
 
-      return Card(
-        child: Padding(
-          padding: EdgeInsets.all(compact ? 16 : 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (r != null) _usageSection(r),
-              actions,
-            ],
-          ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (r != null) _usageSection(r),
+            // Measure the space actually available inside the card's padding.
+            LayoutBuilder(builder: (context, c) {
+              if (c.maxWidth >= 460) {
+                return Wrap(spacing: 8, runSpacing: 8, children: [backup, browse, health, cleanup]);
+              }
+              return Column(mainAxisSize: MainAxisSize.min, children: [
+                Row(children: [Expanded(child: backup), const SizedBox(width: 8), Expanded(child: browse)]),
+                const SizedBox(height: 8),
+                Row(children: [Expanded(child: health), const SizedBox(width: 8), Expanded(child: cleanup)]),
+              ]);
+            }),
+          ],
         ),
-      );
-    });
+      ),
+    );
   }
-
+  
   Widget _snapshotCard(Snapshot s) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
@@ -291,35 +304,84 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     );
   }
 
-  TabBar _tabs() => TabBar(controller: _tc, tabs: const [Tab(text: 'Snapshots'), Tab(text: 'Jobs'), Tab(text: 'Schedules')]);
+  TabBar _tabs() {
+    final wide = MediaQuery.sizeOf(context).width >= _kCompactWidth;
+    return TabBar(
+      controller: _tc,
+      isScrollable: wide,
+      tabAlignment: wide ? TabAlignment.start : TabAlignment.fill,
+      dividerColor: wide ? Colors.transparent : null, // the wide layout draws its own divider
+      tabs: const [Tab(text: 'Snapshots'), Tab(text: 'Jobs'), Tab(text: 'Schedules')],
+    );
+  }
 
   Widget _tabView() => TabBarView(controller: _tc, children: [
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
-            child: CursorList<Snapshot>(
-              key: _key,
-              empty: 'No snapshots yet',
-              emptyIcon: Icons.camera_alt_outlined,
-              autoRefresh: const Duration(seconds: 5),
-              fetch: (c) => _v.snapshots(widget.repoId, cursor: c),
-              itemBuilder: (ctx, s, i) => _snapshotCard(s),
-            ),
-          ),
+        CursorList<Snapshot>(
+          key: _key,
+          empty: 'No snapshots yet',
+          emptyIcon: Icons.camera_alt_outlined,
+          autoRefresh: const Duration(seconds: 5),
+          fetch: (c) => _v.snapshots(widget.repoId, cursor: c),
+          itemBuilder: (ctx, s, i) => _snapshotCard(s),
         ),
         JobsList(repoId: widget.repoId, externalStatus: _jobStatus, showFilters: false),
         SchedulesList(repoId: widget.repoId),
       ]);
 
+  Widget _menu() => PopupMenuButton<String>(
+        onSelected: (a) {
+          if (a == 'pw') _password();
+        },
+        itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
+      );
+
+  /// Desktop / tablet: sidebar with vault info and actions, main pane with tabs and the list.
+  Widget _wideLayout() {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_repo?.name ?? 'Backup Vault', maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [_menu()],
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _kMaxWideWidth),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(
+              width: _kSidebarWidth,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+                children: [
+                  _header(),
+                  CleanupCard(key: _cleanupKey, repoId: widget.repoId, onRunNow: _retention),
+                ],
+              ),
+            ),
+            VerticalDivider(width: 1, color: cs.outlineVariant),
+            Expanded(
+              child: Column(children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cs.outlineVariant))),
+                  child: Align(alignment: Alignment.centerLeft, child: _tabs()),
+                ),
+                if (_tc.index == 1) _JobFilters(status: _jobStatus, onChanged: _setJobStatus),
+                Expanded(child: _tabView()),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final jobs = _tc.index == 1;
     final compact = MediaQuery.sizeOf(context).width < _kCompactWidth;
+    if (!compact) return _wideLayout();
 
+    final jobs = _tc.index == 1;
     return Scaffold(
-      // On wide screens "Backup Now" is already in the header, so the FAB is phone-only.
-      floatingActionButton: (_tc.index == 0 && compact)
+      floatingActionButton: _tc.index == 0
           ? FloatingActionButton.extended(onPressed: _backup, icon: const Icon(Icons.backup), label: const Text('Backup'))
           : null,
       body: NestedScrollView(
@@ -330,14 +392,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             floating: true,
             snap: true,
             scrolledUnderElevation: 0,
-            actions: [
-              PopupMenuButton<String>(
-                onSelected: (a) {
-                  if (a == 'pw') _password();
-                },
-                itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
-              ),
-            ],
+            actions: [_menu()],
           ),
           SliverToBoxAdapter(child: _centered(_header())),
           SliverToBoxAdapter(
@@ -379,7 +434,7 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => true;
 }
 
 class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
