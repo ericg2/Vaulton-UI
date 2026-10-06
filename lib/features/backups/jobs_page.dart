@@ -400,33 +400,6 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                 ),
               );
             },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'run', child: Text('Run Now')),
-                          PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
-                          const PopupMenuItem(value: 'preview', child: Text('Preview Next Runs')),
-                          const PopupMenuDivider(),
-                          const PopupMenuItem(value: 'del', child: Text('Delete')),
-                        ],
-                      ),
-                    ),
-                    Wrap(spacing: 8, children: [
-                      if (s.lastJobId != null)
-                        TextButton.icon(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: s.lastJobId!, showVaultLink: widget.repoId == null))),
-                          icon: const Icon(Icons.history, size: 18),
-                          label: const Text('Last run'),
-                        ),
-                      if (widget.repoId == null)
-                        TextButton.icon(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: s.repoId, initialTab: 2))),
-                          icon: const Icon(Icons.inventory_2_outlined, size: 18),
-                          label: Text('Open $repoName'),
-                        ),
-                    ]),
-                  ]),
-                ),
-              );
-            },
           ),
         ),
       ),
