@@ -113,7 +113,7 @@ class CursorListState<T> extends State<CursorList<T>> {
     super.didChangeDependencies();
     // Coming back to this list (tab switch, or a pushed page was popped):
     // reload quietly so numbers such as data usage are never stale.
-    final visible = TickerMode.of(context);
+    final visible = TickerMode.valuesOf(context);
     if (visible && !_wasVisible && _loadedOnce) silentRefresh(force: true);
     _wasVisible = visible;
   }
@@ -125,7 +125,7 @@ class CursorListState<T> extends State<CursorList<T>> {
     final d = widget.autoRefresh;
     if (d != null) {
       _timer = Timer.periodic(d, (_) {
-        if (!mounted || _loading || !TickerMode.of(context)) return;
+        if (!mounted || _loading || !TickerMode.valuesOf(context)) return;
         final now = DateTime.now();
         if (now.difference(_lastUserScroll) < const Duration(seconds: 6)) return;
         if (now.difference(_lastRefresh) < const Duration(seconds: 5)) return;
