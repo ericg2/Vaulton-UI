@@ -60,7 +60,7 @@ Widget _statusCountsTile(BuildContext context, String title, List<_StatusCount> 
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(c.icon, size: 15, color: c.color),
               const SizedBox(width: 4),
-              Text('§{c.value} §{c.label}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
+              Text('${c.value} ${c.label}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
             ]),
           ),
       ],
@@ -79,6 +79,7 @@ class _StatusTab extends ConsumerWidget {
       builder: (ctx, s, reload) {
         Widget tile(String k, Object? val, [IconData? icon]) => ListTile(dense: true, leading: icon == null ? null : Icon(icon), title: Text(k), trailing: Text('$val', style: Theme.of(ctx).textTheme.titleSmall));
         final ok = toBool(s['backendReachable']);
+        final cs = Theme.of(ctx).colorScheme;
         return RefreshIndicator(
           onRefresh: reload,
           child: ListView(children: [
@@ -343,30 +344,7 @@ class _LogsTab extends ConsumerStatefulWidget {
   ConsumerState<_LogsTab> createState() => _LogsTabState();
 }
 
-class _LogsTabState extends ConsumerState<_LogsTab> {
-  String _search = '';
-  @override
-  Widget build(BuildContext context) {
-    final v = ref.read(vaultonProvider);
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.all(12),
-        child: TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Filter log'), onSubmitted: (s) => setState(() => _search = s.trim())),
-      ),
-      Expanded(
-        child: CursorList<Json>(
-          key: ValueKey(_search),
-          empty: 'No log entries',
-          fetch: (c) => v.logs(search: _search, cursor: c),
-          itemBuilder: (ctx, e, i) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            child: SelectableText('${fmtDate(toDate(e['time']))}  [${e['priority']}] ${e['message']}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-          ),
-        ),
-      ),
-    ]);
-  }
-}class _LogsTabState extends ConsumerStatefulWidget {
+class _LogsTab extends ConsumerStatefulWidget {
   const _LogsTab();
   @override
   ConsumerState<_LogsTab> createState() => _LogsTabState();
@@ -437,11 +415,11 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
                 value: _priority,
                 hint: const Text('Priority'),
                 items: const [
-                  DropdownMenuItem(value: null, child: Text('All Priorities')),
-                  DropdownMenuItem(value: 'Debug', child: Text('Debug')),
-                  DropdownMenuItem(value: 'Info', child: Text('Info')),
-                  DropdownMenuItem(value: 'Warn', child: Text('Warning')),
-                  DropdownMenuItem(value: 'Error', child: Text('Error')),
+                  DropdownMenuItem<String?>(value: null, child: Text('All Priorities')),
+                  DropdownMenuItem<String?>(value: 'Debug', child: Text('Debug')),
+                  DropdownMenuItem<String?>(value: 'Info', child: Text('Info')),
+                  DropdownMenuItem<String?>(value: 'Warn', child: Text('Warning')),
+                  DropdownMenuItem<String?>(value: 'Error', child: Text('Error')),
                 ],
                 onChanged: (v) => setState(() => _priority = v),
               ),
