@@ -222,7 +222,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final repos = await guarded(context, () => _v.repos(limit: 200));
     final datas = await guarded(context, () => _v.datas(limit: 200));
     if (repos == null || datas == null || !mounted) return;
-    if (repos.items.isEmpty) return toast(context, 'Create a Backup vault First', error: true);
+    if (repos.items.isEmpty) return toast(context, 'Create a Backup Vault First', error: true);
     String repoName(Point p) => p.name;
     final repoMap = {for (final r in repos.items) repoName(r): r};
     final dataMap = {for (final d in datas.items) d.name: d};
