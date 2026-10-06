@@ -139,7 +139,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                 builder: (context, constraints) {
                   final narrow = constraints.maxWidth < 600;
                   final buttons = [
-                    FilledButton.icon(onPressed: _repo == null ? null : () => _browse(), icon: const Icon(Icons.folder_open), label: const Text('Browse latest')),
+                    FilledButton.icon(onPressed: _repo == null ? null : () => _browse(), icon: const Icon(Icons.folder_open), label: const Text('Browse')),
                     FilledButton.tonalIcon(onPressed: _backup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup now')),
                     OutlinedButton.icon(
                       onPressed: () async {
@@ -261,36 +261,81 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       ]);
 
   PreferredSizeWidget _appBar() => AppBar(
-        title: Text(_repo?.name ?? 'Backup vault'),
+        title: Text(_repo?.name ?? 'Backup Vault'),
         actions: [
           PopupMenuButton<String>(
             onSelected: (a) {
               if (a == 'pw') _password();
             },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update vault password…'))],
+            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
           ),
         ],
         bottom: _tabs(),
       );
 
+  SliverAppBar _scrollingAppBar() => SliverAppBar(
+        title: Text(_repo?.name ?? 'Backup Vault'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (a) {
+              if (a == 'pw') _password();
+            },
+            itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
+          ),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
+    final snapshots = _tc.index == 0;
+
     return Scaffold(
-      appBar: _appBar(),
-      floatingActionButton: _tc.index == 0 ? FloatingActionButton.extended(onPressed: _backup, icon: const Icon(Icons.backup), label: const Text('Backup')) : null,
-      body: Column(children: [
-        _header(),
-        Expanded(
-          child: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverToBoxAdapter(
-                child: CleanupCard(key: _cleanupKey, repoId: widget.repoId, onRunNow: _retention),
-              ),
-            ],
-            body: _tabView(),
+      appBar: snapshots ? _appBar() : null,
+      floatingActionButton: snapshots
+          ? FloatingActionButton.extended(onPressed: _backup, icon: const Icon(Icons.backup), label: const Text('Backup'))
+          : null,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          if (!snapshots) _scrollingAppBar(),
+          if (!snapshots)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _PinnedTabBarDelegate(_tabs()),
+            ),
+          SliverToBoxAdapter(child: _header()),
+          SliverToBoxAdapter(
+            child: CleanupCard(
+              key: _cleanupKey,
+              repoId: widget.repoId,
+              onRunNow: _retention,
+            ),
           ),
-        ),
-      ]),
+        ],
+        body: _tabView(),
+      ),
     );
   }
+}
+
+class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarDelegate(this.child);
+  final TabBar child;
+
+  @override
+  double get minExtent => child.preferredSize.height;
+
+  @override
+  double get maxExtent => child.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: overlapsContent ? 2 : 0,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
 }
