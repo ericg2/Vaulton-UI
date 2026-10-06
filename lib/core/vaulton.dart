@@ -123,6 +123,20 @@ class Vaulton {
     final fullId = await _fullSnapshotId(id, snap);
     return toJson(await _req('POST', '/repos/$id/snapshots/${_e(fullId)}/${lock ? 'lock' : 'unlock'}'));
   }
+  /// Finds the most recent job associated with a snapshot.
+  /// Checks both the job's direct snapshot ID and its options for compatibility with older jobs.
+  Future<RepoJob?> snapshotJob(String repoId, String snapshotId) async {
+    String? cursor;
+    do {
+      final page = await jobs(repoId: repoId, cursor: cursor, limit: 100, order: 'Desc');
+      for (final job in page.items) {
+        if (job.snapshotId == snapshotId || job.options['snapshotId'] == snapshotId) return job;
+      }
+      cursor = page.hasMore ? page.nextCursor : null;
+    } while (cursor != null);
+    return null;
+  }
+
   Future<RepoJob> backup(String repoId, Json body, {DateTime? runAt}) async =>
       RepoJob.fromJson(toJson(await _req('POST', '/repos/$repoId/backup', body: body, q: {'runAt': runAt?.toUtc().toIso8601String()})));
   Future<RepoJob> restore(String repoId, Json body, {DateTime? runAt}) async =>
