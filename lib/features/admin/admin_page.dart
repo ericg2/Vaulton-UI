@@ -149,7 +149,6 @@ class _UsersTab extends ConsumerStatefulWidget {
 
 class _UsersTabState extends ConsumerState<_UsersTab> {
   final _key = GlobalKey<CursorListState<UserAccount>>();
-  final _searchCtl = TextEditingController();
   String _search = '';
   Vaulton get _v => ref.read(vaultonProvider);
   bool get _manage => ref.read(userProvider)!.has(Scopes.usersManage);
@@ -348,6 +347,7 @@ class _LogsTab extends ConsumerStatefulWidget {
 }
 
 class _LogsTabState extends ConsumerState<_LogsTab> {
+  final _searchCtl = TextEditingController();
   String _search = '';
   String? _priority;
   DateTime? _from;
@@ -404,27 +404,13 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
           key: ValueKey('$_search|$_priority|$_from|$_to'),
           empty: 'No Log Entries',
           fetch: (c) => v.logs(search: _search, minPriority: _priority, from: _from, to: _to, cursor: c, order: 'Desc'),
-          itemBuilder: (ctx, e, i) => Card(
-            margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              child: SelectableText.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: '${fmtDate(toDate(e['time']))}  ', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-                    TextSpan(
-                      text: '[${e['priority'] ?? 'Info'}] ',
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: logPriorityColor(ctx, '${e['priority'] ?? 'Info'}'), fontWeight: FontWeight.w700),
-                    ),
-                    TextSpan(text: '${e['message']}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
+          itemBuilder: (ctx, e, i) => LogLine(
+            time: toDate(e['time']),
+            priority: '${e['priority'] ?? 'Info'}',
+            message: '${e['message']}',
           ),
         ),
       ),
     ]);
-
-}
+  }
 }
