@@ -16,9 +16,9 @@ class AdminPage extends ConsumerWidget {
     final tabs = <(String, Widget)>[
       ('System', const _StatusTab()),
       ('Users', const _UsersTab()),
-      if (u.has(Scopes.jobsManage)) ('All jobs', const JobsList(admin: true)),
+      if (u.has(Scopes.jobsManage)) ('All Jobs', const JobsList(admin: true)),
       if (u.has(Scopes.adminVfs)) ('VFS', const _VfsTab()),
-      if (u.has(Scopes.adminVfs)) ('Health events', const _EventsTab()),
+      if (u.has(Scopes.adminVfs)) ('Health Events', const _EventsTab()),
       if (u.has(Scopes.adminLogs)) ('Logs', const _LogsTab()),
     ];
     return DefaultTabController(
@@ -32,6 +32,42 @@ class AdminPage extends ConsumerWidget {
 }
 
 // ----------------------------------------------------------------- status
+class _StatusCount {
+  const _StatusCount(this.icon, this.label, this.value, this.color);
+  final IconData icon;
+  final String label;
+  final int value;
+  final Color color;
+}
+
+Widget _statusCountsTile(BuildContext context, String title, List<_StatusCount> counts, IconData icon) {
+  return ListTile(
+    dense: true,
+    leading: Icon(icon),
+    title: Text(title),
+    trailing: Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      alignment: WrapAlignment.end,
+      children: [
+        for (final c in counts)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: c.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(c.icon, size: 15, color: c.color),
+              const SizedBox(width: 4),
+              Text('§{c.value} §{c.label}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+      ],
+    ),
+  );
+}
+
 class _StatusTab extends ConsumerWidget {
   const _StatusTab();
   @override
@@ -59,8 +95,15 @@ class _StatusTab extends ConsumerWidget {
               tile('Locations', s['roots'], Icons.dns_outlined),
               tile('Data folders', s['dataPoints'], Icons.folder_outlined),
               tile('Backup vaults', s['repoPoints'], Icons.inventory_2_outlined),
-              tile('Points healthy / failed / Unknown', '${s['pointsHealthy']} / ${s['pointsFailed']} / ${s['pointsUnknown']}', Icons.monitor_heart_outlined),
-              tile('Jobs pending / running', '${s['jobsPending']} / ${s['jobsRunning']}', Icons.work_outline),
+              _statusCountsTile(ctx, 'Point Health', [
+                _StatusCount(Icons.check_circle_outline, 'Healthy', toInt(s['pointsHealthy']), cs.primary),
+                _StatusCount(Icons.error_outline, 'Failed', toInt(s['pointsFailed']), cs.error),
+                _StatusCount(Icons.help_outline, 'Unknown', toInt(s['pointsUnknown']), cs.outline),
+              ], Icons.monitor_heart_outlined),
+              _statusCountsTile(ctx, 'Jobs', [
+                _StatusCount(Icons.schedule, 'Waiting', toInt(s['jobsPending']), cs.secondary),
+                _StatusCount(Icons.sync, 'Running', toInt(s['jobsRunning']), cs.tertiary),
+              ], Icons.work_outline),
               tile('Failed jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
               tile('Enabled schedules', s['schedulesEnabled'], Icons.schedule),
               tile('SMB', toBool(s['smbRunning']) ? 'running · ${s['smbShares']} shares' : 'stopped', Icons.folder_shared_outlined),
@@ -72,7 +115,7 @@ class _StatusTab extends ConsumerWidget {
                 child: Wrap(spacing: 8, children: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.sync),
-                    label: const Text('Push config to backend'),
+                    label: const Text('Push Config to Backend'),
                     onPressed: () async {
                       await guarded(ctx, v.syncVfs);
                       if (ctx.mounted) toast(ctx, 'Sync requested');
@@ -80,7 +123,7 @@ class _StatusTab extends ConsumerWidget {
                   ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.mark_email_read_outlined),
-                    label: const Text('Send test email'),
+                    label: const Text('Send Test Email'),
                     onPressed: () async {
                       await guarded(ctx, v.testEmail);
                       if (ctx.mounted) toast(ctx, 'Test email sent to your address');
@@ -178,7 +221,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   Widget build(BuildContext context) {
     final me = ref.watch(userProvider)!;
     return Scaffold(
-      floatingActionButton: _manage ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.person_add_alt), label: const Text('New user')) : null,
+      floatingActionButton: _manage ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.person_add_alt), label: const Text('New User')) : null,
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.all(12),
@@ -319,6 +362,120 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
             child: SelectableText('${fmtDate(toDate(e['time']))}  [${e['priority']}] ${e['message']}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
           ),
+        ),
+      ),
+    ]);
+  }
+}class _LogsTabState extends ConsumerStatefulWidget {
+  const _LogsTab();
+  @override
+  ConsumerState<_LogsTab> createState() => _LogsTabState();
+}
+
+class _LogsTabState extends ConsumerState<_LogsTab> {
+  String _search = '';
+  String? _priority;
+  DateTime? _from;
+  DateTime? _to;
+
+  Future<void> _pickDates() async {
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      initialDateRange: _from != null && _to != null
+          ? DateTimeRange(start: _from!, end: _to!.subtract(const Duration(seconds: 1)))
+          : null,
+    );
+    if (range == null) return;
+    setState(() {
+      _from = DateTime(range.start.year, range.start.month, range.start.day);
+      _to = DateTime(range.end.year, range.end.month, range.end.day).add(const Duration(days: 1));
+    });
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _search = '';
+      _priority = null;
+      _from = null;
+      _to = null;
+    });
+  }
+
+  Color _priorityColor(BuildContext context, String value) {
+    final cs = Theme.of(context).colorScheme;
+    final p = value.toLowerCase();
+    if (p.contains('err') || p.contains('crit') || p.contains('fatal')) return cs.error;
+    if (p.contains('warn')) return cs.tertiary;
+    if (p.contains('debug') || p.contains('trace')) return cs.outline;
+    return cs.primary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = ref.read(vaultonProvider);
+    final dateLabel = _from == null
+        ? 'Any Date'
+        : '${fmtDate(_from)} – ${fmtDate(_to!.subtract(const Duration(seconds: 1)))}';
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SizedBox(
+              width: 280,
+              child: TextField(
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search Log'),
+                onSubmitted: (s) => setState(() => _search = s.trim()),
+              ),
+            ),
+            DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                value: _priority,
+                hint: const Text('Priority'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('All Priorities')),
+                  DropdownMenuItem(value: 'Debug', child: Text('Debug')),
+                  DropdownMenuItem(value: 'Info', child: Text('Info')),
+                  DropdownMenuItem(value: 'Warn', child: Text('Warning')),
+                  DropdownMenuItem(value: 'Error', child: Text('Error')),
+                ],
+                onChanged: (v) => setState(() => _priority = v),
+              ),
+            ),
+            OutlinedButton.icon(onPressed: _pickDates, icon: const Icon(Icons.date_range), label: Text(dateLabel)),
+            if (_search.isNotEmpty || _priority != null || _from != null)
+              TextButton(onPressed: _clearFilters, child: const Text('Clear Filters')),
+          ],
+        ),
+      ),
+      Expanded(
+        child: CursorList<Json>(
+          key: ValueKey('${_search}|${_priority}|${_from}|${_to}'),
+          empty: 'No Log Entries',
+          fetch: (c) => v.logs(search: _search, priority: _priority, from: _from, to: _to, cursor: c, order: 'Desc'),
+          itemBuilder: (ctx, e, i) {
+            final priority = '${e['priority'] ?? 'Info'}';
+            final color = _priorityColor(ctx, priority);
+            return Card(
+              margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: SelectableText.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '${fmtDate(toDate(e['time']))}  ', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                      TextSpan(text: '[$priority] ', style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: color, fontWeight: FontWeight.w700)),
+                      TextSpan(text: '${e['message']}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     ]);
