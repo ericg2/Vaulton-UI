@@ -106,13 +106,16 @@ class Vaulton {
 
   /// Resolves a snapshot ID/prefix to the full snapshot ID required by snapshot operations.
   Future<String> _fullSnapshotId(String repoId, String snapshotId) async {
-    if (snapshotId.length >= 64) return snapshotId;
-    final page = await snapshots(repoId, idPrefix: snapshotId, limit: 1);
-    final match = page.items.firstOrNull;
-    if (match == null) {
-      throw ApiException('Snapshot "$snapshotId" was not found.');
-    }
-    return match.id;
+    final requested = snapshotId.trim();
+    String? cursor;
+    do {
+      final page = await snapshots(repoId, cursor: cursor, limit: 200);
+      final match = page.items.where((s) => s.id == requested || s.id.startsWith(requested)).firstOrNull;
+      if (match != null) return match.id;
+      cursor = page.hasMore ? page.nextCursor : null;
+    } while (cursor != null);
+
+    throw ApiException('Snapshot "$snapshotId" was not found.');
   }
 
   /// Lists one directory of a snapshot (omit [path] for the top level).
