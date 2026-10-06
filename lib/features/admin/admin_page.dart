@@ -355,16 +355,6 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
     });
   }
 
-  void _clearFilters() {
-    _searchCtl.clear();
-    setState(() {
-      _search = '';
-      _priority = null;
-      _from = null;
-      _to = null;
-    });
-  }
-
   @override
   void dispose() {
     _searchCtl.dispose();
