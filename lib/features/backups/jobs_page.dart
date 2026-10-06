@@ -340,10 +340,12 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
             itemBuilder: (ctx, s, i) {
               final repoName = names[s.repoId] ?? 'Backup Vault';
               return Card(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    ListTile(
+                child: InkWell(
+                  onTap: () => _edit(s),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
                       title: Text(s.name),
