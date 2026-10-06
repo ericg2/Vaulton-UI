@@ -15,7 +15,7 @@ import 'snapshot_browser.dart';
 import 'vault_timeline.dart';
 
 const double _kWideWidth = 840;
-const double _kSidebarWidth = 360;
+const double _kSidebarWidth = 400;
 const double _kMaxWide = 1280;
 
 /// One backup vault. Two tabs:
