@@ -389,7 +389,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                     if (j != null)
                       TextButton.icon(
                         style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        onPressed: () => _openJob(j),
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id, showVaultLink: false, initialTab: 1))),
                         icon: const Icon(Icons.notes, size: 18),
                         label: const Text('Job Log'),
                       ),
