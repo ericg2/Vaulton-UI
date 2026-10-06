@@ -408,7 +408,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         const Divider(height: 1),
         Expanded(
           child: lines.isEmpty && !_hasOlder
-              ? EmptyView(_log.isEmpty ? (j.active ? 'Waiting for log output…' : 'No log lines') : 'No lines match this filter', icon: Icons.notes)
+              ? EmptyView(_log.isEmpty ? (j.active ? 'Waiting for log output…' : 'No messages') : 'No lines match this filter', icon: Icons.notes)
               : SelectionArea(
                   child: ListView.builder(
                     reverse: true, // newest line at the bottom, scroll up for history
