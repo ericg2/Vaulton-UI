@@ -258,7 +258,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ]),
         ],
         if (desktop)
-          Section('Folder sync', children: [
+          Section('Folder Sync', children: [
             if (_pairs.isEmpty)
               const Padding(padding: EdgeInsets.all(16), child: Text('Mirror local folders into a data folder. New and changed files are uploaded automatically while Vaulton is open or minimised.')),
             for (final p in _pairs)
