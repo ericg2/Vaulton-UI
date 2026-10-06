@@ -346,31 +346,60 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                     padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
-                      title: Text(s.name),
-                      subtitle: Text('${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}'),
-                      isThreeLine: true,
-                      onTap: () => _edit(s),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (a) async {
-                          switch (a) {
-                            case 'run':
-                              await guarded(context, () => _v.runSchedule(s.id));
-                              ref.read(epochProvider.notifier).bump();
-                              if (context.mounted) toast(context, 'Job queued');
-                            case 'toggle':
-                              await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
-                              _key.currentState?.refresh();
-                            case 'preview':
-                              _preview(s);
-                            case 'del':
-                              if (await confirm(context, 'Delete Schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
-                                await guarded(context, () => _v.deleteSchedule(s.id));
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
+                        title: Text(s.name),
+                        subtitle: Text(
+                          '${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}',
+                        ),
+                        isThreeLine: true,
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (a) async {
+                            switch (a) {
+                              case 'run':
+                                await guarded(context, () => _v.runSchedule(s.id));
+                                ref.read(epochProvider.notifier).bump();
+                                if (context.mounted) toast(context, 'Job queued');
+                              case 'toggle':
+                                await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
                                 _key.currentState?.refresh();
-                              }
-                          }
-                        },
+                              case 'preview':
+                                _preview(s);
+                              case 'del':
+                                if (await confirm(context, 'Delete Schedule?', 'Existing jobs will not be affected.', ok: 'Delete', danger: true)) {
+                                  await guarded(context, () => _v.deleteSchedule(s.id));
+                                  _key.currentState?.refresh();
+                                }
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(value: 'run', child: Text('Run Now')),
+                            PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
+                            const PopupMenuItem(value: 'preview', child: Text('Preview Next Runs')),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(value: 'del', child: Text('Delete')),
+                          ],
+                        ),
+                      ),
+                      Wrap(spacing: 8, children: [
+                        if (s.lastJobId != null)
+                          TextButton.icon(
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: s.lastJobId!, showVaultLink: widget.repoId == null))),
+                            icon: const Icon(Icons.history, size: 18),
+                            label: const Text('Last run'),
+                          ),
+                        if (widget.repoId == null)
+                          TextButton.icon(
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: s.repoId, initialTab: 2))),
+                            icon: const Icon(Icons.inventory_2_outlined),
+                            label: Text('Open $repoName'),
+                          ),
+                      ]),
+                    ]),
+                  ),
+                ),
+              );
+            },
                         itemBuilder: (_) => [
                           const PopupMenuItem(value: 'run', child: Text('Run Now')),
                           PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
