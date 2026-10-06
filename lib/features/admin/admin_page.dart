@@ -344,12 +344,6 @@ class _LogsTab extends ConsumerStatefulWidget {
   ConsumerState<_LogsTab> createState() => _LogsTabState();
 }
 
-class _LogsTab extends ConsumerStatefulWidget {
-  const _LogsTab();
-  @override
-  ConsumerState<_LogsTab> createState() => _LogsTabState();
-}
-
 class _LogsTabState extends ConsumerState<_LogsTab> {
   String _search = '';
   String? _priority;
