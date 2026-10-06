@@ -9,18 +9,9 @@ import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import 'job_text.dart';
 import 'job_widgets.dart';
+import 'log_widgets.dart';
 import 'repo_page.dart';
 import 'snapshot_browser.dart';
-
-enum _Level { debug, info, warning, error }
-
-_Level _levelOf(String p) {
-  final s = p.toLowerCase();
-  if (s.contains('err') || s.contains('crit') || s.contains('fatal')) return _Level.error;
-  if (s.contains('warn')) return _Level.warning;
-  if (s.contains('debug') || s.contains('trace')) return _Level.debug;
-  return _Level.info;
-}
 
 /// Two tabs: an overview (status, progress, stages, details, options) and a live log.
 class JobDetailPage extends ConsumerStatefulWidget {
@@ -47,7 +38,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   String? _olderCursor;
   bool _hasOlder = false, _loadingOlder = false;
   String _search = '';
-  int _levelFilter = 0; // 0 all, 1 warnings+, 2 errors
+  String? _priorityFilter;
   final _searchCtl = TextEditingController();
 
   Vaulton get _v => ref.read(vaultonProvider);
@@ -150,14 +141,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     if (_job != null) _refreshLog(_job!);
   }
 
-  List<JobMessage> get _visible => _log.where((m) {
-        final l = _levelOf(m.priority);
-        return switch (_levelFilter) {
-          1 => l == _Level.warning || l == _Level.error,
-          2 => l == _Level.error,
-          _ => true,
-        };
-      }).toList();
+  List<JobMessage> get _visible => _log.where((m) => logPriorityMatches(m.priority, _priorityFilter)).toList();
 
   // ----------------------------------------------------------------- actions
   Future<void> _cancel(RepoJob j) async {
@@ -374,36 +358,14 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     final lines = _visible;
     return _centered(
       Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-          child: Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _searchCtl,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Search log',
-                  suffixIcon: _search.isEmpty ? null : IconButton(icon: const Icon(Icons.clear), onPressed: () { _searchCtl.clear(); _applySearch(''); }),
-                ),
-                onSubmitted: _applySearch,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Copy visible lines',
-              icon: const Icon(Icons.copy_all_outlined),
-              onPressed: lines.isEmpty ? null : () => copyText(context, lines.reversed.map(_fmtLine).join('\n'), 'Log copied'),
-            ),
-          ]),
-        ),
-        SizedBox(
-          height: 48,
-          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), children: [
-            for (final (i, label) in ['All', 'Warnings & errors', 'Errors'].indexed)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(label: Text(label), selected: _levelFilter == i, onSelected: (_) => setState(() => _levelFilter = i)),
-              ),
-          ]),
+        LogFilterBar(
+          searchController: _searchCtl,
+          search: _search,
+          priority: _priorityFilter,
+          onSearch: _applySearch,
+          onPriority: (p) => setState(() => _priorityFilter = p),
+          onCopy: lines.isEmpty ? null : () => copyText(context, lines.reversed.map(_fmtLine).join('\n'), 'Log copied'),
+          copyEnabled: lines.isNotEmpty,
         ),
         const Divider(height: 1),
         Expanded(
@@ -438,23 +400,4 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   static final _hms = DateFormat.Hms();
   String _fmtLine(JobMessage m) => '${m.time == null ? '--:--:--' : _hms.format(m.time!)} [${m.priority}] ${m.message}';
 
-  Widget _logLine(JobMessage m) {
-    final cs = Theme.of(context).colorScheme;
-    final lvl = _levelOf(m.priority);
-    final color = switch (lvl) {
-      _Level.error => cs.error,
-      _Level.warning => Colors.amber.shade800,
-      _Level.debug => cs.outline,
-      _Level.info => cs.onSurface,
-    };
-    return Container(
-      color: lvl == _Level.error ? cs.errorContainer.withValues(alpha: 0.35) : null,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 68, child: Text(m.time == null ? '--:--:--' : _hms.format(m.time!), style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: cs.outline))),
-        SizedBox(width: 44, child: Text(m.priority.length > 4 ? m.priority.substring(0, 4).toUpperCase() : m.priority.toUpperCase(), style: TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold, color: color))),
-        Expanded(child: Text(m.message, style: TextStyle(fontFamily: 'monospace', fontSize: 12.5, color: color))),
-      ]),
-    );
-  }
-}
+  Widget _logLine(JobMessage m) => LogLine(time: m.time, priority: m.priority, message: m.message);}
