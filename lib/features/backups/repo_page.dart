@@ -213,7 +213,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             VerticalDivider(width: 1, color: cs.outlineVariant),
             Expanded(
               child: Column(children: [
-                Align(alignment: Alignment.centerLeft, child: _tabs()),
+                SizedBox(width: double.infinity, child: _tabs()),
                 Expanded(
                   child: TabBarView(controller: _tc, children: [
                     VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false),
