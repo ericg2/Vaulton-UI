@@ -42,7 +42,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     super.initState();
     _load();
     _t = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted && TickerMode.of(context)) _load();
+      if (mounted && TickerMode.valuesOf(context).enabled) _load();
     });
   }
 
@@ -52,7 +52,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     // The dashboard sits under other pages (Files, Jobs...) and in a tab stack.
     // When it becomes visible again, reload right away so usage is never stale
     // after an upload, delete or backup done elsewhere.
-    final visible = TickerMode.of(context);
+    final visible = TickerMode.valuesOf(context).enabled;
     if (visible && !_wasVisible) _load();
     _wasVisible = visible;
   }
