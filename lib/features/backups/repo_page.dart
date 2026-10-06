@@ -185,6 +185,9 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         controller: _tc,
         isScrollable: false,
         tabAlignment: TabAlignment.fill,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelPadding: EdgeInsets.zero,
+        padding: EdgeInsets.zero,
         tabs: const [Tab(text: 'History'), Tab(text: 'Automation')],
       );
 
