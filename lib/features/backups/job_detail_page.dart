@@ -189,7 +189,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     final j = _job;
     return DefaultTabController(
       length: 2,
-      initialIndex: widget.initialTab.clamp(0, 1),
+      initialIndex: widget.initialTab < 0 ? 0 : (widget.initialTab > 1 ? 1 : widget.initialTab),
       child: Scaffold(
         appBar: AppBar(
           title: Text(j == null ? 'Job' : kindLabel(j.kind)),
