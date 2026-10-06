@@ -73,6 +73,20 @@ List<TimelineEntry> buildTimeline(Iterable<RepoJob> jobs, Iterable<Snapshot> sna
 
 const _filters = ['Backups', 'Other activity', 'Failed', 'All'];
 
+class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
+  const _TimelineFilterDelegate(this.child);
+  final Widget child;
+  @override double get minExtent => 52;
+  @override double get maxExtent => 52;
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(color: cs.surface, elevation: overlapsContent ? 2 : 0, child: child);
+  }
+  @override
+  bool shouldRebuild(covariant _TimelineFilterDelegate oldDelegate) => false;
+}
+
 /// The "History" tab. Backups come first by default; restores, cleanups and
 /// health checks live under "Other activity".
 class VaultTimeline extends ConsumerStatefulWidget {
@@ -413,7 +427,6 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     }
 
     // [header?] [filters] [banner?] [entries or empty] [footer]
-    final count = (hasHeader ? 1 : 0) + 1 + (busy != null ? 1 : 0) + (entries.isEmpty ? 1 : entries.length) + 1;
     return Scaffold(
       floatingActionButton: widget.showFab
           ? FloatingActionButton.extended(onPressed: widget.onBackup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup now'))
@@ -424,40 +437,44 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
           constraints: const BoxConstraints(maxWidth: 920),
           child: RefreshIndicator(
             onRefresh: () => _load(replace: true),
-            child: ListView.builder(
+            child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(top: 4),
-              itemCount: count,
-              itemBuilder: (c, i) {
-                if (hasHeader) {
-                  if (i == 0) return widget.header!;
-                  i--;
-                }
-                if (i == 0) return _filterBar();
-                i--;
-                if (busy != null) {
-                  if (i == 0) return _activityBanner(busy);
-                  i--;
-                }
-                if (entries.isEmpty) {
-                  if (i == 0) return emptySlot();
-                  i--;
-                } else {
-                  if (i < entries.length) return _card(entries[i], names);
-                  i -= entries.length;
-                }
-                if (more) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                    child: Center(
-                      child: _loadingMore
-                          ? const CircularProgressIndicator(strokeWidth: 2)
-                          : TextButton.icon(onPressed: _more, icon: const Icon(Icons.expand_more), label: const Text('Load older history')),
-                    ),
-                  );
-                }
-                return const SizedBox(height: 96);
-              },
+              slivers: [
+                if (hasHeader) SliverToBoxAdapter(child: widget.header!),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _TimelineFilterDelegate(_filterBar()),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (c, i) {
+                      if (busy != null) {
+                        if (i == 0) return _activityBanner(busy);
+                        i--;
+                      }
+                      if (entries.isEmpty) {
+                        if (i == 0) return emptySlot();
+                        i--;
+                      } else {
+                        if (i < entries.length) return _card(entries[i], names);
+                        i -= entries.length;
+                      }
+                      if (more) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          child: Center(
+                            child: _loadingMore
+                                ? const CircularProgressIndicator(strokeWidth: 2)
+                                : TextButton.icon(onPressed: _more, icon: const Icon(Icons.expand_more), label: const Text('Load older history')),
+                          ),
+                        );
+                      }
+                      return const SizedBox(height: 96);
+                    },
+                    childCount: (busy != null ? 1 : 0) + (entries.isEmpty ? 1 : entries.length) + 1,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
