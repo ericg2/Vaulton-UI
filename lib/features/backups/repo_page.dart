@@ -331,7 +331,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             pinned: false,
             delegate: _CollapsingHeaderDelegate(
               _header(),
-              MediaQuery.sizeOf(context).width < 600 ? 176 : 128,
+              MediaQuery.sizeOf(context).width < 600 ? 176 : 124,
             ),
           ),
           SliverPersistentHeader(
@@ -415,7 +415,7 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 0;
 
   @override
-  double get maxExtent => 140;
+  double get maxExtent => 156;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
