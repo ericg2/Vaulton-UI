@@ -7,6 +7,7 @@ import '../../core/util.dart';
 import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import '../backups/jobs_page.dart';
+import '../backups/log_widgets.dart';
 
 class AdminPage extends ConsumerWidget {
   const AdminPage({super.key});
@@ -376,81 +377,46 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
     });
   }
 
-  Color _priorityColor(BuildContext context, String value) {
-    final cs = Theme.of(context).colorScheme;
-    final p = value.toLowerCase();
-    if (p.contains('err') || p.contains('crit') || p.contains('fatal')) return cs.error;
-    if (p.contains('warn')) return cs.tertiary;
-    if (p.contains('debug') || p.contains('trace')) return cs.outline;
-    return cs.primary;
-  }
-
   @override
   Widget build(BuildContext context) {
     final v = ref.read(vaultonProvider);
-    final dateLabel = _from == null
-        ? 'Any Date'
-        : '${fmtDate(_from)} – ${fmtDate(_to!.subtract(const Duration(seconds: 1)))}';
     return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            SizedBox(
-              width: 280,
-              child: TextField(
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search Log'),
-                onSubmitted: (s) => setState(() => _search = s.trim()),
-              ),
-            ),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<String?>(
-                value: _priority,
-                hint: const Text('Priority'),
-                items: const [
-                  DropdownMenuItem<String?>(value: null, child: Text('All Priorities')),
-                  DropdownMenuItem<String?>(value: 'Debug', child: Text('Debug')),
-                  DropdownMenuItem<String?>(value: 'Info', child: Text('Info')),
-                  DropdownMenuItem<String?>(value: 'Warn', child: Text('Warning')),
-                  DropdownMenuItem<String?>(value: 'Error', child: Text('Error')),
-                ],
-                onChanged: (v) => setState(() => _priority = v),
-              ),
-            ),
-            OutlinedButton.icon(onPressed: _pickDates, icon: const Icon(Icons.date_range), label: Text(dateLabel)),
-            if (_search.isNotEmpty || _priority != null || _from != null)
-              TextButton(onPressed: _clearFilters, child: const Text('Clear Filters')),
-          ],
-        ),
+      LogFilterBar(
+        searchController: TextEditingController(text: _search),
+        search: _search,
+        priority: _priority,
+        onSearch: (s) => setState(() => _search = s),
+        onPriority: (p) => setState(() => _priority = p),
+        from: _from,
+        to: _to,
+        onDates: _pickDates,
+        onClear: _clearFilters,
       ),
       Expanded(
         child: CursorList<Json>(
           key: ValueKey('$_search|$_priority|$_from|$_to'),
           empty: 'No Log Entries',
           fetch: (c) => v.logs(search: _search, minPriority: _priority, from: _from, to: _to, cursor: c, order: 'Desc'),
-          itemBuilder: (ctx, e, i) {
-            final priority = '${e['priority'] ?? 'Info'}';
-            final color = _priorityColor(ctx, priority);
-            return Card(
-              margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                child: SelectableText.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${fmtDate(toDate(e['time']))}  ', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-                      TextSpan(text: '[$priority] ', style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: color, fontWeight: FontWeight.w700)),
-                      TextSpan(text: '${e['message']}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-                    ],
-                  ),
+          itemBuilder: (ctx, e, i) => Card(
+            margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: SelectableText.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: '${fmtDate(toDate(e['time']))}  ', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                    TextSpan(
+                      text: '[${e['priority'] ?? 'Info'}] ',
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: logPriorityColor(ctx, '${e['priority'] ?? 'Info'}'), fontWeight: FontWeight.w700),
+                    ),
+                    TextSpan(text: '${e['message']}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     ]);
-  }
+
 }
