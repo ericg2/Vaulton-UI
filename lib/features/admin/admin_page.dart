@@ -427,7 +427,7 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
       ),
       Expanded(
         child: CursorList<Json>(
-          key: ValueKey('${_search}|${_priority}|${_from}|${_to}'),
+          key: ValueKey('$_search|$_priority|$_from|$_to'),
           empty: 'No Log Entries',
           fetch: (c) => v.logs(search: _search, minPriority: _priority, from: _from, to: _to, cursor: c, order: 'Desc'),
           itemBuilder: (ctx, e, i) {
