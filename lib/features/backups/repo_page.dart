@@ -415,7 +415,7 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 0;
 
   @override
-  double get maxExtent => extent;
+  double get maxExtent => 156;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -449,7 +449,7 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 0;
 
   @override
-  double get maxExtent => 156;
+  double get maxExtent => extent;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
