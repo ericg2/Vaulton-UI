@@ -264,7 +264,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       FieldSpec('cron', 'Schedule', kind: 'cron', initial: s?.cron ?? '0 2 * * *'),
       FieldSpec('tz', 'Time Zone', kind: 'choice', options: timeZoneOptions(device: deviceTz, extra: s?.timeZone), initial: s?.timeZone.isNotEmpty == true ? s!.timeZone : (deviceTz ?? 'UTC')),
       FieldSpec('enabled', 'Enabled', kind: 'bool', initial: '${s?.enabled ?? true}'),
-      FieldSpec('skip', 'Skip if the last run is still going', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
+      FieldSpec('skip', 'Skip if already running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
     ], ok: 'Save', pick: (v) async {
       final d = dataMap[v['data']];
       final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose folder to backup');
