@@ -303,13 +303,24 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
               delegate: _PinnedTabBarDelegate(_tabs()),
             ),
           SliverToBoxAdapter(child: _header()),
-          SliverToBoxAdapter(
-            child: CleanupCard(
-              key: _cleanupKey,
-              repoId: widget.repoId,
-              onRunNow: _retention,
-            ),
-          ),
+          snapshots
+              ? SliverPersistentHeader(
+                  pinned: false,
+                  delegate: _CollapsingCleanupDelegate(
+                    CleanupCard(
+                      key: _cleanupKey,
+                      repoId: widget.repoId,
+                      onRunNow: _retention,
+                    ),
+                  ),
+                )
+              : SliverToBoxAdapter(
+                  child: CleanupCard(
+                    key: _cleanupKey,
+                    repoId: widget.repoId,
+                    onRunNow: _retention,
+                  ),
+                ),
         ],
         body: _tabView(),
       ),
@@ -338,4 +349,34 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
+}
+
+
+class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
+  _CollapsingCleanupDelegate(this.child);
+  final Widget child;
+
+  @override
+  double get minExtent => 0;
+
+  @override
+  double get maxExtent => 190;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress = (shrinkOffset / maxExtent).clamp(0, 1).toDouble();
+    return ClipRect(
+      child: Opacity(
+        opacity: 1 - progress,
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: 1 - progress,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CollapsingCleanupDelegate oldDelegate) => oldDelegate.child != child;
 }
