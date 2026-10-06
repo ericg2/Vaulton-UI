@@ -423,7 +423,10 @@ class _CollapsingCleanupDelegate extends SliverPersistentHeaderDelegate {
         child: Align(
           alignment: Alignment.topCenter,
           heightFactor: 1 - progress,
-          child: child,
+          child: Transform.translate(
+            offset: Offset(0, -20 * progress),
+            child: child,
+          ),
         ),
       ),
     );
@@ -453,7 +456,10 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: Align(
           alignment: Alignment.topCenter,
           heightFactor: 1 - progress,
-          child: child,
+          child: Transform.translate(
+            offset: Offset(0, -20 * progress),
+            child: child,
+          ),
         ),
       ),
     );
@@ -509,7 +515,13 @@ class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
     return Material(
       color: Theme.of(context).colorScheme.surface,
       elevation: overlapsContent ? 2 : 0,
-      child: child,
+      child: Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 920),
+          child: child,
+        ),
+      ),
     );
   }
 
