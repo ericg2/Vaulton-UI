@@ -324,6 +324,7 @@ class _VfsTab extends ConsumerWidget {
         );
       },
     );
+  }
 }
 
 class _LogsTab extends ConsumerStatefulWidget {
