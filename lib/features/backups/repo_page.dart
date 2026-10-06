@@ -480,6 +480,15 @@ class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _PinnedJobFiltersDelegate oldDelegate) => oldDelegate.child != child;
 }
 
+const _jobStatusFilters = <(String label, String? value)>[
+  ('All', null),
+  ('Running', 'Running'),
+  ('Waiting', 'Pending'),
+  ('Succeeded', 'Succeeded'),
+  ('Failed', 'Failed'),
+  ('Cancelled', 'Cancelled'),
+];
+
 class _JobFilters extends StatelessWidget {
   const _JobFilters({required this.status, required this.onChanged});
   final String? status;
@@ -492,7 +501,7 @@ class _JobFilters extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           children: [
-            for (final f in _statusFilters)
+            for (final f in _jobStatusFilters)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
