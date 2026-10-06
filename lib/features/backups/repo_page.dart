@@ -536,7 +536,7 @@ class _JobFilters extends StatelessWidget {
         height: 52,
         child: ListView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
           children: [
             for (final f in _jobStatusFilters)
               Padding(
