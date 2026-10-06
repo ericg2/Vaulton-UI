@@ -26,10 +26,11 @@ _Level _levelOf(String p) {
 class JobDetailPage extends ConsumerStatefulWidget {
   /// [showVaultLink]: null (default) hides "Open Backup Vault" automatically when that
   /// vault's page is already open, which avoids vault -> job -> vault loops.
-  const JobDetailPage({super.key, required this.jobId, this.admin = false, this.showVaultLink});
+  const JobDetailPage({super.key, required this.jobId, this.admin = false, this.showVaultLink, this.initialTab = 0});
   final String jobId;
   final bool admin;
   final bool? showVaultLink;
+  final int initialTab;
   @override
   ConsumerState<JobDetailPage> createState() => _JobDetailPageState();
 }
@@ -188,6 +189,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     final j = _job;
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.initialTab.clamp(0, 1),
       child: Scaffold(
         appBar: AppBar(
           title: Text(j == null ? 'Job' : kindLabel(j.kind)),
