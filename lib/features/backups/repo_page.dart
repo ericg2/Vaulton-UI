@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
@@ -131,105 +130,90 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (mounted) toast(context, 'Password updated');
   }
 
-  Widget _header() {
-    final r = _repo;
+  /// Centers a sliver's content and caps its width on large screens.
+  Widget _centered(Widget child) => Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: child),
+        ),
+      );
+
+  Widget _usageSection(Point r) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final pct = r.maxBytes > 0 ? (r.usedBytes / r.maxBytes * 100).round() : 0;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(child: Text('Storage', style: tt.titleSmall)),
+        chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null),
+      ]),
+      const SizedBox(height: 10),
+      UsageBar(used: r.usedBytes, max: r.maxBytes),
+      const SizedBox(height: 8),
+      Row(children: [
+        Text('${fmtBytes(r.usedBytes)} used', style: tt.bodyMedium),
+        const Spacer(),
+        Text('$pct% of ${fmtBytes(r.maxBytes)}', style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+      ]),
+      if (r.error != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(r.error!, style: TextStyle(color: cs.error, fontSize: 12)),
+        ),
+      const SizedBox(height: 16),
+    ]);
+  }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < _kCompactWidth;
-        final pad = compact ? 12.0 : 20.0;
-        final gap = compact ? 8.0 : 12.0;
+  Widget _header() {
+    final r = _repo;
+    return LayoutBuilder(builder: (context, constraints) {
+      // The card's own padding (16 + 16) is already excluded from what the buttons see.
+      final compact = constraints.maxWidth < _kCompactWidth;
 
-        final buttons = <Widget>[
-          FilledButton.icon(
-            onPressed: r == null ? null : () => _browse(),
-            icon: const Icon(Icons.folder_open),
-            label: const Text('Browse'),
-          ),
-          FilledButton.tonalIcon(
-            onPressed: _backup,
-            icon: const Icon(Icons.backup_outlined),
-            label: const Text('Backup Now'),
-          ),
-          OutlinedButton.icon(
-            onPressed: _healthCheck,
-            icon: const Icon(Icons.fact_check_outlined),
-            label: const Text('Health Check'),
-          ),
-          OutlinedButton.icon(
-            onPressed: _retention,
-            icon: const Icon(Icons.auto_delete_outlined),
-            label: const Text('Clean up'),
-          ),
-        ];
+      final backup = FilledButton.icon(
+        onPressed: r == null ? null : _backup,
+        icon: const Icon(Icons.backup_outlined),
+        label: const Text('Backup Now'),
+      );
+      final browse = FilledButton.tonalIcon(
+        onPressed: r == null ? null : () => _browse(),
+        icon: const Icon(Icons.folder_open),
+        label: const Text('Browse'),
+      );
+      final health = OutlinedButton.icon(
+        onPressed: _healthCheck,
+        icon: const Icon(Icons.fact_check_outlined),
+        label: const Text('Health Check'),
+      );
+      final cleanup = OutlinedButton.icon(
+        onPressed: _retention,
+        icon: const Icon(Icons.auto_delete_outlined),
+        label: const Text('Clean up'),
+      );
 
-        Widget usage() {
-          if (r == null) return const SizedBox.shrink();
-          final label = Text('${fmtBytes(r.usedBytes)} of ${fmtBytes(r.maxBytes)}', style: tt.labelMedium);
-          final health = chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null);
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (compact) ...[
-              UsageBar(used: r.usedBytes, max: r.maxBytes),
+      final actions = compact
+          ? Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [Expanded(child: backup), const SizedBox(width: 8), Expanded(child: browse)]),
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: label),
-                health,
-              ]),
-            ] else
-              Row(children: [
-                Expanded(child: UsageBar(used: r.usedBytes, max: r.maxBytes)),
-                const SizedBox(width: 16),
-                label,
-                const SizedBox(width: 12),
-                health,
-              ]),
-            if (r.error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(r.error!, style: TextStyle(color: cs.error, fontSize: 12)),
-              ),
-            SizedBox(height: gap + 4),
-          ]);
-        }
+              Row(children: [Expanded(child: health), const SizedBox(width: 8), Expanded(child: cleanup)]),
+            ])
+          : Wrap(spacing: 8, runSpacing: 8, children: [backup, browse, health, cleanup]);
 
-        Widget actions() {
-          if (!compact) return Wrap(spacing: gap, runSpacing: gap, children: buttons);
-          return Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [
-              Expanded(child: buttons[0]),
-              SizedBox(width: gap),
-              Expanded(child: buttons[1]),
-            ]),
-            SizedBox(height: gap),
-            Row(children: [
-              Expanded(child: buttons[2]),
-              SizedBox(width: gap),
-              Expanded(child: buttons[3]),
-            ]),
-          ]);
-        }
-
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
-            child: Card(
-              margin: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: 4),
-              child: Padding(
-                padding: EdgeInsets.all(pad),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [usage(), actions()],
-                ),
-              ),
-            ),
+      return Card(
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 16 : 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (r != null) _usageSection(r),
+              actions,
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 
   Widget _snapshotCard(Snapshot s) {
@@ -241,56 +225,66 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       child: InkWell(
         onTap: () => _browse(s),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(s.locked ? Icons.lock_outline : Icons.camera_alt_outlined, color: cs.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(fmtDate(s.time), style: t.titleMedium),
-                  Text(shortId(s.id), style: t.bodySmall?.copyWith(color: cs.outline, fontFamily: 'monospace')),
-                ]),
-              ),
-              PopupMenuButton<String>(
-                onSelected: (a) async {
-                  switch (a) {
-                    case 'restore':
-                      _restore(s);
-                    case 'lock':
-                      final r = await guarded(context, () => _v.lockSnapshot(widget.repoId, s.id, !s.locked));
-                      if (r != null && mounted) toast(context, '${toStr(r['message']) ?? 'Done'} (the snapshot ID changed)');
-                      _key.currentState?.refresh();
-                    case 'copy':
-                      copyText(context, s.id, 'Snapshot ID copied');
-                    case 'forget':
-                      if (await confirm(context, 'Delete snapshot?', 'Locked snapshots can’t be deleted. Space is only freed once you clean up old snapshots.', ok: 'Delete', danger: true)) {
-                        final j = await guarded(context, () => _v.forget(widget.repoId, [s.id]));
-                        if (j != null) _queued(j);
-                      }
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'restore', child: Text('Restore…')),
-                  PopupMenuItem(value: 'lock', child: Text(s.locked ? 'Unlock' : 'Lock')),
-                  const PopupMenuItem(value: 'copy', child: Text('Copy ID')),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(value: 'forget', child: Text('Delete')),
-                ],
-              ),
-            ]),
-            Padding(
-              padding: const EdgeInsets.only(left: 36, top: 4, right: 8),
+          padding: const EdgeInsets.fromLTRB(16, 14, 4, 14),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: cs.secondaryContainer,
+              foregroundColor: cs.onSecondaryContainer,
+              child: Icon(s.locked ? Icons.lock_outline : Icons.camera_alt_outlined, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (s.paths.isNotEmpty) Text(s.paths.join(', '), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodyMedium),
-                if (sum != null) Text('${fmtBytes(toInt(sum['totalBytesProcessed']))} · ${toInt(sum['totalFilesProcessed'])} files · +${fmtBytes(toInt(sum['bytesAdded']))} new', style: t.bodySmall),
-                if (s.tags.isNotEmpty) Wrap(children: [for (final tg in s.tags) chip(context, '#$tg')]),
+                Text(fmtDate(s.time), style: t.titleMedium),
+                const SizedBox(height: 2),
+                Text(shortId(s.id), style: t.bodySmall?.copyWith(color: cs.outline, fontFamily: 'monospace')),
+                if (s.paths.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(s.paths.join(', '), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodyMedium),
+                ],
+                if (sum != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${fmtBytes(toInt(sum['totalBytesProcessed']))} · ${toInt(sum['totalFilesProcessed'])} files · +${fmtBytes(toInt(sum['bytesAdded']))} new',
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+                if (s.tags.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(children: [for (final tg in s.tags) chip(context, '#$tg')]),
+                ],
               ]),
             ),
-            OverflowBar(alignment: MainAxisAlignment.start, children: [
-              TextButton.icon(onPressed: () => _browse(s), icon: const Icon(Icons.folder_open), label: const Text('Browse Files')),
-              TextButton.icon(onPressed: () => _restore(s), icon: const Icon(Icons.settings_backup_restore), label: const Text('Restore…')),
-            ]),
+            PopupMenuButton<String>(
+              onSelected: (a) async {
+                switch (a) {
+                  case 'browse':
+                    _browse(s);
+                  case 'restore':
+                    _restore(s);
+                  case 'lock':
+                    final r = await guarded(context, () => _v.lockSnapshot(widget.repoId, s.id, !s.locked));
+                    if (r != null && mounted) toast(context, '${toStr(r['message']) ?? 'Done'} (the snapshot ID changed)');
+                    _key.currentState?.refresh();
+                  case 'copy':
+                    copyText(context, s.id, 'Snapshot ID copied');
+                  case 'forget':
+                    if (await confirm(context, 'Delete snapshot?', 'Locked snapshots can’t be deleted. Space is only freed once you clean up old snapshots.', ok: 'Delete', danger: true)) {
+                      final j = await guarded(context, () => _v.forget(widget.repoId, [s.id]));
+                      if (j != null) _queued(j);
+                    }
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'browse', child: Text('Browse files')),
+                const PopupMenuItem(value: 'restore', child: Text('Restore…')),
+                PopupMenuItem(value: 'lock', child: Text(s.locked ? 'Unlock' : 'Lock')),
+                const PopupMenuItem(value: 'copy', child: Text('Copy ID')),
+                const PopupMenuDivider(),
+                const PopupMenuItem(value: 'forget', child: Text('Delete')),
+              ],
+            ),
           ]),
         ),
       ),
@@ -317,92 +311,11 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         JobsList(repoId: widget.repoId, externalStatus: _jobStatus, showFilters: false),
         SchedulesList(repoId: widget.repoId),
       ]);
-      
-  Widget _topBar() {
-    final canPop = Navigator.of(context).canPop();
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: kToolbarHeight,
-          child: Row(children: [
-            // Same 56px leading slot AppBar uses, so the arrow lines up with other screens.
-            if (canPop)
-              SizedBox(
-                width: 56,
-                child: Center(
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                ),
-              )
-            else
-              const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                _repo?.name ?? 'Backup Vault',
-                style: theme.textTheme.titleLarge,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (a) {
-                if (a == 'pw') _password();
-              },
-              itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
-            ),
-            const SizedBox(width: 4),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _cleanup() => CleanupCard(
-        key: _cleanupKey,
-        repoId: widget.repoId,
-        onRunNow: _retention,
-      );
 
   @override
   Widget build(BuildContext context) {
     final jobs = _tc.index == 1;
     final compact = MediaQuery.sizeOf(context).width < _kCompactWidth;
-
-    // Wide screens: nothing collapses, it all just scrolls. Only the tab bar stays pinned.
-    // Phones: the top bar, vault card and cleanup card fade away to save space.
-    final topSlivers = compact
-        ? <Widget>[
-            SliverPersistentHeader(
-              pinned: false,
-              delegate: _CollapsingTopBarDelegate(
-                _topBar(),
-                kToolbarHeight + MediaQuery.paddingOf(context).top,
-              ),
-            ),
-            SliverPersistentHeader(pinned: true, delegate: _PinnedTabBarDelegate(_tabs())),
-            _AutoHeightHeader(initialHeight: 190, child: _header()),
-            _AutoHeightHeader(initialHeight: 156, child: _cleanup()),
-          ]
-        : <Widget>[
-            SliverToBoxAdapter(child: _topBar()),
-            SliverToBoxAdapter(child: _header()),
-            SliverToBoxAdapter(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _kMaxContentWidth),
-                  child: _cleanup(),
-                ),
-              ),
-            ),
-            SliverPersistentHeader(pinned: true, delegate: _PinnedTabBarDelegate(_tabs())),
-          ];
 
     return Scaffold(
       // On wide screens "Backup Now" is already in the header, so the FAB is phone-only.
@@ -411,15 +324,32 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           : null,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          ...topSlivers,
+          // A real AppBar: back button, title and menu spacing match every other screen.
+          SliverAppBar(
+            title: Text(_repo?.name ?? 'Backup Vault', maxLines: 1, overflow: TextOverflow.ellipsis),
+            floating: true,
+            snap: true,
+            scrolledUnderElevation: 0,
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (a) {
+                  if (a == 'pw') _password();
+                },
+                itemBuilder: (_) => const [PopupMenuItem(value: 'pw', child: Text('Update Vault Password…'))],
+              ),
+            ],
+          ),
+          SliverToBoxAdapter(child: _centered(_header())),
+          SliverToBoxAdapter(
+            child: _centered(CleanupCard(key: _cleanupKey, repoId: widget.repoId, onRunNow: _retention)),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 4)),
+          SliverPersistentHeader(pinned: true, delegate: _PinnedTabBarDelegate(_tabs())),
           if (jobs)
             SliverPersistentHeader(
               pinned: true,
               delegate: _PinnedJobFiltersDelegate(
-                _JobFilters(
-                  status: _jobStatus,
-                  onChanged: _setJobStatus,
-                ),
+                _JobFilters(status: _jobStatus, onChanged: _setJobStatus),
               ),
             ),
         ],
@@ -450,137 +380,6 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
-}
-
-/// A collapsing (fade + slide) sliver header whose height follows its child's
-/// real height, instead of a hardcoded extent. Used on phones only.
-class _AutoHeightHeader extends StatefulWidget {
-  const _AutoHeightHeader({required this.child, this.initialHeight = 0});
-  final Widget child;
-
-  /// Used only until the child has been measured once.
-  final double initialHeight;
-
-  @override
-  State<_AutoHeightHeader> createState() => _AutoHeightHeaderState();
-}
-
-class _AutoHeightHeaderState extends State<_AutoHeightHeader> {
-  late double _height = widget.initialHeight;
-
-  void _onMeasured(double h) {
-    if (!mounted || (h - _height).abs() < 0.5) return;
-    setState(() => _height = h);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverPersistentHeader(
-      pinned: false,
-      delegate: _AutoHeightDelegate(widget.child, _height, _onMeasured),
-    );
-  }
-}
-
-class _AutoHeightDelegate extends SliverPersistentHeaderDelegate {
-  _AutoHeightDelegate(this.child, this.extent, this.onMeasured);
-  final Widget child;
-  final double extent;
-  final ValueChanged<double> onMeasured;
-
-  @override
-  double get minExtent => 0;
-
-  @override
-  double get maxExtent => extent;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final progress = extent <= 0 ? 0.0 : (shrinkOffset / extent).clamp(0, 1).toDouble();
-    return ClipRect(
-      child: Opacity(
-        opacity: 1 - progress,
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: 1 - progress,
-          child: Transform.translate(
-            offset: Offset(0, -20 * progress),
-            // Let the child take its natural height, and report it.
-            child: OverflowBox(
-              alignment: Alignment.topCenter,
-              minHeight: 0,
-              maxHeight: double.infinity,
-              child: _MeasureSize(onChange: onMeasured, child: child),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _AutoHeightDelegate oldDelegate) =>
-      oldDelegate.child != child || oldDelegate.extent != extent;
-}
-
-/// Reports its child's height after layout.
-class _MeasureSize extends SingleChildRenderObjectWidget {
-  const _MeasureSize({required this.onChange, required Widget super.child});
-  final ValueChanged<double> onChange;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) => _RenderMeasureSize(onChange);
-
-  @override
-  void updateRenderObject(BuildContext context, covariant _RenderMeasureSize renderObject) {
-    renderObject.onChange = onChange;
-  }
-}
-
-class _RenderMeasureSize extends RenderProxyBox {
-  _RenderMeasureSize(this.onChange);
-  ValueChanged<double> onChange;
-  double? _last;
-
-  @override
-  void performLayout() {
-    super.performLayout();
-    final h = size.height;
-    if (h == _last) return;
-    _last = h;
-    WidgetsBinding.instance.addPostFrameCallback((_) => onChange(h));
-  }
-}
-
-class _CollapsingTopBarDelegate extends SliverPersistentHeaderDelegate {
-  _CollapsingTopBarDelegate(this.child, this.extent);
-  final Widget child;
-  final double extent;
-
-  @override
-  double get minExtent => 0;
-
-  @override
-  double get maxExtent => extent;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final progress = (shrinkOffset / maxExtent).clamp(0, 1).toDouble();
-    return ClipRect(
-      child: Opacity(
-        opacity: 1 - progress,
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: 1 - progress,
-          child: child,
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _CollapsingTopBarDelegate oldDelegate) =>
-      oldDelegate.child != child || oldDelegate.extent != extent;
 }
 
 class _PinnedJobFiltersDelegate extends SliverPersistentHeaderDelegate {
