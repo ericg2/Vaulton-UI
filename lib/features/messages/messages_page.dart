@@ -83,6 +83,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
               ]),
             ),
             actions: [
+          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
                 onPressed: selected.isEmpty ? null : () => Navigator.pop(ctx, selected.toList()),
@@ -155,7 +156,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
           ),
           if (inbox && !full.isSystem)
             TextButton(onPressed: () { Navigator.pop(ctx); _compose(to: full.sender, subject: full.subject.startsWith('Re: ') ? full.subject : 'Re: ${full.subject}', replyTo: full.id); }, child: const Text('Reply')),
-          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
     );
@@ -167,13 +167,34 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       empty: inbox ? 'Inbox is empty' : 'No sent messages',
       emptyIcon: Icons.mail_outline,
       fetch: (c) => inbox ? _v.inbox(cursor: c, unread: _unreadOnly ? true : null) : _v.sent(cursor: c),
-      itemBuilder: (ctx, m, i) => ListTile(
-        leading: CircleAvatar(child: Icon(m.isSystem ? Icons.campaign_outlined : Icons.person_outline)),
-        title: Text(m.subject, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: inbox && !m.isRead ? FontWeight.bold : null)),
-        subtitle: Text('${inbox ? m.sender : m.recipient} — ${m.preview}', maxLines: 2, overflow: TextOverflow.ellipsis),
-        trailing: Text(fmtShort(m.createdAt), style: Theme.of(ctx).textTheme.labelSmall),
-        onTap: () => _open(m, inbox),
-      ),
+      itemBuilder: (ctx, m, i) => Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _open(m, inbox),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              CircleAvatar(child: Icon(m.isSystem ? Icons.campaign_outlined : Icons.person_outline)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text(m.subject, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: inbox && !m.isRead ? FontWeight.bold : null))),
+                    const SizedBox(width: 8),
+                    Text(fmtShort(m.createdAt), style: Theme.of(ctx).textTheme.labelSmall),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(inbox ? m.sender : m.recipient, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: Theme.of(ctx).textTheme.labelMedium),
+                  const SizedBox(height: 2),
+                  Text(m.preview, maxLines: 2, overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      )
     );
   }
 

@@ -167,9 +167,9 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             const SizedBox(height: 14),
           ],
           Row(children: [
-            Expanded(child: FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined, size: 18), label: label('Backup now'))),
+            Expanded(child: FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined, size: 18), label: label('Backup Now'))),
             const SizedBox(width: 8),
-            Expanded(child: FilledButton.tonalIcon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse latest'))),
+            Expanded(child: FilledButton.tonalIcon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse Latest'))),
           ]),
         ]),
       ),

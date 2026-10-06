@@ -122,7 +122,7 @@ class _DownloadSheet extends ConsumerWidget {
             if (finished && canReveal)
               OutlinedButton.icon(onPressed: () => revealDownload(context, done.first.localPath!), icon: const Icon(Icons.folder_open, size: 18), label: const Text('Show in Folder')),
             if (onOpenTransfers != null)
-              TextButton(onPressed: () { Navigator.pop(context); onOpenTransfers!(); }, child: const Text('All transfers')),
+              TextButton(onPressed: () { Navigator.pop(context); onOpenTransfers!(); }, child: const Text('All Transfers')),
             TextButton(onPressed: () => Navigator.pop(context), child: Text(finished ? 'Done' : 'Hide')),
           ]),
           if (!finished)

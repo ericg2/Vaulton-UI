@@ -26,6 +26,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   List<FolderPair> _pairs = [];
   List<Point> _points = [];
   Timer? _poll;
+  Timer? _folderPoll;
   final _remote = TextEditingController();
 
   @override
@@ -43,11 +44,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       await prefs.reload();
       if (mounted) setState(() => _st = SyncStatus.load(prefs));
     });
+    _folderPoll = Timer.periodic(const Duration(seconds: 30), (_) => _runDuePairs());
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _folderPoll?.cancel();
     _remote.dispose();
     super.dispose();
   }
@@ -120,11 +123,20 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     await _runPair(_pairs.last);
   }
 
-  Future<void> _runPair(FolderPair p) async {
+  Future<void> _runDuePairs() async {
+    if (!isDesktop || !mounted) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final p in [..._pairs]) {
+      if (!p.enabled) continue;
+      if (p.lastRun == 0 || now - p.lastRun >= p.intervalMinutes * 60000) await _runPair(p, quiet: true);
+    }
+  }
+
+  Future<void> _runPair(FolderPair p, {bool quiet = false}) async {
     final prefs = ref.read(prefsProvider);
     final n = await guarded(context, () => runFolderPair(p, prefs, ref.read(transferProvider.notifier)));
     await FolderPair.saveAll(prefs, _pairs);
-    if (mounted && n != null) toast(context, n == 0 ? 'Folder is up to date' : 'Queued $n upload${n == 1 ? '' : 's'}');
+    if (mounted && !quiet && n != null) toast(context, n == 0 ? 'Folder is up to date' : 'Queued $n upload${n == 1 ? '' : 's'}');
   }
 
   @override
@@ -263,32 +275,66 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               const Padding(padding: EdgeInsets.all(16), child: Text('Mirror local folders into a data folder. New and changed files are uploaded automatically while Vaulton is open or minimised.')),
             for (final p in _pairs)
               Card(
-                child: ListTile(
-                  leading: const Icon(Icons.folder_special_outlined),
-                  title: Text(p.localDir, overflow: TextOverflow.ellipsis),
-                  subtitle: Text('→ ${_points.where((x) => x.id == p.pointId).firstOrNull?.name ?? 'data folder'}${p.remoteDir}\nEvery ${p.intervalMinutes} min · last run ${p.lastRun == 0 ? 'never' : fmtDate(DateTime.fromMillisecondsSinceEpoch(p.lastRun))}'),
-                  isThreeLine: true,
-                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Switch(value: p.enabled, onChanged: (v) async {
-                      p.enabled = v;
-                      await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
-                      setState(() {});
-                    }),
-                    IconButton(icon: const Icon(Icons.sync), tooltip: 'Sync now', onPressed: () => _runPair(p)),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Remove',
-                      onPressed: () async {
-                        _pairs.remove(p);
-                        await resetFolderState(ref.read(prefsProvider), p);
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      const Icon(Icons.folder_special_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(p.localDir, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
+                          Text('→ ${_points.where((x) => x.id == p.pointId).firstOrNull?.name ?? 'Data Folder'}${p.remoteDir}',
+                              maxLines: 2, overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.outline)),
+                        ]),
+                      ),
+                      Switch(value: p.enabled, onChanged: (v) async {
+                        p.enabled = v;
                         await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
                         setState(() {});
-                      },
-                    ),
+                      }),
+                    ]),
+                    const SizedBox(height: 12),
+                    LayoutBuilder(builder: (ctx, c) {
+                      final frequency = DropdownButton<int>(
+                        value: const [5, 15, 30, 60, 180, 360].contains(p.intervalMinutes) ? p.intervalMinutes : 15,
+                        onChanged: (v) async {
+                          if (v == null) return;
+                          p.intervalMinutes = v;
+                          await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
+                          setState(() {});
+                        },
+                        items: const [
+                          DropdownMenuItem(value: 5, child: Text('Every 5 Minutes')),
+                          DropdownMenuItem(value: 15, child: Text('Every 15 Minutes')),
+                          DropdownMenuItem(value: 30, child: Text('Every 30 Minutes')),
+                          DropdownMenuItem(value: 60, child: Text('Every Hour')),
+                          DropdownMenuItem(value: 180, child: Text('Every 3 Hours')),
+                          DropdownMenuItem(value: 360, child: Text('Every 6 Hours')),
+                        ],
+                      );
+                      final last = p.lastRun == 0 ? 'Never' : fmtDate(DateTime.fromMillisecondsSinceEpoch(p.lastRun));
+                      final controls = Wrap(spacing: 8, runSpacing: 8, children: [
+                        frequency,
+                        OutlinedButton.icon(onPressed: () => _runPair(p), icon: const Icon(Icons.sync, size: 18), label: const Text('Sync Now')),
+                        IconButton(tooltip: 'Remove', icon: const Icon(Icons.delete_outline), onPressed: () async {
+                          _pairs.remove(p);
+                          await resetFolderState(ref.read(prefsProvider), p);
+                          await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
+                          setState(() {});
+                        }),
+                      ]);
+                      final meta = Text('Last Run: $last', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.outline));
+                      return c.maxWidth < 620
+                          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [controls, const SizedBox(height: 6), meta])
+                          : Row(children: [Expanded(child: meta), controls]);
+                    }),
                   ]),
                 ),
               ),
-            Padding(padding: const EdgeInsets.all(12), child: Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: _addPair, icon: const Icon(Icons.add), label: const Text('Add folder')))),
+            Padding(padding: const EdgeInsets.all(12), child: Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: _addPair, icon: const Icon(Icons.add), label: const Text('Add Folder')))),
           ]),
       ]),
     );
