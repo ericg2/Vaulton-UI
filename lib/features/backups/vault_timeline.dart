@@ -412,8 +412,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       if (_loading) return const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()));
       if (_error != null && all.isEmpty) return SizedBox(height: 260, child: ErrorView(_error!, onRetry: () => _load(spinner: true, replace: true)));
       final msg = all.isEmpty
-          ? (widget.snapshotOnly ? 'No snapshots yet.' : 'No history yet')
-          : (widget.snapshotOnly ? (_filter == 1 ? 'No locked snapshots' : (_filter == 2 ? 'No unlocked snapshots' : 'No snapshots yet')) : (_filter == 0 ? 'No backups yet' : (_filter == 1 ? 'No other activity' : 'Nothing failed')));
+          ? (widget.snapshotOnly ? 'No snapshots yet.' : 'No History Yet')
+          : (widget.snapshotOnly ? (_filter == 1 ? 'No Locked Snapshots' : (_filter == 2 ? 'No Unlocked Snapshots' : 'No Snapshots Yet')) : (_filter == 0 ? 'No Backups Yet' : (_filter == 1 ? 'No Other Activity' : 'Nothing failed')));
       return SizedBox(
         height: 220,
         child: EmptyView(msg, icon: Icons.history, hint: all.isEmpty ? 'Run a backup and it will show up here, together with its snapshot.' : null),
