@@ -189,9 +189,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  SizedBox(
-                    height: 40,
-                    child: FilledButton.tonalIcon(
+                  OutlinedButton.icon(
                     onPressed: () async {
                       final picked = await pickFolder(
                         ctx,
