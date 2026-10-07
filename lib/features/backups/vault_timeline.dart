@@ -373,6 +373,10 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
               padding: EdgeInsets.fromLTRB(indent, 10, 12, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 if (what != null && what.isNotEmpty) Text(what, style: t.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
+                if (s != null) ...[
+                  const SizedBox(height: 4),
+                  SelectableText('Snapshot ID: ${s.id}', style: t.bodySmall?.copyWith(color: cs.outline)),
+                ],
                 if (result != null) ...[const SizedBox(height: 4), Text(result, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
                 if (note != null) ...[const SizedBox(height: 4), Text(note, style: t.bodySmall?.copyWith(color: cs.outline))],
                 if (j != null && phase == JobPhase.running) ...[
