@@ -95,9 +95,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   void _swipeStorageBoundary(int direction) {
     if (!_pages.hasClients) return;
-    final target = (_index + direction).clamp(0, 3);
+    final target = (_index + direction).clamp(0, 4);
     if (target == _index) return;
-    _select(target, label: ['Dashboard', 'Files', 'Transfers', 'Storage'][target]);
+    _select(target, label: ['Dashboard', 'Files', 'Transfers', 'Storage', 'More'][target]);
   }
 
   void _goto(String label, List<_Dest> dests, bool wide) {
