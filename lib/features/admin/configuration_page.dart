@@ -27,7 +27,6 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   int _powerScheduleProtectionMinutes = 120;
   bool _hasPowerAgentKey = false;
   Json? _powerAgentStatus;
-  Json? _powerDecision;
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -223,7 +222,6 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   Future<void> _testPowerDecision() async {
     final decision = await guarded(context, _v.powerDecision);
     if (decision == null || !mounted) return;
-    setState(() => _powerDecision = decision);
     final execute = toBool(decision['execute']);
     final reason = toStr(decision['blockReason']);
     final action = toStr(decision['action']);
