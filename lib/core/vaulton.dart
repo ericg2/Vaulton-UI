@@ -271,4 +271,7 @@ class Vaulton {
   Future<Paged<Json>> events({String? user, String? cursor, int limit = 100}) async =>
       Paged.from(await _req('GET', '/admin/events', q: _pg(cursor, limit, 'Desc', {'user': user})), (j) => j);
   Future<void> testEmail() => _req('POST', '/admin/email/test');
+
+  Future<Json> wolSettings() async => toJson(await _req('GET', '/admin/settings/wol'));
+  Future<Json> saveWolSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/wol', body: body));
 }
