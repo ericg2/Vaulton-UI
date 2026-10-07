@@ -227,7 +227,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'The Data Folder root is selected. This sync can add, update, and delete files throughout the entire folder.',
+                              'Data Folder root selected. Changes may affect the entire folder.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: cs.onErrorContainer,
                                   ),
@@ -282,23 +282,47 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             FilledButton(
-              onPressed: () => Navigator.pop(ctx, SyncProfile(
-                id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-                name: name.trim().isEmpty ? source.label : name.trim(),
-                sourceKind: source.kind,
-                sourceLocation: source.location,
-                sourceLabel: source.label,
-                pointId: pointId,
-                remoteDir: remoteDir.trim().isEmpty ? '/' : remoteDir.trim(),
-                enabled: enabled,
-                deleteExtras: deleteExtras,
-                intervalMinutes: interval,
-                wifiOnly: wifiOnly,
-                chargingOnly: chargingOnly,
-                lastRun: existing?.lastRun ?? 0,
-                nextRun: existing?.nextRun ?? (DateTime.now().millisecondsSinceEpoch + interval * 60000),
-              )),
-              child: const Text('Save'),
+              onPressed: () async {
+                if (remoteDir.trim() == '/' && deleteExtras) {
+                  final proceed = await showDialog<bool>(
+                    context: ctx,
+                    builder: (warningCtx) => AlertDialog(
+                      title: const Text('Confirm Root Destination'),
+                      content: const Text(
+                        'Match destination to source is enabled for the Data Folder root. '
+                        'Files outside the source may be permanently deleted.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(warningCtx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(warningCtx, true),
+                          child: const Text('Continue'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (proceed != true) return;
+                }
+                Navigator.pop(ctx, SyncProfile(
+                  id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+                  name: name.trim().isEmpty ? source.label : name.trim(),
+                  sourceKind: source.kind,
+                  sourceLocation: source.location,
+                  sourceLabel: source.label,
+                  pointId: pointId,
+                  remoteDir: remoteDir.trim().isEmpty ? '/' : remoteDir.trim(),
+                  enabled: enabled,
+                  deleteExtras: deleteExtras,
+                  intervalMinutes: interval,
+                  wifiOnly: wifiOnly,
+                  chargingOnly: chargingOnly,
+                  lastRun: existing?.lastRun ?? 0,
+                  nextRun: existing?.nextRun ?? (DateTime.now().millisecondsSinceEpoch + interval * 60000),
+                )),
+              },              child: const Text('Save'),
             ),
           ],
         ),
