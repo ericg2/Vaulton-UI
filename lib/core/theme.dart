@@ -93,9 +93,6 @@ ThemeData buildTheme(ColorScheme scheme) {
       border: OutlineInputBorder(borderRadius: inputRadius),
       isDense: isWin || isLinux,
     ),
-    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: isWin ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)) : null)),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(splashFactory: InkRipple.splashFactory)),
-    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(splashFactory: InkRipple.splashFactory)),
     snackBarTheme: SnackBarThemeData(shape: shape),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: scheme.surfaceContainer,
