@@ -267,8 +267,17 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     profile.lastRun = DateTime.now().millisecondsSinceEpoch;
     profile.nextRun = profile.lastRun + profile.intervalMinutes * 60000;
   } catch (e) {
-    final status = SyncRunStatus(running: false, phase: 'Failed', error: e.toString(), finishedAt: now);
+    final error = e.toString();
+    final sourceMissing = error.toLowerCase().contains('source folder is no longer available');
+    final status = SyncRunStatus(
+      running: false,
+      phase: 'Failed',
+      error: sourceMissing ? 'Source folder is unavailable.' : error,
+      message: sourceMissing ? 'Sync paused. Choose the source folder again to resume.' : null,
+      finishedAt: now,
+    );
     await status.save(prefs, profile.id);
+    profile.enabled = !sourceMissing;
     profile.nextRun = now + profile.intervalMinutes * 60000;
   }
 
