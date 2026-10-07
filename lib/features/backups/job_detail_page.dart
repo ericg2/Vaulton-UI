@@ -32,6 +32,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   Timer? _timer;
   bool _busy = false;
   String? _repoName, _dataName;
+  Json? _backupSummary;
   String? _loadedContextJobId;
 
   // log state, newest first
@@ -88,17 +89,27 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       final results = await Future.wait([
         _v.repo(j.repoId),
         if (j.dataId != null) _v.datas(search: j.dataId, limit: 100),
+        if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty)
+          _v.snapshots(j.repoId, idPrefix: j.snapshotId, limit: 2),
       ]);
       if (!mounted) return;
       final repo = results[0] as Point;
       Point? data;
-      if (j.dataId != null && results.length > 1) {
-        final pg = results[1] as Paged<Point>;
+      var resultIndex = 1;
+      if (j.dataId != null) {
+        final pg = results[resultIndex++] as Paged<Point>;
         data = pg.items.where((p) => p.id == j.dataId).firstOrNull;
+      }
+      Json? summary;
+      if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty && resultIndex < results.length) {
+        final pg = results[resultIndex] as Paged<Snapshot>;
+        final snap = pg.items.where((s) => s.id == j.snapshotId || s.id.startsWith(j.snapshotId!)).firstOrNull;
+        summary = snap?.summary;
       }
       setState(() {
         _repoName = repo.name;
         _dataName = data?.name;
+        _backupSummary = summary;
       });
     } catch (_) {
       // Names are supplementary; the IDs remain available if lookup fails.
@@ -222,6 +233,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       _hero(j),
       if (j.stages.isNotEmpty) _stagesCard(j),
       _detailsCard(j),
+      _backupSummaryCard(j),
       _optionsCard(j),
     ]));
   }
@@ -353,12 +365,30 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       if (j.scheduleId != null) _kv('Schedule', copyable(j.scheduleId!)),
       if (j.snapshotId != null) _kv('Snapshot ID', copyable(j.snapshotId!)),
       if (j.options['dryRun'] == true) _kv('Run Type', const Text('Test Run')),
-      if (j.options['dryRun'] == true) _kv('Test Run', const Text('Yes')),
-      _kv('Created', Text(fmtDate(j.createdAt))),
+            _kv('Created', Text(fmtDate(j.createdAt))),
       if (j.scheduleDate != null) _kv('Not Before', Text(fmtDate(j.scheduleDate))),
       if (j.startDate != null) _kv('Started', Text(fmtDate(j.startDate))),
       if (j.endDate != null) _kv('Finished', Text(fmtDate(j.endDate))),
       if (j.duration != null) _kv('Duration', Text(fmtDuration(j.duration!))),
+    ]);
+  }
+
+  Widget _backupSummaryCard(RepoJob j) {
+    final summary = _backupSummary;
+    if (j.kind != 'backup' || summary == null || summary.isEmpty) return const SizedBox.shrink();
+
+    String value(String key, dynamic v) {
+      if (v is bool) return v ? 'Yes' : 'No';
+      if (v is num && key.toLowerCase().contains('bytes')) return fmtBytes(v.toInt());
+      if (v is List) return v.join(', ');
+      if (v is Map) return v.entries.map((e) => '${pretty('${e.key}')}: ${e.value}').join('\n');
+      return '$v';
+    }
+
+    return _card('Backup Summary', [
+      for (final e in summary.entries)
+        if (e.value != null && e.value != '' && !(e.value is num && e.value == 0))
+          _kv(pretty(e.key), SelectableText(value(e.key, e.value))),
     ]);
   }
 
