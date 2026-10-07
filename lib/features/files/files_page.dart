@@ -80,7 +80,13 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     if (path.isEmpty) return '/';
     final value = path.replaceAll('\\\\', '/');
     if (value == '/') return '/';
-    final trimmed = value.replaceAll(RegExp(r'^/+|/+
+    var trimmed = value;
+    while (trimmed.startsWith('/')) trimmed = trimmed.substring(1);
+    while (trimmed.endsWith('/')) trimmed = trimmed.substring(0, trimmed.length - 1);
+    return trimmed.isEmpty ? '/' : '/$trimmed';
+  }
+
+  @override
   void initState() {
     super.initState();
     _initPoints();
