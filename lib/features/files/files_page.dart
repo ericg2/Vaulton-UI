@@ -380,6 +380,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           body: const EmptyView('No data folders yet.\nCreate one under Storage to start storing files.', icon: Icons.folder_off_outlined));
     }
     final pt = _point!;
+    final currentSync = _syncForPath(_path, pt.id);
     final selecting = _sel.isNotEmpty;
     // An upload to this data folder just finished -> refresh the list in place (no spinner).
     final doneUploads = ref.watch(transferProvider.select((l) => l.where((t) => t.kind == TKind.upload && t.state == TState.done && t.pointId == pt.id).length));
@@ -486,96 +487,127 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               Expanded(
                 child: Column(
                   children: [
-                    Builder(builder: (context) {
-                      final sync = _syncForPath(_path, pt.id);
-                      if (sync == null) return const SizedBox.shrink();
-                      final status = SyncRunStatus.load(ref.read(prefsProvider), sync.id);
-                      final error = status.error;
-                      final cs = Theme.of(context).colorScheme;
-                      return Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                        decoration: BoxDecoration(
-                          color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(children: [
-                          Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(
-                            error != null ? 'Sync Error: ' + error : 'Sync Folder · ' + sync.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer, fontWeight: FontWeight.w600),
-                          )),
-                        ]),
-                      );
-                    }),
+                    if (currentSync != null)
+                      Builder(
+                        builder: (context) {
+                          final sync = currentSync;
+                          final status = SyncRunStatus.load(ref.read(prefsProvider), sync.id);
+                          final error = status.error;
+                          final cs = Theme.of(context).colorScheme;
+                          return Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(children: [
+                              Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  error != null ? 'Sync Error: $error' : 'Sync Folder · ${sync.name}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ]),
+                          );
+                        },
+                      ),
                     Expanded(
                       child: CursorList<Node>(
-                  key: _listKey,
-                  empty: _search.isEmpty ? 'This folder is empty' : 'No matches',
-                  emptyHint: _search.isEmpty
-                      ? (isDesktop || kIsWeb ? 'Tap add to upload files or create a folder, or drag and drop files here.' : 'Tap add to upload files or create a folder.')
-                      : 'Try a different word, or clear the search.',
-                  emptyIcon: Icons.folder_open,
-                  header: _PendingUploads(pointId: pt.id, dir: _path, since: _panelSince, onDismiss: () => setState(() => _panelSince = DateTime.now())),
-                  fetch: (c) => _v.list(pt.id, _path, search: _search, cursor: c, order: _desc ? 'Desc' : 'Asc'),
-                  onChanged: (l) => _loaded = l,
-                  itemBuilder: (c, n, i) {
-                    final sel = _sel.contains(n.name);
-                    final explicitSelection = kIsWeb || isDesktop;
-                    final sync = n.isDir ? _syncForPath(joinPath(_path, n.name), pt.id) : null;
-                    final syncError = sync == null ? null : SyncRunStatus.load(ref.read(prefsProvider), sync.id).error;
-                    final syncColor = syncError != null ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary;
-                    return ListTile(
-                      selected: sel,
-                      leading: explicitSelection || selecting
-                          ? SizedBox(width: 52, child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              SizedBox(width: 24, height: 24, child: Checkbox(value: sel, onChanged: (_) => _toggle(n), visualDensity: VisualDensity.compact)),
-                              const SizedBox(width: 4),
-                              if (sync != null) Icon(Icons.sync, size: 20, color: syncColor) else Icon(iconFor(n), size: 20, color: n.isDir ? Theme.of(context).colorScheme.primary : null),
-                            ]))
-                          : sync != null
-                              ? Icon(Icons.sync, color: syncColor)
-                              : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
-                      title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(sync != null ? (syncError != null ? 'Sync Error' : 'Sync Folder') : (n.isDir ? fmtShort(n.modified) : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}')),
-                      trailing: selecting
-                          ? null
-                          : PopupMenuButton<String>(
-                              onSelected: (a) {
-                                switch (a) {
-                                  case 'open': _open(n);
-                                  case 'download': _download([n]);
-                                  case 'rename': _rename(n);
-                                  case 'move': _moveCopy([n], false);
-                                  case 'copy': _moveCopy([n], true);
-                                  case 'select': _toggle(n);
-                                  case 'info': _info(n);
-                                  case 'delete': _delete([n]);
-                                }
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(value: 'open', child: Text('Open')),
-                                PopupMenuItem(value: 'download', child: Text('Download')),
-                                PopupMenuItem(value: 'rename', child: Text('Rename')),
-                                PopupMenuItem(value: 'move', child: Text('Move To…')),
-                                PopupMenuItem(value: 'copy', child: Text('Copy To…')),
-                                PopupMenuItem(value: 'select', child: Text('Select')),
-                                PopupMenuItem(value: 'info', child: Text('Details')),
-                                PopupMenuDivider(),
-                                PopupMenuItem(value: 'delete', child: Text('Delete')),
-                              ],
-                            ),
-                      onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),
-                      onLongPress: () => _toggle(n),
-                    );
-                  },
+                        key: _listKey,
+                        empty: _search.isEmpty ? 'This folder is empty' : 'No matches',
+                        emptyHint: _search.isEmpty
+                            ? (isDesktop || kIsWeb ? 'Tap add to upload files or create a folder, or drag and drop files here.' : 'Tap add to upload files or create a folder.')
+                            : 'Try a different word, or clear the search.',
+                        emptyIcon: Icons.folder_open,
+                        header: _PendingUploads(pointId: pt.id, dir: _path, since: _panelSince, onDismiss: () => setState(() => _panelSince = DateTime.now())),
+                        fetch: (c) => _v.list(pt.id, _path, search: _search, cursor: c, order: _desc ? 'Desc' : 'Asc'),
+                        onChanged: (l) => _loaded = l,
+                        itemBuilder: (c, n, i) {
+                          final sel = _sel.contains(n.name);
+                          final explicitSelection = kIsWeb || isDesktop;
+                          final sync = n.isDir ? _syncForPath(joinPath(_path, n.name), pt.id) : null;
+                          final syncError = sync == null ? null : SyncRunStatus.load(ref.read(prefsProvider), sync.id).error;
+                          final syncColor = syncError != null ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary;
+                          return ListTile(
+                            selected: sel,
+                            leading: explicitSelection || selecting
+                                ? SizedBox(
+                                    width: 52,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: Checkbox(
+                                            value: sel,
+                                            onChanged: (_) => _toggle(n),
+                                            visualDensity: VisualDensity.compact,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          sync != null ? Icons.sync : iconFor(n),
+                                          size: 20,
+                                          color: sync != null
+                                              ? syncColor
+                                              : (n.isDir ? Theme.of(context).colorScheme.primary : null),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : sync != null
+                                    ? Icon(Icons.sync, color: syncColor)
+                                    : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
+                            title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(sync != null
+                                ? (syncError != null ? 'Sync Error' : 'Sync Folder')
+                                : (n.isDir ? fmtShort(n.modified) : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}')),
+                            trailing: selecting
+                                ? null
+                                : PopupMenuButton<String>(
+                                    onSelected: (a) {
+                                      switch (a) {
+                                        case 'open': _open(n);
+                                        case 'download': _download([n]);
+                                        case 'rename': _rename(n);
+                                        case 'move': _moveCopy([n], false);
+                                        case 'copy': _moveCopy([n], true);
+                                        case 'select': _toggle(n);
+                                        case 'info': _info(n);
+                                        case 'delete': _delete([n]);
+                                      }
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'open', child: Text('Open')),
+                                      PopupMenuItem(value: 'download', child: Text('Download')),
+                                      PopupMenuItem(value: 'rename', child: Text('Rename')),
+                                      PopupMenuItem(value: 'move', child: Text('Move To…')),
+                                      PopupMenuItem(value: 'copy', child: Text('Copy To…')),
+                                      PopupMenuItem(value: 'select', child: Text('Select')),
+                                      PopupMenuItem(value: 'info', child: Text('Details')),
+                                      PopupMenuDivider(),
+                                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                    ],
+                                  ),
+                            onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),
+                            onLongPress: () => _toggle(n),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ]),
+              ),            ]),
             if (_drag)
               Positioned.fill(
                 child: Container(
@@ -751,4 +783,3 @@ class _PendingRow extends StatelessWidget {
     );
   }
 }
-
