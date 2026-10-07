@@ -41,30 +41,40 @@ class _StatusCount {
 }
 
 Widget _statusCountsTile(BuildContext context, String title, List<_StatusCount> counts, IconData icon) {
-  return ListTile(
-    dense: true,
-    leading: Icon(icon),
-    title: Text(title),
-    trailing: Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      alignment: WrapAlignment.end,
-      children: [
-        for (final c in counts)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              color: c.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final narrow = constraints.maxWidth < 520;
+      final badges = Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final c in counts)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: c.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(c.icon, size: 14, color: c.color),
+                const SizedBox(width: 4),
+                Text(c.value.toString() + ' ' + c.label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
+              ]),
             ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(c.icon, size: 15, color: c.color),
-              const SizedBox(width: 4),
-              Text('${c.value} ${c.label}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
-            ]),
-          ),
-      ],
-    ),
+        ],
+      );
+      if (narrow) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Icon(icon), const SizedBox(width: 16), Text(title)]),
+            const SizedBox(height: 8),
+            badges,
+          ]),
+        );
+      }
+      return ListTile(dense: true, leading: Icon(icon), title: Text(title), trailing: badges);
+    },
   );
 }
 
