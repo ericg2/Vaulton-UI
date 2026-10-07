@@ -35,6 +35,9 @@ class _PathSource implements SyncSource {
     return out;
   }
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry) async => File(entry.location).openRead();
+  Future<void> delete(SyncSourceEntry entry) async => FileSystemEntity.typeSync(entry.location) == FileSystemEntityType.directory
+      ? Directory(entry.location).delete(recursive: true)
+      : File(entry.location).delete();
 }
 class _SafSource implements SyncSource {
   _SafSource(this.root);
@@ -50,6 +53,7 @@ class _SafSource implements SyncSource {
     return out;
   }
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry) => _saf.readFileStream(entry.location);
+  Future<void> delete(SyncSourceEntry entry) => _saf.delete(entry.location);
 }
 Future<SyncSourceInfo?> pickSyncSource() async {
   if (Platform.isAndroid) {

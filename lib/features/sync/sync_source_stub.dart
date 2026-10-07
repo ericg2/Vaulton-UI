@@ -12,6 +12,7 @@ class SyncSourceEntry {
 abstract class SyncSource {
   Future<List<SyncSourceEntry>> scan();
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry);
+  Future<void> delete(SyncSourceEntry entry);
 }
 Future<SyncSourceInfo?> pickSyncSource() async => null;
 SyncSource openSyncSource(SyncSourceInfo info) => throw UnsupportedError('Local folders are unavailable in the browser.');

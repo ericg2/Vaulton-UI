@@ -23,6 +23,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   List<Point> _points = [];
   final Map<String, SyncRunStatus> _status = {};
   final Map<String, SyncPlan> _plans = {};
+  final Map<String, List<SyncSourceEntry>> _safeCleanup = {};
   Timer? _poll;
   Timer? _desktopSchedule;
   CancelToken? _cancel;
@@ -257,6 +258,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
       await configureSyncSchedules(_profiles);
       if (mounted) toast(context, 'Sync complete');
+      final source = openSyncSource(SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel));
+      final safe = (await source.scan()).where((x) => !x.isDir).toList();
+      if (mounted) setState(() => _safeCleanup[p.id] = safe);
       await _refreshStatus();
     } catch (e) {
       if (mounted) toast(context, e is DioException && CancelToken.isCancel(e) ? 'Sync cancelled' : e.toString(), error: true);
@@ -391,6 +395,80 @@ class _SyncPageState extends ConsumerState<SyncPage> {
 
   Future<void> _run(SyncProfile p) async {
     await _preview(p);
+  }
+
+  Future<void> _reviewSourceCleanup(SyncProfile p) async {
+    final source = openSyncSource(SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel));
+    var files = List<SyncSourceEntry>.from(_safeCleanup[p.id] ?? const []);
+    if (files.isEmpty) {
+      try { files = (await source.scan()).where((x) => !x.isDir).toList(); } catch (_) {}
+    }
+    if (!mounted || files.isEmpty) {
+      if (mounted) toast(context, 'There are no source files ready to remove.');
+      return;
+    }
+    final selected = <String>{};
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          title: const Text('Safe to Delete'),
+          content: SizedBox(
+            width: 620,
+            height: 520,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                'These files were successfully mirrored to Vaulton. Nothing is deleted until you choose the files and confirm.',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: files.length,
+                  itemBuilder: (_, i) {
+                    final f = files[i];
+                    final checked = selected.contains(f.location);
+                    return CheckboxListTile(
+                      value: checked,
+                      onChanged: (v) => set(() => v == true ? selected.add(f.location) : selected.remove(f.location)),
+                      title: Text(f.relative, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(fmtBytes(f.size)),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+            TextButton(
+              onPressed: selected.isEmpty ? null : () async {
+                Navigator.pop(ctx);
+                final ok = await confirm(
+                  context,
+                  'Delete Source Files?',
+                  'This permanently deletes ' + selected.length.toString() + ' file' + (selected.length == 1 ? '' : 's') + ' from the source device. The Vaulton copies remain.',
+                );
+                if (!ok) return;
+                var removed = 0;
+                for (final f in files.where((x) => selected.contains(x.location))) {
+                  try {
+                    await source.delete(f);
+                    removed++;
+                  } catch (_) {}
+                }
+                _safeCleanup[p.id] = files.where((x) => !selected.contains(x.location)).toList();
+                if (mounted) {
+                  setState(() {});
+                  toast(context, removed.toString() + ' source file' + (removed == 1 ? '' : 's') + ' deleted');
+                }
+              },
+              child: const Text('Delete Selected'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _delete(SyncProfile p) async {
@@ -530,6 +608,19 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               Text(
                 plan.newFiles.toString() + ' new · ' + plan.updatedFiles.toString() + ' updated · ' + plan.deletedFiles.toString() + ' destination extras',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+            if (_safeCleanup[p.id]?.isNotEmpty == true)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(children: [
+                  Icon(Icons.cleaning_services_outlined, size: 18, color: cs.primary),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(
+                    _safeCleanup[p.id]!.length.toString() + ' source files are safe to delete',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )),
+                  TextButton(onPressed: () => _reviewSourceCleanup(p), child: const Text('Review')),
+                ]),
               ),
           ],
           const SizedBox(height: 12),
