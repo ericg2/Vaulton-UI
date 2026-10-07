@@ -193,7 +193,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       setState(_sel.clear);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       if (ids.isEmpty) {
-        toast(context, 'Nothing new to download. These files are already queued.');
+        toast(context, 'Already queued.');
       } else {
         showDownloadSheet(context, ids, onOpenTransfers: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransfersPage())));
       }
@@ -484,7 +484,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           child: Stack(children: [
             Column(children: [
               _Breadcrumbs(point: pt, segs: _segs, onTap: (i) => _go(_segs.sublist(0, i))),
-              if (!kIsWeb && !isDesktop) const HintBanner(id: 'files_select', text: 'Long-press a file to select several. Tap ⋮ on a row for more actions.'),
+              if (!kIsWeb && !isDesktop) const HintBanner(id: 'files_select', text: 'Long-press to select several files. Tap ⋮ for more actions.'),
               Expanded(
                 child: Column(
                   children: [
@@ -503,15 +503,15 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                             borderRadius: BorderRadius.circular(10),
                             child: Container(
                               width: double.infinity,
-                              margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
                                 color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(children: [
                                 Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     error != null ? 'Sync Error: $error' : 'Sync Folder · ${sync.name}',
@@ -532,8 +532,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                         key: _listKey,
                         empty: _search.isEmpty ? 'This folder is empty' : 'No matches',
                         emptyHint: _search.isEmpty
-                            ? (isDesktop || kIsWeb ? 'Tap add to upload files or create a folder, or drag and drop files here.' : 'Tap add to upload files or create a folder.')
-                            : 'Try a different word, or clear the search.',
+                            ? (isDesktop || kIsWeb ? 'Tap Add or drag and drop files here.' : 'Tap Add to upload files or create a folder.')
+                            : 'Try a different search.',
                         emptyIcon: Icons.folder_open,
                         header: _PendingUploads(pointId: pt.id, dir: _path, since: _panelSince, onDismiss: () => setState(() => _panelSince = DateTime.now())),
                         fetch: (c) => _v.list(pt.id, _path, search: _search, cursor: c, order: _desc ? 'Desc' : 'Asc'),
@@ -548,7 +548,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                             selected: sel,
                             leading: explicitSelection || selecting
                                 ? SizedBox(
-                                    width: 52,
+                                    width: 56,
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -561,10 +561,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                             visualDensity: VisualDensity.compact,
                                           ),
                                         ),
-                                        const SizedBox(width: 4),
+                                        const SizedBox(width: 8),
                                         Icon(
                                           sync != null ? Icons.sync : iconFor(n),
-                                          size: 20,
+                                          size: 24,
                                           color: sync != null
                                               ? syncColor
                                               : (n.isDir ? Theme.of(context).colorScheme.primary : null),
@@ -638,12 +638,12 @@ class _Breadcrumbs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       SizedBox(
-        height: 44,
-        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8), children: [
+        height: 40,
+        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: [
           for (var i = 0; i <= segs.length; i++) ...[
-            if (i > 0) const Icon(Icons.chevron_right, size: 18),
+            if (i > 0) const Center(child: Icon(Icons.chevron_right, size: 18)),
             TextButton(
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact, minimumSize: const Size(0, 40)),
               onPressed: i == segs.length ? null : () => onTap(i),
               child: Text(i == 0 ? point.name : segs[i - 1]),
             ),
@@ -652,10 +652,10 @@ class _Breadcrumbs extends StatelessWidget {
       ),
       if (point.maxBytes > 0)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Row(children: [
             Expanded(child: UsageBar(used: point.usedBytes, max: point.maxBytes)),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Text('${fmtBytes(point.usedBytes)} / ${fmtBytes(point.maxBytes)}', style: Theme.of(context).textTheme.labelSmall),
           ]),
         ),
@@ -745,13 +745,13 @@ class _PendingRow extends StatelessWidget {
       if (isFolder) {
         subtitle = '${active.length} file${active.length == 1 ? '' : 's'} uploading${fraction != null && running ? ' · ${(fraction * 100).round()}%' : ''}';
       } else if (!running) {
-        subtitle = active.first.error ?? 'Waiting to Upload…';
+        subtitle = active.first.error ?? 'Waiting…';
       } else {
         subtitle = fraction == null ? 'Uploading…' : 'Uploading · ${(fraction * 100).round()}% · ${fmtBytes(sent)} of ${fmtBytes(total)}';
       }
     } else {
       final err = failed.isEmpty ? null : failed.first.error;
-      subtitle = isFolder ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload Failed');
+      subtitle = isFolder ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload failed');
     }
     final exists = failed.any((x) => x.error?.toLowerCase().contains('exist') ?? false);
 
@@ -759,21 +759,21 @@ class _PendingRow extends StatelessWidget {
       color: busy ? cs.primaryContainer.withValues(alpha: 0.35) : cs.errorContainer.withValues(alpha: 0.5),
       child: ListTile(
         leading: SizedBox(
-          width: 40,
-          height: 40,
+          width: 24,
+          height: 24,
           child: busy
               ? Stack(alignment: Alignment.center, children: [
                   SizedBox(
-                    width: 36,
-                    height: 36,
+                    width: 24,
+                    height: 24,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween<double>(begin: 0, end: fraction ?? 0),
                       duration: const Duration(milliseconds: 250),
                       // value == null spins freely (waiting / size unknown); otherwise a determinate ring.
-                      builder: (_, v, _) => CircularProgressIndicator(value: (running && fraction != null) ? v : null, strokeWidth: 3),
+                      builder: (_, v, _) => CircularProgressIndicator(value: (running && fraction != null) ? v : null, strokeWidth: 2.5),
                     ),
                   ),
-                  Icon(isFolder ? Icons.folder : Icons.upload, size: 16, color: cs.primary),
+                  Icon(isFolder ? Icons.folder : Icons.upload, size: 11, color: cs.primary),
                 ])
               : Icon(Icons.error_outline, color: cs.error),
         ),

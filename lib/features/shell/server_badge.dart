@@ -6,8 +6,11 @@ import '../../core/wake.dart';
 
 /// Compact server identity: host, connection state, version and signed-in user.
 class ServerBadge extends ConsumerWidget {
-  const ServerBadge({super.key, this.compact = false});
+  const ServerBadge({super.key, this.compact = false, this.inline = false});
   final bool compact;
+
+  /// Single-row variant that fills the available width (phone dashboard).
+  final bool inline;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,6 +29,24 @@ class ServerBadge extends ConsumerWidget {
         child: Stack(clipBehavior: Clip.none, children: [
           Icon(Icons.lock_outline_rounded, color: cs.primary, size: 30),
           Positioned(right: -3, bottom: -1, child: dot),
+        ]),
+      );
+    }
+    if (inline) {
+      final status = [ok ? 'Connected' : 'Unreachable', if (info?.version != null) 'v${info!.version}'].join(' · ');
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(children: [
+          Icon(Icons.lock_outline_rounded, color: cs.primary, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(host.isEmpty ? 'Vaulton' : host, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleSmall),
+              Text(status, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          dot,
         ]),
       );
     }
@@ -61,25 +82,25 @@ class ServerBadge extends ConsumerWidget {
                     await WakeService.wake(ref.read(sessionProvider));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Wake request sent. Waiting for Vaulton...')),
+                        const SnackBar(content: Text('Wake request sent')),
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Could not wake server: $e')),
+                        SnackBar(content: Text('Couldn’t wake server: $e')),
                       );
                     }
                   }
                 },
-                icon: const Icon(Icons.power_settings_new_rounded, size: 18),
+                icon: const Icon(Icons.power_settings_new_rounded),
                 label: const Text('Wake Server'),
               ),
             ),
           ),
         if (user != null) Padding(padding: const EdgeInsets.only(top: 6), child: Row(children: [
           Icon(Icons.person_outline, size: 14, color: cs.onSurfaceVariant),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Expanded(child: Text(user.userName, overflow: TextOverflow.ellipsis, style: t.bodySmall)),
         ])),
       ]),

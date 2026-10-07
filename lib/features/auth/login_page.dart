@@ -210,7 +210,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
@@ -229,8 +229,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                           child: AnimatedBuilder(
                             animation: _breath,
                             builder: (_, child) => Container(
-                              width: 72,
-                              height: 72,
+                              width: 64,
+                              height: 64,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: cs.primaryContainer,
@@ -238,16 +238,16 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                               ),
                               child: child,
                             ),
-                            child: Icon(Icons.lock_outline_rounded, size: 36, color: cs.onPrimaryContainer),
+                            child: Icon(Icons.lock_outline_rounded, size: 32, color: cs.onPrimaryContainer),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _stagger(1, Text('Vaulton', textAlign: TextAlign.center, style: t.headlineMedium)),
+                    _stagger(1, Text('Vaulton', textAlign: TextAlign.center, style: t.headlineSmall)),
                     const SizedBox(height: 4),
                     _stagger(1, Text('Sign in to your server', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant))),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
                     _stagger(2, AnimatedSize(duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic, alignment: Alignment.topCenter, child: _recent(cs))),
                     AnimatedSize(
                       duration: const Duration(milliseconds: 250),
@@ -260,7 +260,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                               decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(12)),
                               child: Row(children: [
                                 Icon(Icons.info_outline, size: 18, color: cs.onTertiaryContainer),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 12),
                                 Expanded(child: Text(note, style: TextStyle(color: cs.onTertiaryContainer))),
                               ]),
                             )
@@ -268,39 +268,39 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                     ),
                     _stagger(
                       3,
-                      TextFormField(
-                        controller: _host,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.next,
-                        autocorrect: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Server Address',
-                          prefixIcon: Icon(Icons.dns_outlined),
-                          hintText: '192.168.1.10 or vault.example.com',
+                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _host,
+                            keyboardType: TextInputType.url,
+                            textInputAction: TextInputAction.next,
+                            autocorrect: false,
+                            decoration: const InputDecoration(
+                              labelText: 'Server Address',
+                              prefixIcon: Icon(Icons.dns_outlined),
+                              hintText: '192.168.1.10',
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your server address' : null,
+                          ),
                         ),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your server address' : null,
-                      ),
-                    ),
-                    gap,
-                    _stagger(
-                      4,
-                      TextFormField(
-                        controller: _port,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: const InputDecoration(
-                          labelText: 'Port',
-                          prefixIcon: Icon(Icons.settings_ethernet_outlined),
-                          hintText: '5141',
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 104,
+                          child: TextFormField(
+                            controller: _port,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: const InputDecoration(labelText: 'Port', hintText: '5141'),
+                            validator: (v) {
+                              final value = v?.trim() ?? '';
+                              if (value.isEmpty) return null;
+                              final port = int.tryParse(value);
+                              return port == null || port < 1 || port > 65535 ? 'Invalid port' : null;
+                            },
+                          ),
                         ),
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return null;
-                          final port = int.tryParse(value);
-                          return port == null || port < 1 || port > 65535 ? 'Enter a valid port' : null;
-                        },
-                      ),
+                      ]),
                     ),
                     gap,
                     _stagger(
@@ -326,10 +326,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         textInputAction: _temp ? TextInputAction.next : TextInputAction.done,
                         onFieldSubmitted: (_) => _temp ? null : _submit(),
                         decoration: InputDecoration(
-                          labelText: _temp ? 'Temporary password' : 'Password',
+                          labelText: _temp ? 'Temporary Password' : 'Password',
                           prefixIcon: const Icon(Icons.key_outlined),
                           suffixIcon: IconButton(
-                            tooltip: _show ? 'Hide password' : 'Show password',
+                            tooltip: _show ? 'Hide Password' : 'Show Password',
                             icon: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
                               transitionBuilder: (c, a) => RotationTransition(turns: Tween<double>(begin: 0.85, end: 1).animate(a), child: FadeTransition(opacity: a, child: c)),
@@ -354,12 +354,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(12)),
                                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Icon(Icons.lock_reset, color: cs.onTertiaryContainer),
-                                  const SizedBox(width: 10),
+                                  Icon(Icons.lock_reset, size: 20, color: cs.onTertiaryContainer),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Text(_pwTitle ?? 'Password Change Required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
-                                      Text('Enter the temporary password above, then choose a permanent one to sign-in.', style: TextStyle(color: cs.onTertiaryContainer)),
+                                      Text('Enter the temporary password, then choose a permanent one.', style: TextStyle(color: cs.onTertiaryContainer)),
                                     ]),
                                   ),
                                 ]),
@@ -368,7 +368,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 controller: _new,
                                 obscureText: !_show,
                                 textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.password), helperText: 'At least 8 characters'),
+                                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.password_outlined), helperText: 'At least 8 characters'),
                                 validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters' : null,
                               ),
                               gap,
@@ -377,7 +377,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 obscureText: !_show,
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => _submit(),
-                                decoration: const InputDecoration(labelText: 'Repeat New Password', prefixIcon: Icon(Icons.password)),
+                                decoration: const InputDecoration(labelText: 'Repeat New Password', prefixIcon: Icon(Icons.password_outlined)),
                                 validator: (v) => v != _new.text ? 'Passwords do not match' : null,
                               ),
                             ]),
@@ -386,6 +386,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                       7,
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
+                        dense: true,
                         controlAffinity: ListTileControlAffinity.leading,
                         value: _rememberPassword,
                         onChanged: (v) => setState(() => _rememberPassword = v ?? false),
@@ -408,7 +409,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(12)),
                                 child: Row(children: [
                                   Icon(Icons.error_outline, size: 18, color: cs.onErrorContainer),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 12),
                                   Expanded(child: Text(_error!, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onErrorContainer))),
                                 ]),
                               ),
@@ -420,17 +421,17 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                       FilledButton(
                         onPressed: _busy ? null : _submit,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
                             child: _busy
                                 ? const SizedBox(key: ValueKey('busy'), height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                : Text(_temp ? 'Change password & sign in' : 'Sign in', key: ValueKey(_temp)),
+                                : Text(_temp ? 'Change Password and Sign In' : 'Sign In', key: ValueKey(_temp)),
                           ),
                         ),
                       ),
                     ),
-                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need Help')))),
+                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline), label: const Text('Need Help?')))),
                   ]),
                 ),
               ),

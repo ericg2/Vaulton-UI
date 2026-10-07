@@ -39,7 +39,7 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
   String? _selectedLabel = 'Dashboard';
-  bool _syncingLayout = false;
+  bool _wasWide = true;
   int _storageTab = 0;
   final _visited = <int>{0};
   final PageController _pages = PageController();
@@ -57,7 +57,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         context: ctx,
         builder: (c) => AlertDialog(
           title: const Text('Transfers in Progress'),
-          content: const Text('Uploads or downloads are still running. Minimise Vaulton to keep them going, or quit and pick them up again next time.'),
+          content: const Text('Minimise Vaulton to keep transfers running, or quit and resume them next time.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Quit')),
             FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Minimise')),
@@ -76,6 +76,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     super.dispose();
   }
 
+  // Phone pages: 0 Dashboard, 1 Files, 2 Transfers, 3-5 Storage tabs, 6 More.
+  int _pageForNav(int nav) => nav < 3 ? nav : (nav == 3 ? 3 + _storageTab : 6);
+  int _navForPage(int page) => page < 3 ? page : (page < 6 ? 3 : 4);
+
   /// Switches tab. On phones the page slides, so taps and swipes feel the same.
   void _select(int i, {String? label, bool isMore = false}) {
     final from = _index;
@@ -84,27 +88,37 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _selectedLabel = isMore ? null : label;
       _visited.add(i);
     });
-    if (_pages.hasClients && from != i) {
-      if ((i - from).abs() > 1) {
-        _pages.jumpToPage(i);
-      } else {
-        _pages.animateToPage(i, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
-      }
+    if (_pages.hasClients && from != i) _animateToPage(_pageForNav(i));
+  }
+
+  void _animateToPage(int target) {
+    final current = (_pages.page ?? target.toDouble()).round();
+    if (current == target) return;
+    if ((target - current).abs() > 1) {
+      _pages.jumpToPage(target);
+    } else {
+      _pages.animateToPage(target, duration: const Duration(milliseconds: 240), curve: Curves.easeOutCubic);
     }
   }
 
-  void _swipeStorageBoundary(int direction) {
-    if (!_pages.hasClients) return;
-    final target = (_index + direction).clamp(0, 4);
-    if (target == _index) return;
-    _select(target, label: ['Dashboard', 'Files', 'Transfers', 'Storage', 'More'][target]);
+  void _selectStorageTab(int sub) {
+    _storageTab = sub;
+    if (_pages.hasClients) _animateToPage(3 + sub);
   }
 
   void _goto(String label, List<_Dest> dests, bool wide) {
     if (label == 'Data Folders' || label == 'Backup Vaults') {
       _storageTab = label == 'Data Folders' ? 1 : 2;
       final storage = dests.indexWhere((d) => d.label == 'Storage');
-      if (storage >= 0) _select(storage, label: dests[storage].label);
+      if (storage >= 0) {
+        if (wide) {
+          _select(storage, label: dests[storage].label);
+        } else if (_index == storage) {
+          _selectStorageTab(_storageTab);
+        } else {
+          _select(storage, label: dests[storage].label);
+        }
+      }
       return;
     }
     final i = dests.indexWhere((d) => d.label == label);
@@ -120,7 +134,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _Dest('Dashboard', Icons.dashboard_outlined, Icons.dashboard, () => DashboardPage(onNavigate: (l) => _goto(l, _dests(ref.read(userProvider)!, wide), wide))),
         _Dest('Files', Icons.folder_outlined, Icons.folder, () => const FilesPage()),
         _Dest('Transfers', Icons.swap_vert, Icons.swap_vert, () => const TransfersPage()),
-        _Dest('Storage', Icons.storage_outlined, Icons.storage, () => StoragePage(key: ValueKey(_storageTab), initialTab: _storageTab, onBoundarySwipe: _swipeStorageBoundary)),
+        _Dest('Storage', Icons.storage_outlined, Icons.storage, () => StoragePage(key: ValueKey(_storageTab), initialTab: _storageTab)),
         if (u.has(Scopes.jobsManage)) _Dest('Activity', Icons.history_outlined, Icons.history, () => const BackupsPage()),
         _Dest('Sync', Icons.cloud_sync_outlined, Icons.cloud_sync, () => const SyncPage()),
         _Dest('Messages', Icons.mail_outline, Icons.mail, () => const MessagesPage()),
@@ -170,14 +184,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ? (selectedDestination != null && selectedDestination >= 0 ? selectedDestination : _index.clamp(0, dests.length - 1).toInt())
         : (selectedDestination != null && selectedDestination >= 0 && selectedDestination < 4 ? selectedDestination : 4);
 
-    if (!wide && _pages.hasClients && (_pages.page?.round() ?? -1) != effectiveIndex) {
+    // Resized from a wide layout to a phone layout: land on the matching page.
+    if (!wide && _wasWide) {
+      final target = _pageForNav(effectiveIndex);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _pages.hasClients) {
-          _syncingLayout = true;
-          _pages.jumpToPage(effectiveIndex);
-        }
+        if (mounted && _pages.hasClients) _pages.jumpToPage(target);
       });
     }
+    _wasWide = wide;
 
     Widget body(int i) => _visited.contains(i) ? dests[i].build() : const SizedBox.shrink();
 
@@ -224,17 +238,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return _withAndroidBack(Scaffold(
       body: PageView(
         controller: _pages,
-        onPageChanged: (i) => setState(() {
-          _index = i;
-          if (_syncingLayout) {
-            _syncingLayout = false;
-          } else {
-            _selectedLabel = i < primary.length ? primary[i].label : null;
-          }
-          _visited.add(i);
-        }),
+        onPageChanged: (page) {
+          final nav = _navForPage(page);
+          setState(() {
+            _index = nav;
+            if (page >= 3 && page <= 5) _storageTab = page - 3;
+            _selectedLabel = nav < primary.length ? primary[nav].label : null;
+            _visited.add(nav);
+          });
+        },
         children: [
-          for (var i = 0; i < 4; i++) _KeepAlive(child: dests[i].build()),
+          for (var i = 0; i < 3; i++) _KeepAlive(child: dests[i].build()),
+          for (var i = 0; i < 3; i++)
+            _KeepAlive(child: StorageSection(index: i, pages: _pages, basePage: 3, onSelect: _selectStorageTab)),
           _KeepAlive(child: _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref), onOpen: _openMoreDestination)),
         ],
       ),
@@ -311,7 +327,7 @@ class _MorePage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('More')),
         body: ListView(children: [
-          const HintBanner(id: 'more_tab', text: 'Everything else lives here: sync, messages, settings and (if you have access) admin tools.'),
+          const HintBanner(id: 'more_tab', text: 'Sync, messages, settings and admin tools.'),
           for (final d in items)
             ListTile(
               leading: Icon(d.icon),
@@ -320,7 +336,7 @@ class _MorePage extends StatelessWidget {
               onTap: () => onOpen(d),
             ),
           const Divider(),
-          ListTile(leading: const Icon(Icons.logout), title: const Text('Sign Out / Switch Account'), onTap: onSignOut),
+          ListTile(leading: const Icon(Icons.logout), title: const Text('Sign Out or Switch Account'), onTap: onSignOut),
         ]),
       );
 }

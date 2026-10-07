@@ -110,8 +110,8 @@ class _JobsListState extends ConsumerState<JobsList> {
         child: Column(children: [
           if (widget.showFilters)
             SizedBox(
-              height: 52,
-              child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), children: [
+              height: 48,
+              child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), children: [
                 for (final f in _statusFilters)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -122,7 +122,7 @@ class _JobsListState extends ConsumerState<JobsList> {
           Expanded(
             child: CursorList<RepoJob>(
               key: _key,
-              empty: _status == null ? 'No jobs created.' : 'No ${_status!.toLowerCase()} jobs.',
+              empty: _status == null ? 'No jobs yet' : 'No ${_status!.toLowerCase()} jobs',
               emptyIcon: Icons.work_history_outlined,
               onChanged: (l) => _anyActive = l.any((j) => j.active),
               fetch: (c) => v.jobs(cursor: c, repoId: widget.repoId, dataId: widget.dataId, admin: widget.admin, status: widget.externalStatus ?? _status),
@@ -244,7 +244,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final repos = await guarded(context, () => _v.repos(limit: 200));
     final datas = await guarded(context, () => _v.datas(limit: 200));
     if (repos == null || datas == null || !mounted) return;
-    if (repos.items.isEmpty) return toast(context, 'Create a Backup Vault First', error: true);
+    if (repos.items.isEmpty) return toast(context, 'Create a backup vault first', error: true);
     String repoName(Point p) => p.name;
     final repoMap = {for (final r in repos.items) repoName(r): r};
     final dataMap = {for (final d in datas.items) d.name: d};
@@ -253,7 +253,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final isNew = s == null;
     final curRepo = repos.items.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.items.first;
     final curData = datas.items.where((d) => d.id == s?.dataId).firstOrNull;
-    final f = await formDialog(context, isNew ? 'New schedule' : 'Edit Schedule', [
+    final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
       if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
       if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean Up Snapshots', 'Health Check'], initial: startMode ?? 'Backup'),
@@ -264,12 +264,12 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       FieldSpec('cron', 'Schedule', kind: 'cron', initial: s?.cron ?? '0 2 * * *'),
       FieldSpec('tz', 'Time Zone', kind: 'choice', options: timeZoneOptions(device: deviceTz, extra: s?.timeZone), initial: s?.timeZone.isNotEmpty == true ? s!.timeZone : (deviceTz ?? 'UTC')),
       FieldSpec('enabled', 'Enabled', kind: 'bool', initial: '${s?.enabled ?? true}'),
-      FieldSpec('skip', 'Skip if already running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
+      FieldSpec('skip', 'Skip if Already Running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
     ], ok: 'Save', pick: (v) async {
       final d = dataMap[v['data']];
       final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose Folder to Backup');
       return r?.path;
-    }, intro: 'Choose how often this runs. Times follow the selected time zone.${isNew ? '\n\nTip: pair each backup schedule with a “Clean up snapshots” schedule, or old snapshots will slowly fill your vault.' : ''}');
+    }, intro: 'Times follow the selected time zone.${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}');
     if (f == null || !mounted) return;
     try {
       final mode = s == null ? (f['mode'] == 'Backup' ? 'backup' : (f['mode'] == 'Clean Up Snapshots' ? 'retention' : 'check')) : s.mode;
@@ -302,8 +302,8 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
   Future<void> _remindCleanup(String repoId) async {
     final existing = await _v.schedules(repoId: repoId, limit: 200);
     if (!mounted || existing.items.any((x) => x.mode == 'retention')) return;
-    final go = await confirm(context, 'Your vault will fill up without cleanup',
-        'Every scheduled backup adds a snapshot, and nothing removes the old ones. Without a cleanup schedule this vault will eventually run out of space and backups will start failing.',
+    final go = await confirm(context, 'Add a Cleanup Schedule?',
+        'Each backup adds a snapshot and nothing removes old ones. Without cleanup, this vault will eventually fill up and backups will fail.',
         ok: 'Set Up Cleanup Now');
     if (go && mounted) await _edit(null, 'Clean Up Snapshots', repoId);
   }
@@ -333,7 +333,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
           child: CursorList<Schedule>(
             key: _key,
             header: widget.header,
-            empty: 'No Schedules Created.',
+            empty: 'No schedules yet',
             emptyIcon: Icons.schedule,
             autoRefresh: const Duration(seconds: 30),
             fetch: (c) => _v.schedules(cursor: c, repoId: widget.repoId),

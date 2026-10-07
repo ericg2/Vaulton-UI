@@ -38,7 +38,7 @@ Future<String?> chooseDownloadBase(BuildContext context, WidgetRef ref) async {
   // one, fall back rather than creating an unusable transfer path.
   if (picked.startsWith('content://')) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That folder cannot be used directly. Please choose a normal device folder.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That folder can’t be used. Choose a regular folder.')));
     }
     return null;
   }

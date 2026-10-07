@@ -90,7 +90,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (repo == null) return;
     final datas = await guarded(context, () => _v.datas(limit: 200));
     if (datas == null || !mounted) return;
-    if (datas.items.isEmpty) return toast(context, 'Create a data folder first, then back it up here.', error: true);
+    if (datas.items.isEmpty) return toast(context, 'Create a data folder first', error: true);
     final req = await showBackupSheet(context, datas: datas.items, repos: [repo], repo: repo);
     if (req == null) return;
     final j = await guarded(context, () => _v.backup(widget.repoId, req.toBody()));
@@ -111,9 +111,9 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
 
   Future<void> _password() async {
     final f = await formDialog(context, 'Update Vault Password', [
-      const FieldSpec('cur', 'Current password', kind: 'secret', required: true),
-      const FieldSpec('new', 'New password (at least 8 characters)', kind: 'secret', required: true),
-    ], intro: 'This only updates the password Vaulton uses to open this vault. It doesn’t change the vault’s encryption, so use it if the saved password is wrong.');
+      const FieldSpec('cur', 'Current Password', kind: 'secret', required: true),
+      const FieldSpec('new', 'New Password', kind: 'secret', required: true),
+    ], intro: 'Updates the password Vaulton uses to open this vault. It doesn’t change the vault’s encryption.');
     if (f == null) return;
     await guarded(context, () => _v.changeRepoPassword(widget.repoId, f['cur']!, f['new']!));
     if (mounted) toast(context, 'Password updated');
@@ -173,8 +173,8 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
             const SizedBox(height: 14),
           ],
           LayoutBuilder(builder: (context, c) {
-            final backup = FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined, size: 18), label: label('Backup Now'));
-            final browse = OutlinedButton.icon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse Latest'));
+            final backup = FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined), label: label('Backup'));
+            final browse = OutlinedButton.icon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open_outlined), label: label('Browse'));
             if (c.maxWidth < 300) {
               return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [backup, const SizedBox(height: 8), browse]);
             }

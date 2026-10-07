@@ -10,8 +10,8 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
   final busy = ref.read(transferProvider.notifier).hasActive;
   final ok = await confirm(
     context,
-    'Sign out?',
-    busy ? 'Unfinished transfers will be cancelled. You can sign back in from the account list on the login screen.' : 'You can sign back in or switch to another server or account from the login screen.',
+    'Sign Out?',
+    busy ? 'Unfinished transfers will be cancelled. You can sign back in from the login screen.' : 'You can sign back in or switch accounts from the login screen.',
     ok: 'Sign Out',
     danger: busy,
   );

@@ -128,7 +128,7 @@ class _DownloadSheet extends ConsumerWidget {
           if (!finished)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('You can hide this: downloads keep running and appear under Transfers.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              child: Text('Downloads continue in Transfers if you close this.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
             ),
         ]),
       ),

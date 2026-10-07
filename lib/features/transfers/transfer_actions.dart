@@ -62,5 +62,5 @@ Future<void> revealDownload(BuildContext context, String path) async {
 /// Opens a downloaded file, telling the user when nothing can handle it.
 Future<void> openDownload(BuildContext context, String path) async {
   final ok = await localFiles.open(path);
-  if (!ok && context.mounted) toast(context, 'Cannot open this file. It may have been moved, or no app can handle its type.', error: true);
+  if (!ok && context.mounted) toast(context, 'Can’t open this file. It may have moved, or no app supports it.', error: true);
 }

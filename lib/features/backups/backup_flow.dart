@@ -15,11 +15,11 @@ Future<RepoJob?> startBackup(BuildContext context, WidgetRef ref, {Point? data, 
   final repos = await guarded(context, () => v.repos(limit: 200));
   if (datas == null || repos == null || !context.mounted) return null;
   if (datas.items.isEmpty) {
-    toast(context, 'Create a data folder first. You’ll find it under Storage.', error: true);
+    toast(context, 'Create a data folder in Storage first.', error: true);
     return null;
   }
   if (repos.items.isEmpty) {
-    toast(context, 'Create a backup vault first. You’ll find it under Storage.', error: true);
+    toast(context, 'Create a backup vault in Storage first.', error: true);
     return null;
   }
   final req = await showBackupSheet(context, datas: datas.items, repos: repos.items, data: data, repo: repo);

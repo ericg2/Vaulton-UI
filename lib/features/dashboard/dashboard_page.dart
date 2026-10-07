@@ -130,16 +130,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
           children: [
             if (MediaQuery.sizeOf(context).width < 800)
-              FadeSlideIn(key: const ValueKey('badge'), child: Card(margin: const EdgeInsets.only(bottom: 12), child: const Align(alignment: Alignment.centerLeft, child: ServerBadge()))),
+              FadeSlideIn(key: const ValueKey('badge'), child: const Card(margin: EdgeInsets.fromLTRB(16, 4, 16, 4), child: ServerBadge(inline: true))),
             FadeSlideIn(
               key: const ValueKey('greet'),
               delay: const Duration(milliseconds: 60),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$greet, ${u.displayName}', style: t.headlineSmall),
-                const SizedBox(height: 2),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('$greet, ${u.displayName}', style: t.titleLarge),
+                const SizedBox(height: 4),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: Row(key: ValueKey(failedPoints > 0 || failed > 0), children: [
@@ -148,36 +150,39 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     Flexible(
                       child: Text(
                         failedPoints > 0
-                            ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention. Open Storage to see details.'
-                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours. Tap to review.' : 'Everything looks healthy'),
+                            ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention'
+                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours' : 'Everything looks healthy'),
                         style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
                       ),
                     ),
                   ]),
                 ),
               ]),
+              ),
             ),
-            const SizedBox(height: 16),
-            LayoutBuilder(key: const ValueKey('stats'), builder: (ctx, c) {
-              final cols = c.maxWidth > 700 ? stats.length : 2;
-              final w = (c.maxWidth - 12 * (cols - 1)) / cols;
-              return Wrap(spacing: 12, runSpacing: 12, children: [
-                for (var i = 0; i < stats.length; i++)
-                  FadeSlideIn(key: ValueKey('stat$i'), delay: Duration(milliseconds: 120 + 70 * i), child: SizedBox(width: w, child: stats[i])),
-              ]);
-            }),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: LayoutBuilder(key: const ValueKey('stats'), builder: (ctx, c) {
+                final cols = c.maxWidth > 700 ? stats.length : 2;
+                final w = (c.maxWidth - 10 * (cols - 1)) / cols;
+                return Wrap(spacing: 10, runSpacing: 10, children: [
+                  for (var i = 0; i < stats.length; i++)
+                    FadeSlideIn(key: ValueKey('stat$i'), delay: Duration(milliseconds: 120 + 70 * i), child: SizedBox(width: w, child: stats[i])),
+                ]);
+              }),
+            ),
+            const SizedBox(height: 4),
             if (d.datas.isEmpty)
               FadeSlideIn(
                 key: const ValueKey('firstrun'),
                 delay: const Duration(milliseconds: 300),
                 child: Card(
-                  margin: const EdgeInsets.only(bottom: 8),
                   color: cs.tertiaryContainer,
                   child: ListTile(
                     leading: Icon(Icons.rocket_launch_outlined, color: cs.onTertiaryContainer),
                     title: Text('Get Started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Create a data folder under Storage first. It is the place your files are kept.', style: TextStyle(color: cs.onTertiaryContainer)),
+                    subtitle: Text('Create a data folder in Storage to start storing files.', style: TextStyle(color: cs.onTertiaryContainer)),
                     trailing: Icon(Icons.chevron_right, color: cs.onTertiaryContainer),
                     onTap: () => widget.onNavigate?.call('Data Folders'),
                   ),
@@ -187,16 +192,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup), label: const Text('Backup Now')),
+                  if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup_outlined), label: const Text('Backup Now')),
                   FilledButton.tonalIcon(
                     onPressed: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => const FilesPage()));
                       if (mounted) _load(); // usage may have changed while you were in Files
                     },
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text('Upload Files'),
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Upload'),
                   ),
-                  OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Manage Storage')),
+                  OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Storage')),
                 ]),
               ),
             ]),
@@ -207,16 +212,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   child: Card(
                     margin: EdgeInsets.zero,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         UsageBar(used: used, max: cap),
                         const SizedBox(height: 8),
                         Text('${fmtBytes(used)} used of ${fmtBytes(cap)} allocated', style: t.bodySmall),
-                        const SizedBox(height: 2),
-                        Text('Total across all data folders and backup vaults you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         if (lastOk != null) ...[
                           const SizedBox(height: 4),
-                          Text('Last successful backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700)),
+                          Text('Last backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         ],
                       ]),
                     ),
@@ -226,21 +229,24 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             if (_canJobs) ...[
               Section('Running Now', children: [
                 if (running.isEmpty && waiting == 0)
-                  const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('No jobs are running.'))
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text('No jobs running.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)))
                 else
                   for (final j in d.jobs.where((j) => j.active))
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
               ]),
               Section('Activity', children: [
                 if (d.jobs.where((j) => !j.active).isEmpty)
-                  const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('No finished jobs yet.'))
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text('No finished jobs yet.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)))
                 else
                   for (final j in d.jobs.where((j) => !j.active).take(5))
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
                 if (d.jobs.isNotEmpty)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('Show More')),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('View All')),
+                    ),
                   ),
               ]),
             ],
@@ -282,16 +288,16 @@ class _Stat extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(children: [
-            Icon(icon, color: fg, size: 28),
+            Icon(icon, color: fg, size: 26),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 // Numbers count up when they first appear and whenever they change.
                 Builder(builder: (_) {
                   final n = int.tryParse(value);
-                  final style = Theme.of(context).textTheme.headlineSmall?.copyWith(color: fg);
+                  final style = Theme.of(context).textTheme.titleLarge?.copyWith(color: fg, height: 1.1);
                   if (n == null) return Text(value, style: style);
                   return TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: n.toDouble()),
@@ -300,7 +306,7 @@ class _Stat extends StatelessWidget {
                     builder: (_, v, _) => Text('${v.round()}', style: style),
                   );
                 }),
-                Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg)),
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg)),
               ]),
             ),
           ]),

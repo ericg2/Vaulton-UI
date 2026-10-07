@@ -238,7 +238,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     } else if (a == 'copy') {
       copyText(context, s.id, 'Snapshot ID copied');
     } else if (a == 'forget') {
-      if (!await confirm(context, 'Delete snapshot?', 'Locked snapshots can’t be deleted. Space is only freed once old snapshots are cleaned up.', ok: 'Delete', danger: true)) return;
+      if (!await confirm(context, 'Delete Snapshot?', 'Locked snapshots can’t be deleted. Space is freed after cleanup.', ok: 'Delete', danger: true)) return;
       final j = await guarded(context, () => _v.forget(widget.repoId, [s.id]));
       if (j != null && mounted) await _openJob(j);
     }
@@ -246,8 +246,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
 
   // --------------------------------------------------------------- build
   Widget _filterBar() => SizedBox(
-        height: 52,
-        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(12, 8, 12, 8), children: [
+        height: 48,
+        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(16, 6, 16, 6), children: [
           for (var i = 0; i < (widget.snapshotOnly ? _snapshotFilters : _filters).length; i++)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -343,7 +343,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                 decoration: BoxDecoration(color: st.bg, shape: BoxShape.circle),
                 child: Icon(j == null ? Icons.camera_alt_outlined : kindIcon(j.kind), color: st.fg, size: 20),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(title, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -455,7 +455,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                       }
                       if (more) {
                         return Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                           child: Center(
                             child: _loadingMore
                                 ? const CircularProgressIndicator(strokeWidth: 2)
@@ -463,7 +463,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                           ),
                         );
                       }
-                      return const SizedBox(height: 96);
+                      return const SizedBox(height: 88);
                     },
                     childCount: (busy != null ? 1 : 0) + (entries.isEmpty ? 1 : entries.length) + 1,
                   ),

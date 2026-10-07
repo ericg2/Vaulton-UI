@@ -184,7 +184,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
   // ----------------------------------------------------------------- actions
   Future<void> _cancel(RepoJob j) async {
-    if (!await confirm(context, 'Cancel this job?', 'A running job is told to stop and finishes shortly after.', ok: 'Cancel Job', danger: true)) return;
+    if (!await confirm(context, 'Cancel Job?', 'A running job will stop shortly.', ok: 'Cancel Job', danger: true)) return;
     await guarded(context, () => _v.cancelJob(j.id, admin: widget.admin));
     _refresh();
   }
@@ -229,7 +229,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
   // ---------------------------------------------------------------- overview
   Widget _overview(RepoJob j) {
-    return _centered(ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
+    return _centered(ListView(padding: const EdgeInsets.fromLTRB(0, 8, 0, 24), children: [
       _hero(j),
       if (j.stages.isNotEmpty) _stagesCard(j),
       _detailsCard(j),
@@ -246,9 +246,9 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     final err = cleanJobError(j.error);
     final showVault = widget.showVaultLink ?? !RepoPage.isOpen(j.repoId);
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(
@@ -264,16 +264,16 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                 if (summary.isNotEmpty) Text(summary, style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
               ]),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             StatusPill(j.phase),
           ]),
           if (j.active) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             ClipRRect(borderRadius: BorderRadius.circular(6), child: LinearProgressIndicator(value: j.phase == JobPhase.waiting ? null : j.liveFraction, minHeight: 8)),
             const SizedBox(height: 6),
             Text(
               j.phase == JobPhase.waiting
-                  ? (j.scheduleDate != null && j.scheduleDate!.isAfter(DateTime.now()) ? 'Starts ${fmtDate(j.scheduleDate)}' : 'Waiting for a free slot…')
+                  ? (j.scheduleDate != null && j.scheduleDate!.isAfter(DateTime.now()) ? 'Starts ${fmtDate(j.scheduleDate)}' : 'Waiting…')
                   : j.liveTotal > 0
                       ? '${fmtBytes(j.liveDone)} of ${fmtBytes(j.liveTotal)}  ·  ${((j.liveFraction ?? 0) * 100).toStringAsFixed(0)}%'
                       : 'Working…',
@@ -287,18 +287,18 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(12)),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(Icons.error_outline, color: cs.onErrorContainer),
-                const SizedBox(width: 10),
+                Icon(Icons.error_outline, size: 20, color: cs.onErrorContainer),
+                const SizedBox(width: 12),
                 Expanded(child: SelectableText(err, style: TextStyle(color: cs.onErrorContainer))),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: Icon(Icons.copy, size: 18, color: cs.onErrorContainer), onPressed: () => copyText(context, err)),
+                IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: Icon(Icons.copy_outlined, size: 18, color: cs.onErrorContainer), onPressed: () => copyText(context, err)),
               ]),
             ),
           ],
           const SizedBox(height: 16),
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (j.kind == 'backup' && j.phase == JobPhase.succeeded && j.snapshotId != null && j.options['dryRun'] != true)
-              FilledButton.icon(onPressed: () => _browse(j), icon: const Icon(Icons.folder_open), label: const Text('Browse Snapshot')),
-            if (showVault) OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Backup Vault')),
+              FilledButton.icon(onPressed: () => _browse(j), icon: const Icon(Icons.folder_open_outlined), label: const Text('Browse Snapshot')),
+            if (showVault) OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Vault')),
             if (j.active) OutlinedButton.icon(onPressed: () => _cancel(j), icon: const Icon(Icons.stop_circle_outlined), label: const Text('Cancel')),
           ]),
         ]),
@@ -307,9 +307,9 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   }
 
   Widget _card(String title, List<Widget> children) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.fromLTRB(16, 6, 16, 6),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -319,9 +319,9 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       );
 
   Widget _kv(String k, Widget v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 120, child: Text(k, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline))),
+          SizedBox(width: 112, child: Text(k, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline))),
           Expanded(child: v),
         ]),
       );
@@ -347,7 +347,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   Widget _detailsCard(RepoJob j) {
     Widget copyable(String v) => Row(children: [
           Expanded(child: SelectableText(v, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))),
-          IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: const Icon(Icons.copy, size: 16), onPressed: () => copyText(context, v)),
+          IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: const Icon(Icons.copy_outlined, size: 18), onPressed: () => copyText(context, v)),
         ]);
     Widget namedId(String? name, String id) {
       final cs = Theme.of(context).colorScheme;
@@ -369,7 +369,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
             IconButton(
               visualDensity: VisualDensity.compact,
               tooltip: 'Copy',
-              icon: Icon(Icons.copy, size: 16, color: cs.onSurfaceVariant),
+              icon: Icon(Icons.copy_outlined, size: 18, color: cs.onSurfaceVariant),
               onPressed: () => copyText(context, id),
             ),
           ]),
@@ -381,11 +381,11 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       _kv('Job Type', Text(kindLabel(j.kind))),
       _kv('Status', Text(phaseStyle(context, j.phase).label)),
       _kv('Backup Vault', namedId(_repoName, j.repoId)),
-      if (j.dataId != null) _kv('Data Point', namedId(_dataName, j.dataId!)),
+      if (j.dataId != null) _kv('Data Folder', namedId(_dataName, j.dataId!)),
       if (j.scheduleId != null) _kv('Schedule', copyable(j.scheduleId!)),
       if (j.snapshotId != null) _kv('Snapshot ID', copyable(j.snapshotId!)),
       if (j.options['dryRun'] == true) _kv('Run Type', const Text('Test Run')),
-            _kv('Created', Text(fmtDate(j.createdAt))),
+      _kv('Created', Text(fmtDate(j.createdAt))),
       if (j.scheduleDate != null) _kv('Not Before', Text(fmtDate(j.scheduleDate))),
       if (j.startDate != null) _kv('Started', Text(fmtDate(j.startDate))),
       if (j.endDate != null) _kv('Finished', Text(fmtDate(j.endDate))),
@@ -453,7 +453,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         const Divider(height: 1),
         Expanded(
           child: lines.isEmpty && !_hasOlder
-              ? EmptyView(_log.isEmpty ? (j.active ? 'Waiting for log output…' : 'No messages') : 'No lines match this filter', icon: Icons.notes)
+              ? EmptyView(_log.isEmpty ? (j.active ? 'Waiting for output…' : 'No messages') : 'No matching lines', icon: Icons.notes)
               : SelectionArea(
                   child: ListView.builder(
                     reverse: true, // newest line at the bottom, scroll up for history

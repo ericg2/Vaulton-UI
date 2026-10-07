@@ -108,7 +108,7 @@ class _StatusTab extends ConsumerWidget {
               tile('Locations', s['roots'], Icons.dns_outlined),
               tile('Data Folders', s['dataPoints'], Icons.folder_outlined),
               tile('Backup Vaults', s['repoPoints'], Icons.inventory_2_outlined),
-              _statusCountsTile(ctx, 'Point Health', [
+              _statusCountsTile(ctx, 'Health', [
                 _StatusCount(Icons.check_circle_outline, 'Healthy', toInt(s['pointsHealthy']), cs.primary),
                 _StatusCount(Icons.error_outline, 'Failed', toInt(s['pointsFailed']), cs.error),
                 _StatusCount(Icons.help_outline, 'Unknown', toInt(s['pointsUnknown']), cs.outline),
@@ -119,19 +119,19 @@ class _StatusTab extends ConsumerWidget {
               ], Icons.work_outline),
               tile('Failed Jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
               tile('Enabled Schedules', s['schedulesEnabled'], Icons.schedule),
-              tile('SMB', toBool(s['smbRunning']) ? 'running · ${s['smbShares']} shares' : 'stopped', Icons.folder_shared_outlined),
-              tile('Email', toBool(s['emailEnabled']) ? 'enabled · ${s['emailPending']} queued' : 'disabled', Icons.email_outlined),
+              tile('SMB', toBool(s['smbRunning']) ? 'Running · ${s['smbShares']} shares' : 'Stopped', Icons.folder_shared_outlined),
+              tile('Email', toBool(s['emailEnabled']) ? 'Enabled · ${s['emailPending']} queued' : 'Disabled', Icons.email_outlined),
             ]),
             if (u.has(Scopes.adminVfs))
               Padding(
-                padding: const EdgeInsets.all(12),
-                child: Wrap(spacing: 8, children: [
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Wrap(spacing: 8, runSpacing: 8, children: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.mark_email_read_outlined),
                     label: const Text('Send Test Email'),
                     onPressed: () async {
                       await guarded(ctx, v.testEmail);
-                      if (ctx.mounted) toast(ctx, 'Test email sent to your address');
+                      if (ctx.mounted) toast(ctx, 'Test email sent');
                     },
                   ),
                 ]),
@@ -158,11 +158,11 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
 
   Future<void> _create() async {
     final f = await formDialog(context, 'New User', [
-      const FieldSpec('u', 'User name', required: true),
-      const FieldSpec('first', 'First name'),
-      const FieldSpec('last', 'Last name'),
+      const FieldSpec('u', 'Username', required: true),
+      const FieldSpec('first', 'First Name'),
+      const FieldSpec('last', 'Last Name'),
       const FieldSpec('email', 'Email'),
-      const FieldSpec('welcome', 'Send welcome email', kind: 'bool'),
+      const FieldSpec('welcome', 'Send Welcome Email', kind: 'bool'),
     ], ok: 'Create');
     if (f == null) return;
     final r = await guarded(context, () => _v.addUser({
@@ -178,7 +178,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         builder: (ctx) => AlertDialog(
           title: Text(title),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Shown only once. The user must change password at first sign-in.'),
+            const Text('Shown once. The user must change it at first sign-in.'),
             const SizedBox(height: 12),
             SelectableText(pw, style: const TextStyle(fontFamily: 'monospace', fontSize: 18)),
           ]),
@@ -360,7 +360,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                 if (remote)
                   OutlinedButton.icon(
                     onPressed: () => _resetQuota(p),
-                    icon: const Icon(Icons.restart_alt, size: 18),
+                    icon: const Icon(Icons.restart_alt),
                     label: const Text('Reset Quota', textAlign: TextAlign.center),
                     style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 40)),
                   ),

@@ -16,50 +16,123 @@ import '../transfers/transfer_manager.dart';
 import 'root_shares_page.dart';
 import 'share_logic.dart';
 
-class StoragePage extends StatefulWidget {
-  const StoragePage({super.key, this.initialTab = 0, this.onBoundarySwipe});
+/// Desktop / wide layout: a normal tabbed page.
+class StoragePage extends StatelessWidget {
+  const StoragePage({super.key, this.initialTab = 0});
   final int initialTab;
-  final ValueChanged<int>? onBoundarySwipe;
-  @override
-  State<StoragePage> createState() => _StoragePageState();
-}
-
-class _StoragePageState extends State<StoragePage> {
-  int _lastBoundaryDirection = 0;
-  DateTime _lastBoundaryAt = DateTime.fromMillisecondsSinceEpoch(0);
   @override
   Widget build(BuildContext context) => DefaultTabController(
         length: 3,
-        initialIndex: widget.initialTab.clamp(0, 2).toInt(),
+        initialIndex: initialTab.clamp(0, 2).toInt(),
         child: Scaffold(
-          appBar: AppBar(title: const Text('Storage'), bottom: const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [
-            Tab(text: 'Locations'),
-            Tab(text: 'Data Folders'),
-            Tab(text: 'Backup Vaults'),
-          ])),
-          body: NotificationListener<OverscrollNotification>(onNotification: (n) {
-          if (n.metrics.axis != Axis.horizontal || !n.metrics.atEdge || n.overscroll == 0) return false;
-          final direction = n.overscroll > 0 ? 1 : -1;
-          final now = DateTime.now();
-          if (direction != _lastBoundaryDirection || now.difference(_lastBoundaryAt) > const Duration(milliseconds: 500)) {
-            _lastBoundaryDirection = direction;
-            _lastBoundaryAt = now;
-            widget.onBoundarySwipe?.call(direction);
-          }
-          return false;
-        }, child: const TabBarView(children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)])),
+          appBar: AppBar(
+            title: const Text('Storage'),
+            bottom: const TabBar(tabs: [
+              Tab(text: 'Locations'),
+              Tab(text: 'Data Folders'),
+              Tab(text: 'Backup Vaults'),
+            ]),
+          ),
+          body: const TabBarView(children: [RootsTab(), PointsTab(repo: false), PointsTab(repo: true)]),
         ),
       );
 }
 
-// ================================================================== ROOTS
-class _RootsTab extends ConsumerStatefulWidget {
-  const _RootsTab();
+/// Phone layout: each storage tab is its own page in the shell's PageView, so one
+/// continuous swipe moves Dashboard > Files > Transfers > Locations > Data Folders >
+/// Backup Vaults > More with no nested scrolling to fight.
+class StorageSection extends StatelessWidget {
+  const StorageSection({super.key, required this.index, required this.pages, required this.basePage, required this.onSelect});
+  final int index, basePage;
+  final PageController pages;
+  final ValueChanged<int> onSelect;
   @override
-  ConsumerState<_RootsTab> createState() => _RootsTabState();
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Storage'),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: StorageTabStrip(pages: pages, basePage: basePage, onSelect: onSelect),
+          ),
+        ),
+        body: switch (index) {
+          0 => const RootsTab(),
+          1 => const PointsTab(repo: false),
+          _ => const PointsTab(repo: true),
+        },
+      );
 }
 
-class _RootsTabState extends ConsumerState<_RootsTab> {
+/// Tab strip whose indicator follows the finger while the shell's pages are swiped.
+class StorageTabStrip extends StatelessWidget {
+  const StorageTabStrip({super.key, required this.pages, required this.basePage, required this.onSelect});
+  final PageController pages;
+  final int basePage;
+  final ValueChanged<int> onSelect;
+  static const _labels = ['Locations', 'Data Folders', 'Backup Vaults'];
+
+  double _position() {
+    if (!pages.hasClients || !pages.position.haveDimensions) return pages.initialPage.toDouble();
+    return pages.page ?? pages.initialPage.toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 48,
+      child: AnimatedBuilder(
+        animation: pages,
+        builder: (context, _) {
+          final t = (_position() - basePage).clamp(0.0, 2.0);
+          return LayoutBuilder(builder: (context, box) {
+            final w = box.maxWidth / 3;
+            const barW = 56.0;
+            return Stack(children: [
+              Row(children: [
+                for (var i = 0; i < 3; i++)
+                  SizedBox(
+                    width: w,
+                    child: InkWell(
+                      onTap: () => onSelect(i),
+                      child: Center(
+                        child: Text(
+                          _labels[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: Color.lerp(cs.onSurfaceVariant, cs.primary, (1 - (t - i).abs()).clamp(0.0, 1.0)),
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ]),
+              Positioned(
+                left: t * w + (w - barW) / 2,
+                bottom: 0,
+                child: Container(
+                  width: barW,
+                  height: 3,
+                  decoration: BoxDecoration(color: cs.primary, borderRadius: const BorderRadius.vertical(top: Radius.circular(3))),
+                ),
+              ),
+            ]);
+          });
+        },
+      ),
+    );
+  }
+}
+
+// ================================================================== ROOTS
+class RootsTab extends ConsumerStatefulWidget {
+  const RootsTab({super.key});
+  @override
+  ConsumerState<RootsTab> createState() => _RootsTabState();
+}
+
+class _RootsTabState extends ConsumerState<RootsTab> {
   final _key = GlobalKey<CursorListState<Root>>();
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -76,7 +149,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
               initial: existing?[f.key] == null || f.kind == 'k' ? '' : '${existing![f.key]}'),
       ],
       ok: 'Continue',
-      intro: existing != null ? 'Leave secret fields empty to keep them unchanged only if the server supports partial updates; otherwise re-enter them.' : null,
+      intro: existing != null ? 'Re-enter secret fields unless the server keeps existing values.' : null,
     );
     if (r == null) return null;
     final src = <String, dynamic>{'scheme': scheme};
@@ -94,10 +167,10 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
   Future<void> _create() async {
     final r = await formDialog(context, 'New Location', [
       const FieldSpec('name', 'Name', required: true),
-      FieldSpec('scheme', 'Storage type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
+      FieldSpec('scheme', 'Storage Type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
       const FieldSpec('capacity', 'Capacity', kind: 'capacity', required: true),
-      const FieldSpec('data', 'Allow data folders', kind: 'bool', initial: 'true'),
-      const FieldSpec('repo', 'Allow backup vaults', kind: 'bool', initial: 'true'),
+      const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
+      const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
     ], ok: 'Next');
     if (r == null || !mounted) return;
     final src = await _sourceForm(r['scheme']!, null);
@@ -119,8 +192,8 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
     final r = await formDialog(context, 'Edit ${root.name}', [
       FieldSpec('name', 'Name', initial: root.name, required: true),
       FieldSpec('capacity', 'Capacity', kind: 'capacity', initial: bytesToGb(root.maxBytes), required: true),
-      FieldSpec('data', 'Allow data folders', kind: 'bool', initial: '${root.isDataAllowed}'),
-      FieldSpec('repo', 'Allow backup vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
+      FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: '${root.isDataAllowed}'),
+      FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
     ]);
     if (r == null) return;
     await guarded(context, () => _v.patchRoot(root.id, {
@@ -169,7 +242,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
   }
 
   Future<void> _delete(Root root) async {
-    if (!await confirm(context, 'Delete location “${root.name}”?', 'Refused while it still contains data or backup vault points. Files in the underlying storage are not erased.', ok: 'Delete', danger: true)) return;
+    if (!await confirm(context, 'Delete location “${root.name}”?', 'Not allowed while it still holds data folders or backup vaults. Files in the underlying storage are kept.', ok: 'Delete', danger: true)) return;
     await guarded(context, () => _v.deleteRoot(root.id));
     _key.currentState?.refresh();
   }
@@ -183,8 +256,8 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
       floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New Location')) : null,
       body: CursorList<Root>(
         key: _key,
-        empty: 'No storage locations.',
-        emptyHint: canCreate ? 'A location is where your data is stored, such as a disk, network share or cloud account. Tap “New location” to connect one.' : 'Ask an administrator to share a storage location with you.',
+        empty: 'No locations yet',
+        emptyHint: canCreate ? 'A location is where your data lives: a disk, network share or cloud account.' : 'Ask an administrator to share a location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
         fetch: (c) => _v.roots(cursor: c),
@@ -195,12 +268,12 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
             child: InkWell(
               onTap: () => _openRoot(r),
               child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+              padding: const EdgeInsets.fromLTRB(16, 12, 4, 14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.dns_outlined),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(r.name, style: Theme.of(ctx).textTheme.titleMedium)),
+                  Icon(Icons.dns_outlined, color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 16),
+                  Expanded(child: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(ctx).textTheme.titleMedium)),
                   if (r.isOwner)
                     PopupMenuButton<String>(
                       onSelected: (a) {
@@ -214,22 +287,22 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
                       itemBuilder: (_) => const [
                         PopupMenuItem(value: 'edit', child: Text('Edit')),
                         PopupMenuItem(value: 'src', child: Text('Edit Connection')),
-                        PopupMenuItem(value: 'share', child: Text('Sharing…')),
+                        PopupMenuItem(value: 'share', child: Text('Share')),
                         PopupMenuDivider(),
                         PopupMenuItem(value: 'del', child: Text('Delete')),
                       ],
                     ),
                 ]),
-                Wrap(children: [
+                Padding(padding: const EdgeInsets.only(right: 12), child: Wrap(children: [
                   if (scheme.isNotEmpty) chip(ctx, scheme.toUpperCase()),
                   chip(ctx, r.isOwner ? 'Owner' : 'Shared by ${r.userName}'),
                   if (r.isDataAllowed) chip(ctx, 'Data Folders'),
                   if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
-                ]),
+                ])),
                 const SizedBox(height: 10),
                 Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: used, max: r.maxBytes)),
-                const SizedBox(height: 4),
-                Text('${fmtBytes(used < 0 ? 0 : used)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: Theme.of(ctx).textTheme.bodySmall),
+                const SizedBox(height: 6),
+                Padding(padding: const EdgeInsets.only(right: 12), child: Text('${fmtBytes(used < 0 ? 0 : used)} used · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant))),
               ]),
             ),
             ),
@@ -270,7 +343,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     final roots = await guarded(context, () => _v.roots(limit: 200));
     if (roots == null || !mounted) return;
     final usable = roots.items.where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed).toList();
-    if (usable.isEmpty) return toast(context, 'No location allows ' + (widget.repo ? 'backup vaults' : 'data folders') + '. Create or share one first.', error: true);
+    if (usable.isEmpty) return toast(context, 'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Add or share one first.', error: true);
     final created = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, showDragHandle: true, constraints: const BoxConstraints(maxWidth: 640), builder: (_) => _NewPointSheet(repo: widget.repo, roots: usable, vaulton: _v));
     if (created == true && mounted) { _key.currentState?.refresh(); ref.invalidate(pointNamesProvider); ref.read(epochProvider.notifier).bump(); }
   }
@@ -290,7 +363,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
 
   Future<void> _delete(Point p) async {
     if (!await confirm(context, 'Delete “${p.name}”?',
-        widget.repo ? 'Its schedules and job history are deleted. Backups already stored are not erased.' : 'Its schedules are deleted. Files in the underlying storage are not erased.',
+        widget.repo ? 'Its schedules and job history are removed. Stored backups are kept.' : 'Its schedules are removed. Files in the underlying storage are kept.',
         ok: 'Delete', danger: true)) {
       return;
     }
@@ -313,7 +386,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       body: CursorList<Point>(
         key: _key,
         empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet',
-        emptyHint: widget.repo ? 'A backup vault stores your backups. Tap “New Backup Vault” to create one.' : 'A data folder stores your files. Set its space limit when you create it.',
+        emptyHint: widget.repo ? 'A backup vault stores your backups.' : 'A data folder stores your files.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
@@ -327,61 +400,89 @@ class _PointsTabState extends ConsumerState<PointsTab> {
 
   Widget _pointCard(BuildContext ctx, Point p) {
     final cs = Theme.of(ctx).colorScheme;
+    final tt = Theme.of(ctx).textTheme;
+    final locationName = _roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ?? (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId);
     final actions = widget.repo
         ? <Widget>[
             FilledButton.tonalIcon(
               onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => SnapshotBrowserPage(repo: p))),
-              icon: const Icon(Icons.folder_open),
+              icon: const Icon(Icons.folder_open_outlined),
               label: const Text('Browse'),
             ),
-            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup Here')),
-            OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 0), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Snapshots')),
-            OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 1), icon: const Icon(Icons.work_history_outlined), label: const Text('Jobs')),
-            OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 2), icon: const Icon(Icons.schedule), label: const Text('Schedules')),
+            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup')),
           ]
         : <Widget>[
             FilledButton.tonalIcon(
               onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
-              icon: const Icon(Icons.folder_open),
-              label: const Text('Open Files'),
+              icon: const Icon(Icons.folder_open_outlined),
+              label: const Text('Open'),
             ),
             FilledButton.icon(onPressed: () => startBackup(ctx, ref, data: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup')),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => DataJobsPage(data: p))),
-              icon: const Icon(Icons.history),
-              label: const Text('Jobs'),
-            ),
           ];
     return Card(
       child: InkWell(
-        onTap: () => widget.repo ? _openRepo(p) : Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
+        onTap: () {
+          if (widget.repo) {
+            _openRepo(p);
+          } else {
+            Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)));
+          }
+        },
         child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Icon(widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(p.name, style: Theme.of(ctx).textTheme.titleMedium),
-              Text(
-                'Location: ${_roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ??
-    (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId)}',                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.outline),
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined, color: cs.onSurfaceVariant),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: tt.titleMedium),
+                  Text(locationName, maxLines: 1, overflow: TextOverflow.ellipsis, style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                ]),
               ),
-            ])),
-            PopupMenuButton<String>(
-              onSelected: (a) => a == 'edit' ? _edit(p) : _delete(p),
-              itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Rename or Change Limit')), PopupMenuItem(value: 'del', child: Text('Delete'))],
+              chip(ctx, p.healthLabel, color: p.isError ? cs.errorContainer : null, inline: true),
+              PopupMenuButton<String>(
+                onSelected: (a) {
+                  switch (a) {
+                    case 'edit': _edit(p);
+                    case 'jobs':
+                      if (widget.repo) {
+                        _openRepo(p, tab: 1);
+                      } else {
+                        Navigator.push(ctx, MaterialPageRoute(builder: (_) => DataJobsPage(data: p)));
+                      }
+                    case 'snaps': _openRepo(p, tab: 0);
+                    case 'sched': _openRepo(p, tab: 2);
+                    case 'del': _delete(p);
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  if (widget.repo) const PopupMenuItem(value: 'snaps', child: Text('Snapshots')),
+                  const PopupMenuItem(value: 'jobs', child: Text('Jobs')),
+                  if (widget.repo) const PopupMenuItem(value: 'sched', child: Text('Schedules')),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(value: 'del', child: Text('Delete')),
+                ],
+              ),
+            ]),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                UsageBar(used: p.usedBytes, max: p.maxBytes),
+                const SizedBox(height: 6),
+                Text('${fmtBytes(p.usedBytes)} of ${fmtBytes(p.maxBytes)}', style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                if (p.error != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(p.error!, style: TextStyle(color: cs.error, fontSize: 12))),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: actions[0]),
+                  const SizedBox(width: 8),
+                  Expanded(child: actions[1]),
+                ]),
+              ]),
             ),
           ]),
-          Wrap(children: [chip(ctx, p.healthLabel, color: p.isError ? cs.errorContainer : null)]),
-          const SizedBox(height: 8),
-          Padding(padding: const EdgeInsets.only(right: 8), child: UsageBar(used: p.usedBytes, max: p.maxBytes)),
-          const SizedBox(height: 4),
-          Text('${fmtBytes(p.usedBytes)} of ${fmtBytes(p.maxBytes)}', style: Theme.of(ctx).textTheme.bodySmall),
-          if (p.error != null) Text(p.error!, style: TextStyle(color: cs.error, fontSize: 12)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 8, children: actions),
-        ]),
         ),
       ),
     );
@@ -418,7 +519,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
     final cs=Theme.of(context).colorScheme,t=Theme.of(context).textTheme;
     final used=(_root.maxBytes-_root.freeBytes).clamp(0,_root.maxBytes>0?_root.maxBytes:1<<62).toInt();
     return Padding(padding:EdgeInsets.fromLTRB(20,4,20,MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'Create an encrypted place for your backups.':'Create a dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
+      Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
       DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
       const SizedBox(height:6),Text('\${fmtBytes(used)} used · \${fmtBytes(_root.freeBytes)} free of \${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
@@ -492,7 +593,7 @@ class _RootSheetState extends State<_RootSheet> {
     final cs = Theme.of(context).colorScheme;
     final used = (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes > 0 ? r.maxBytes : 1 << 62).toInt();
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
-    final holds = [if (r.isDataAllowed) 'Data folders', if (r.isRepoAllowed) 'Backup vaults'];
+    final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -502,7 +603,7 @@ class _RootSheetState extends State<_RootSheet> {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(r.name, style: t.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(r.isOwner ? 'Owned by You' : 'Shared with you by ${r.userName}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              Text(r.isOwner ? 'Owned by You' : 'Shared by ${r.userName}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
             ]),
           ),
         ]),
@@ -519,11 +620,11 @@ class _RootSheetState extends State<_RootSheet> {
         if (!r.isOwner)
           Text('Only the owner can manage access.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
         else if (_failed)
-          Text('Couldn’t load sharing details.', style: t.bodyMedium?.copyWith(color: cs.error))
+          Text('Couldn’t load sharing.', style: t.bodyMedium?.copyWith(color: cs.error))
         else if (_shares == null)
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator())
         else if (_shares!.isEmpty)
-          Text('Not shared with anyone yet. Only you can use this location.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
+          Text('Not shared. Only you can use this location.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
         else
           for (final s in _shares!)
             ListTile(

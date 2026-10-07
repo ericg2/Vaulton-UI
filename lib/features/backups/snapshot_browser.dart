@@ -186,7 +186,7 @@ Future<void> restoreSnapshotFlow({
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Test Run'),
-                    subtitle: const Text('Show what would be restored without changing the destination.'),
+                    subtitle: const Text('Preview the restore without changing anything.'),
                     value: dryRun,
                     onChanged: (value) => set(() => dryRun = value),
                   ),
@@ -510,7 +510,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
       setState(_sel.clear);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       if (ids.isEmpty) {
-        toast(context, 'Nothing new to download. These files are already queued.');
+        toast(context, 'Already queued.');
       } else {
         showDownloadSheet(context, ids, onOpenTransfers: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransfersPage())));
       }

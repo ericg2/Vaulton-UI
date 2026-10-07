@@ -62,7 +62,7 @@ class _PathRow extends StatelessWidget {
       );
       final button = OutlinedButton.icon(
         onPressed: onBrowse,
-        icon: const Icon(Icons.folder_open_outlined, size: 18),
+        icon: const Icon(Icons.folder_open_outlined),
         label: const Text('Browse'),
       );
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -108,14 +108,13 @@ class _RootWarning extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
-              'Root folder selected',
+              'Root Folder Selected',
               style: tt.titleSmall?.copyWith(color: cs.error, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             Text(
-              'This syncs to the top level of the entire data folder. Existing files '
-              'outside your source may be overwritten or permanently deleted. '
-              'Choose a subfolder unless you are certain.',
+              'This syncs to the top level of the data folder. Existing files outside '
+              'your source may be overwritten or deleted. Choose a subfolder unless you are sure.',
               style: tt.bodySmall?.copyWith(color: cs.onErrorContainer, height: 1.35),
             ),
           ]),
@@ -550,7 +549,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               if (plan.changes.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No files need syncing. The destination folder will still be created.'),
+                  child: Text('Nothing to sync. The destination folder will still be created.'),
                 ),
               if (plan.deletedFiles > 0)
                 Padding(
@@ -685,7 +684,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final active = _profiles.where((p) => _status[p.id]?.running == true).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sync & Backup'),
+        title: const Text('Sync'),
         actions: [
           if (desktop) IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _load),
         ],
@@ -694,33 +693,33 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: desktop ? 1180 : 720),
           child: ListView(
-            padding: EdgeInsets.fromLTRB(desktop ? 28 : 16, 16, desktop ? 28 : 16, 32),
+            padding: EdgeInsets.fromLTRB(desktop ? 12 : 0, 8, desktop ? 12 : 0, 24),
             children: [
               Card(
                 child: Padding(
-                  padding: EdgeInsets.all(desktop ? 22 : 16),
+                  padding: EdgeInsets.all(desktop ? 20 : 16),
                   child: LayoutBuilder(builder: (context, c) {
                     final narrow = c.maxWidth < 520;
                     final icon = Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(16)),
-                      child: Icon(Icons.sync, color: cs.onPrimaryContainer, size: 28),
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(14)),
+                      child: Icon(Icons.sync, color: cs.onPrimaryContainer, size: 24),
                     );
                     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Keep folders in sync', style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 4),
-                      const Text('Automatically sync folders, and keep your data up-to-date.'),
+                      Text('Folder Sync', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 2),
+                      Text('Keep folders in sync automatically.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                     ]);
                     final add = FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Folder'));
                     if (narrow) {
                       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           icon,
-                          const SizedBox(width: 14),
+                          const SizedBox(width: 16),
                           Expanded(child: text),
                         ]),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         SizedBox(width: double.infinity, child: add),
                       ]);
                     }
@@ -734,14 +733,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   }),
                 ),
               ),
-              const SizedBox(height: 16),
               if (active > 0)
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(children: [
-                      const SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 2)),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(width: 16),
                       Text(active.toString() + ' Sync' + (active == 1 ? '' : 's') + ' Running'),
                     ]),
                   ),
@@ -749,8 +747,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               if (_profiles.isEmpty)
                 const Card(
                   child: Padding(
-                    padding: EdgeInsets.all(28),
-                    child: EmptyView('No folders added.', icon: Icons.sync),
+                    padding: EdgeInsets.all(20),
+                    child: EmptyView('No folders added', icon: Icons.sync),
                   ),
                 ),
               for (final p in _profiles) _profileCard(p),
@@ -772,11 +770,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Icon(Icons.sync, color: p.enabled ? cs.primary : cs.outline),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
@@ -798,18 +796,19 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               },
             ),
           ]),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           if (!p.enabled && st.message != null && st.error != null)
             Container(
               width: double.infinity,
+              margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: cs.errorContainer.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer),
-                const SizedBox(width: 10),
+                Icon(Icons.warning_amber_rounded, size: 20, color: cs.onErrorContainer),
+                const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(st.error!, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: cs.onErrorContainer)),
                   const SizedBox(height: 2),
@@ -818,7 +817,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               ]),
             ),
           if (running) ...[
-            Text(st.phase, style: Theme.of(context).textTheme.labelLarge),
+            Padding(padding: const EdgeInsets.only(right: 8), child: Text(st.phase, style: Theme.of(context).textTheme.labelLarge)),
             if (st.current != null) Text(st.current!, maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
             LinearProgressIndicator(value: progress),
@@ -830,13 +829,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ] else ...[
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(_frequencyLabel(p.intervalMinutes)),
-              _chip(p.deleteExtras ? 'Mirror Exactly' : 'Keep Extra Files at Destination'),
+              _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
               if (p.nextRun > 0) _chip('Next Run: ' + fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))),
             ]),
             const SizedBox(height: 8),
             if (st.finishedAt > 0)
               Text(
-                st.error ?? st.message ?? 'Last sync completed.',
+                st.error ?? st.message ?? 'Last sync completed',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: st.error == null ? cs.onSurfaceVariant : cs.error),
               ),
             if (plan != null && plan.changes.isNotEmpty)
@@ -849,7 +848,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(children: [
                   Icon(Icons.cleaning_services_outlined, size: 18, color: cs.primary),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(child: Text(
                     _safeCleanup[p.id]!.length.toString() + ' source files are safe to delete',
                     style: Theme.of(context).textTheme.bodySmall,
@@ -858,13 +857,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ]),
               ),
           ],
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          const SizedBox(height: 8),
+          Row(children: [
             FilledButton.tonalIcon(
               onPressed: running ? null : () => _run(p),
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
+            const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () async {
                 final source = SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel);
@@ -879,15 +879,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               },
               child: const Text('Settings'),
             ),
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: IconButton(
-                tooltip: 'Remove Sync',
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _delete(p),
-              ),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Remove',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _delete(p),
             ),
           ]),
         ]),

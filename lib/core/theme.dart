@@ -34,6 +34,8 @@ ThemeData buildTheme(ColorScheme scheme) {
       surfaceTintColor: scheme.surfaceTint,
       scrolledUnderElevation: isWin ? 0 : 2,
       centerTitle: false,
+      titleSpacing: 16,
+      toolbarHeight: 56,
     ),
     cardTheme: CardThemeData(
       elevation: 0,
@@ -44,7 +46,7 @@ ThemeData buildTheme(ColorScheme scheme) {
         borderRadius: BorderRadius.circular(radius),
         side: BorderSide(color: scheme.primary.withValues(alpha: 0.22)),
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
     ),
     chipTheme: ChipThemeData(
       side: BorderSide(color: scheme.primary.withValues(alpha: 0.22)),
@@ -61,7 +63,8 @@ ThemeData buildTheme(ColorScheme scheme) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: Size(0, isWin || isLinux ? 40 : 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        iconSize: 18,
         splashFactory: InkRipple.splashFactory,
         side: BorderSide(color: scheme.primary.withValues(alpha: 0.45)),
       ),
@@ -69,7 +72,8 @@ ThemeData buildTheme(ColorScheme scheme) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: Size(0, isWin || isLinux ? 40 : 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        iconSize: 18,
         shape: isWin ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)) : null,
       ),
     ),
@@ -77,6 +81,7 @@ ThemeData buildTheme(ColorScheme scheme) {
       style: TextButton.styleFrom(
         minimumSize: Size(0, isWin || isLinux ? 40 : 44),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        iconSize: 18,
         splashFactory: InkRipple.splashFactory,
       ),
     ),
@@ -88,7 +93,15 @@ ThemeData buildTheme(ColorScheme scheme) {
       ),
     ),
     dialogTheme: DialogThemeData(shape: shape),
-    listTileTheme: ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius * 0.75))),
+    listTileTheme: ListTileThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius * 0.75)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      minLeadingWidth: 24,
+      horizontalTitleGap: 16,
+      iconColor: scheme.onSurfaceVariant,
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(extendedIconLabelSpacing: 10),
+    bottomSheetTheme: const BottomSheetThemeData(showDragHandle: true),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: inputRadius),
       isDense: isWin || isLinux,
@@ -97,6 +110,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: scheme.surfaceContainer,
       indicatorColor: scheme.secondaryContainer,
+      height: 68,
     ),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: scheme.surfaceContainer,

@@ -264,7 +264,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
               if (over)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text('The limits you’ve set add up to more than the space still available.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
+                  child: Text('Limits add up to more than the available space.', style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
                 ),
             ]),
           ),

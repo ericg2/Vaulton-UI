@@ -29,13 +29,13 @@ class SettingsPage extends ConsumerWidget {
             child: ListTile(
               leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
               title: Text(u.displayName),
-              subtitle: Text('${u.userName} · ${session.baseUrl}'),
+              subtitle: Text('${u.userName} · ${session.baseUrl}', maxLines: 1, overflow: TextOverflow.ellipsis),
               trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit Profile', onPressed: () async {
                 final f = await formDialog(context, 'Profile', [
-                  FieldSpec('first', 'First name', initial: u.firstName ?? ''),
-                  FieldSpec('last', 'Last name', initial: u.lastName ?? ''),
+                  FieldSpec('first', 'First Name', initial: u.firstName ?? ''),
+                  FieldSpec('last', 'Last Name', initial: u.lastName ?? ''),
                   FieldSpec('email', 'Email', initial: u.email ?? ''),
-                  FieldSpec('notif', 'Email notifications', kind: 'bool', initial: '${u.emailNotifications}'),
+                  FieldSpec('notif', 'Email Notifications', kind: 'bool', initial: '${u.emailNotifications}'),
                 ]);
                 if (f == null) return;
                 await guarded(context, () => v.patchUser(u.userName, {
@@ -48,6 +48,7 @@ class SettingsPage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SegmentedButton<ThemeMode>(
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto)),
@@ -60,21 +61,26 @@ class SettingsPage extends ConsumerWidget {
           ),
         ]),
         Section('Transfers', children: [
-          ListTile(
-            title: const Text('Simultaneous Transfers'),
-            subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: Text('Simultaneous Transfers', style: Theme.of(context).textTheme.bodyLarge)),
+                Text('${s.concurrency}', style: Theme.of(context).textTheme.titleMedium),
+              ]),
               Slider(value: s.concurrency.toDouble(), min: 1, max: 8, divisions: 7, label: '${s.concurrency}', onChanged: (v) => c.setConcurrency(v.round())),
-              Text('How many files upload or download at once. Lower it on slow or metered connections.', style: Theme.of(context).textTheme.bodySmall),
+              Text('Files transferred at once. Lower this on slow or metered connections.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 8),
             ]),
-            trailing: Text('${s.concurrency}'),
           ),
           // Desktop only: on Android, scoped storage stops the app from writing to an
           // arbitrary folder, so downloads always go to the app's own storage there.
           if (isDesktop)
             ListTile(
               title: const Text('Download Folder'),
-              subtitle: Text(s.downloadDir ?? 'Default (Vaulton folder in Downloads)'),
-              trailing: s.downloadDir == null ? null : IconButton(icon: const Icon(Icons.restore), onPressed: () => c.setDownloadDir(null)),
+              subtitle: Text(s.downloadDir ?? 'Default (Downloads/Vaulton)'),
+              leading: const Icon(Icons.folder_outlined),
+              trailing: s.downloadDir == null ? null : IconButton(tooltip: 'Reset', icon: const Icon(Icons.restore), onPressed: () => c.setDownloadDir(null)),
               onTap: () async {
                 final d = await FilePicker.getDirectoryPath();
                 if (d != null) c.setDownloadDir(d);
@@ -84,21 +90,21 @@ class SettingsPage extends ConsumerWidget {
             const ListTile(
               leading: Icon(Icons.folder_outlined),
               title: Text('Download Location'),
-              subtitle: Text('App storage. Open a finished download from Transfers to view, share or save it elsewhere.'),
+              subtitle: Text('App storage. Open finished downloads from Transfers.'),
             ),
         ]),
         Section('Security', children: [
           ListTile(
-            leading: const Icon(Icons.password),
+            leading: const Icon(Icons.password_outlined),
             title: const Text('Change Password'),
-            subtitle: const Text('Also used for SMB file shares. Other sessions are signed out.'),
+            subtitle: const Text('Also used for SMB shares. Signs out other sessions.'),
             onTap: () async {
               final f = await formDialog(context, 'Change Password', [
-                const FieldSpec('cur', 'Current password', kind: 'secret', required: true),
-                const FieldSpec('new', 'New password (min 8)', kind: 'secret', required: true),
+                const FieldSpec('cur', 'Current Password', kind: 'secret', required: true),
+                const FieldSpec('new', 'New Password', kind: 'secret', required: true),
               ]);
               if (f == null) return;
-              if (f['new']!.length < 8) return toast(context, 'New password must be at least 8 characters', error: true);
+              if (f['new']!.length < 8) return toast(context, 'Use at least 8 characters', error: true);
               final t = await guarded(context, () => v.changePassword(f['cur']!, f['new']!));
               if (t != null) {
                 await session.setTokens(t);
@@ -107,10 +113,10 @@ class SettingsPage extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.devices_other),
+            leading: const Icon(Icons.devices_other_outlined),
             title: const Text('Sign Out Everywhere'),
             onTap: () async {
-              if (!await confirm(context, 'Sign out of all devices?', 'Every session of your account ends, including this one.', ok: 'Sign Out')) return;
+              if (!await confirm(context, 'Sign Out Everywhere?', 'This ends every session, including this one.', ok: 'Sign Out')) return;
               await guarded(context, v.logoutAll);
               ref.read(transferProvider.notifier).reset();
               await session.clear();

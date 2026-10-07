@@ -22,11 +22,11 @@ class ErrorView extends StatelessWidget {
           Text(e.message, textAlign: TextAlign.center, maxLines: 4, overflow: TextOverflow.ellipsis),
           if (e.status == null) ...[
             const SizedBox(height: 4),
-            Text('Make sure the server is running, and you are on the right network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            Text('Check that the server is running and you are on the right network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
           ],
           if (onRetry != null && !e.isForbidden) ...[
             const SizedBox(height: 12),
-            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('Try Again')),
+            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try Again')),
           ],
         ]),
       ),
@@ -216,7 +216,7 @@ class CursorListState<T> extends State<CursorList<T>> {
         onRefresh: refresh,
         child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
           if (widget.header != null) widget.header!,
-          SizedBox(height: 300, child: FadeSlideIn(child: EmptyView(widget.empty, icon: widget.emptyIcon, hint: widget.emptyHint))),
+          SizedBox(height: 280, child: FadeSlideIn(child: EmptyView(widget.empty, icon: widget.emptyIcon, hint: widget.emptyHint))),
         ]),
       );
     }
@@ -240,9 +240,9 @@ class CursorListState<T> extends State<CursorList<T>> {
           if (i < items.length) return widget.itemBuilder(c, items[i], i);
           if (_hasMore) {
             if (!_loading) WidgetsBinding.instance.addPostFrameCallback((_) => load());
-            return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+            return const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))));
           }
-          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Failed to load more — retry'));
+          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Couldn’t load more. Tap to retry'));
           return const SizedBox(height: 88);
           },
         ),
@@ -293,7 +293,7 @@ class Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(title.toUpperCase(),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.primary, letterSpacing: 1)),
         ),
@@ -368,21 +368,21 @@ class _FadeSlideInState extends State<FadeSlideIn> with SingleTickerProviderStat
 
 /// The one pill style used everywhere. Blue-tinted by default; pass [color] for
 /// status colours (e.g. errorContainer) and [mono] for IDs.
-Widget chip(BuildContext c, String text, {Color? color, IconData? icon, bool mono = false}) {
+Widget chip(BuildContext c, String text, {Color? color, IconData? icon, bool mono = false, bool inline = false}) {
   final cs = Theme.of(c).colorScheme;
   final isError = color == cs.errorContainer;
   final bg = color ?? cs.primary.withValues(alpha: 0.10);
   final fg = isError ? cs.onErrorContainer : (color == null ? cs.primary : cs.onSurface);
   return Container(
-    margin: const EdgeInsets.only(right: 6, top: 4),
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    margin: inline ? EdgeInsets.zero : const EdgeInsets.only(right: 6, top: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
     decoration: BoxDecoration(
       color: bg,
       borderRadius: BorderRadius.circular(20),
       border: Border.all(color: (isError ? cs.error : cs.primary).withValues(alpha: 0.25)),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      if (icon != null) ...[Icon(icon, size: 12, color: fg), const SizedBox(width: 4)],
+      if (icon != null) ...[Icon(icon, size: 13, color: fg), const SizedBox(width: 4)],
       Flexible(child: Text(text, overflow: TextOverflow.ellipsis, style: Theme.of(c).textTheme.labelSmall?.copyWith(color: fg, fontFamily: mono ? 'monospace' : null))),
     ]),
   );
@@ -410,15 +410,15 @@ class _HintBannerState extends ConsumerState<HintBanner> {
       child: _hidden
           ? const SizedBox(width: double.infinity)
           : Container(
-              margin: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-              padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
               decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12)),
               child: Row(children: [
                 Icon(widget.icon, size: 18, color: cs.onSecondaryContainer),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(child: Text(widget.text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSecondaryContainer))),
                 IconButton(
-                  tooltip: 'Dismiss Tip',
+                  tooltip: 'Dismiss',
                   visualDensity: VisualDensity.compact,
                   icon: Icon(Icons.close, size: 16, color: cs.onSecondaryContainer),
                   onPressed: () {

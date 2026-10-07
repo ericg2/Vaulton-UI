@@ -77,7 +77,7 @@ class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProvid
             duration: const Duration(milliseconds: 300),
             child: IgnorePointer(
               ignoring: !_showCancel,
-              child: TextButton(onPressed: () => ref.read(authProvider.notifier).cancelRestore(), child: const Text('Taking Long? Cancel')),
+              child: TextButton(onPressed: () => ref.read(authProvider.notifier).cancelRestore(), child: const Text('Cancel')),
             ),
           ),
         ]),

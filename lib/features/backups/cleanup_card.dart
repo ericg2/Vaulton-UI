@@ -60,8 +60,8 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
       if (!mounted) return;
       final f = await formDialog(context, 'When should cleanup run?', [
         const FieldSpec('cron', 'Schedule', kind: 'cron', initial: '0 4 * * 0'),
-        FieldSpec('tz', 'Time zone', kind: 'choice', options: timeZoneOptions(device: tz), initial: tz ?? 'UTC'),
-      ], ok: 'Turn On Cleanup', intro: 'Pick a time after your backups usually finish. Weekly is plenty for most people.');
+        FieldSpec('tz', 'Time Zone', kind: 'choice', options: timeZoneOptions(device: tz), initial: tz ?? 'UTC'),
+      ], ok: 'Turn On Cleanup', intro: 'Pick a time after your backups finish. Weekly works for most people.');
       if (f == null || !mounted) return;
       await guarded(context, () => v.createSchedule({
             'name': 'Snapshot cleanup',

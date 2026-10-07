@@ -136,7 +136,7 @@ class _BackupSheetState extends State<_BackupSheet> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Start a backup', style: t.headlineSmall),
               const SizedBox(height: 4),
-              Text('Saves a snapshot of your files. A snapshot is a copy of how things looked at this moment, so you can go back to it later.',
+              Text('Saves a snapshot, a restorable copy of your files as they are now.',
                   style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
               const SizedBox(height: 16),
               if (widget.datas.length > 1)
@@ -389,7 +389,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Preview First'),
-              subtitle: const Text('Shows what would be removed in the job log. Nothing is deleted.'),
+              subtitle: const Text('Previews what would be removed. Nothing is deleted.'),
               value: _preview,
               onChanged: (v) => setState(() => _preview = v),
             ),
