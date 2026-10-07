@@ -272,12 +272,16 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     final usable = roots.items.where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed).toList();
     if (usable.isEmpty) return toast(context, 'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Create or share one first.', error: true);
     final labels = {for (final r in usable) '${r.name}${usable.where((x) => x.name == r.name).length > 1 ? ' (${r.id.substring(0, 6)})' : ''}': r};
+    final storageInfo = usable.map((r) {
+      final used = (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes > 0 ? r.maxBytes : 1 << 62);
+      return '${r.name}: ${fmtBytes(used)} used · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}';
+    }).join('\\n');
     final f = await formDialog(context, 'New ${widget.repo ? 'Backup Vault' : 'Data Folder'}', [
       FieldSpec('root', 'Location', kind: 'choice', options: labels.keys.toList()),
       const FieldSpec('name', 'Name', required: true),
       FieldSpec('capacity', 'Space Limit', kind: 'capacity', required: true, maxBytes: usable.map((r) => r.maxBytes).where((x) => x > 0).fold<int?>(null, (m, x) => m == null || x > m ? x : m)),
       if (widget.repo) const FieldSpec('pw', 'Vault Password (at least 8 characters)', kind: 'secret', required: true),
-    ], ok: 'Create');
+    ], ok: 'Create', intro: 'Available storage:\\n$storageInfo\\n\\nSet the space limit based on how much data you expect to store. It cannot exceed the location limit.');
     if (f == null) return;
     final body = {'rootId': labels[f['root']]!.id, 'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0, if (widget.repo) 'password': f['pw']};
     await guarded(context, () => widget.repo ? _v.createRepo(body) : _v.createData(body));
