@@ -42,7 +42,7 @@ List<TimelineEntry> buildTimeline(Iterable<RepoJob> jobs, Iterable<Snapshot> sna
     }
   }
   final orphans = jobList
-      .where((j) => j.kind == 'backup' && !pairs.containsKey(j.id) && j.phase == JobPhase.succeeded && j.options['dryRun'] != true && j.startDate != null)
+      .where((j) => j.kind == 'backup' && !pairs.containsKey(j.id) && (j.snapshotId == null || j.snapshotId!.isEmpty) && j.phase == JobPhase.succeeded && j.options['dryRun'] != true && j.startDate != null)
       .toList();
   for (final s in snapList.where((s) => !used.contains(s.id))) {
     final st = s.time;
