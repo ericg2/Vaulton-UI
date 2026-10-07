@@ -345,9 +345,29 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                   : (_powerAgentStatus?['seen'] == true ? 'Host agent is not responding.' : 'No host agent heartbeat has been received yet.')),
             ),
           ]),
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text('The broker tokens are encrypted in Vaulton’s persistent application data and are never shown after they are saved.'),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: cs.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Broker tokens are encrypted in Vaulton’s persistent application data and are never shown after they are saved.',
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
