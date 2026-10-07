@@ -25,12 +25,15 @@ class _SettingSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(child: Text(title)),
-            Switch(value: value, onChanged: onChanged),
+            Transform.scale(
+              scale: 0.82,
+              child: Switch(value: value, onChanged: onChanged),
+            ),
           ],
         ),
       );
@@ -143,28 +146,29 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 decoration: const InputDecoration(labelText: 'Sync Name'),
                 onChanged: (v) => name = v,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(vertical: 4),
                 leading: const Icon(Icons.folder_outlined),
                 title: const Text('Source'),
                 subtitle: Text(source.label, maxLines: 2, overflow: TextOverflow.ellipsis),
               ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: pointId,
                 decoration: const InputDecoration(labelText: 'Destination Data Folder'),
                 items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
                 onChanged: (v) => set(() => pointId = v!),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               TextField(
                 controller: remoteCtl,
                 decoration: const InputDecoration(labelText: 'Destination Folder'),
                 onChanged: (v) => remoteDir = v.startsWith('/') ? v : '/' + v,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -181,9 +185,12 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         ],
                       ),
                     ),
-                    Switch(
-                      value: deleteExtras,
-                      onChanged: (v) => set(() => deleteExtras = v),
+                    Transform.scale(
+                      scale: 0.82,
+                      child: Switch(
+                        value: deleteExtras,
+                        onChanged: (v) => set(() => deleteExtras = v),
+                      ),
                     ),
                   ],
                 ),
@@ -202,6 +209,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ],
                 onChanged: (v) => set(() => interval = v!),
               ),
+              const SizedBox(height: 12),
               if (backgroundSupported) ...[
                 _SettingSwitch(
                   title: 'Wi-Fi / Unmetered Only',
