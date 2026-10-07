@@ -152,11 +152,12 @@ class TransferManager extends Notifier<List<TransferTask>> {
   }
 
   void clearForPoint(String pointId) {
-    for (final t in _tasks.where((t) => t.pointId == pointId && t.active).toList()) {
+    final ids = _tasks.where((t) => t.pointId == pointId).map((t) => t.id).toSet();
+    for (final t in _tasks.where((t) => ids.contains(t.id) && t.active).toList()) {
       _tokens[t.id]?.cancel();
     }
-    _tasks.removeWhere((t) => t.pointId == pointId);
-    for (final id in _webBytes.keys.where((id) => _tasks.every((t) => t.id != id)).toList()) {
+    _tasks.removeWhere((t) => ids.contains(t.id));
+    for (final id in ids) {
       _webBytes.remove(id);
     }
     _changed(persist: true);
