@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
+import '../../core/wake.dart';
 
 /// Compact server identity: host, connection state, version and signed-in user.
 class ServerBadge extends ConsumerWidget {
@@ -49,6 +50,33 @@ class ServerBadge extends ConsumerWidget {
           style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
         ),
         if (info?.uptime != null) Text('Uptime ${fmtDuration(info!.uptime!)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+        if (!ok && ref.read(sessionProvider).wakeToken?.isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () async {
+                  try {
+                    await WakeService.wake(ref.read(sessionProvider));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Wake request sent. Waiting for Vaulton...')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not wake server: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.power_settings_new_rounded, size: 18),
+                label: const Text('Wake Server'),
+              ),
+            ),
+          ),
         if (user != null) Padding(padding: const EdgeInsets.only(top: 6), child: Row(children: [
           Icon(Icons.person_outline, size: 14, color: cs.onSurfaceVariant),
           const SizedBox(width: 4),
