@@ -18,7 +18,7 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "com.example.vaulton"
+    namespace = "com.ericg2.vaulton"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.vaulton"
+        applicationId = "com.ericg2.vaulton"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
