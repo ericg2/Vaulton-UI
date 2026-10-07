@@ -330,11 +330,11 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               subtitle: Text(_hasPowerAgentKey ? 'Configured securely.' : 'Not configured.'),
             ),
             ListTile(
-              leading: Icon(_powerAgentStatus?['seen'] == true ? Icons.check_circle_outline : Icons.help_outline),
+              leading: Icon(_powerAgentStatus?['online'] == true ? Icons.check_circle_outline : Icons.warning_amber_outlined),
               title: const Text('Host Agent'),
-              subtitle: Text(_powerAgentStatus?['seen'] == true
-                  ? 'Last seen ${toStr(_powerAgentStatus?['lastSeenAt']) ?? 'recently'} · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'}'
-                  : 'No host agent heartbeat has been received yet.'),
+              subtitle: Text(_powerAgentStatus?['online'] == true
+                  ? 'Online · Last seen ${toStr(_powerAgentStatus?['lastSeenAt']) ?? 'recently'} · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'}'
+                  : (_powerAgentStatus?['seen'] == true ? 'Host agent is not responding.' : 'No host agent heartbeat has been received yet.')),
             ),
           ]),
           const Padding(
