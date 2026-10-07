@@ -122,7 +122,7 @@ class _JobsListState extends ConsumerState<JobsList> {
           Expanded(
             child: CursorList<RepoJob>(
               key: _key,
-              empty: _status == null ? 'No Jobs Created' : 'No ${_status!.toLowerCase()} Jobs',
+              empty: _status == null ? 'No jobs created.' : 'No ${_status!.toLowerCase()} jobs.',
               emptyIcon: Icons.work_history_outlined,
               onChanged: (l) => _anyActive = l.any((j) => j.active),
               fetch: (c) => v.jobs(cursor: c, repoId: widget.repoId, dataId: widget.dataId, admin: widget.admin, status: widget.externalStatus ?? _status),
