@@ -14,8 +14,8 @@ import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
 import '../../platform/local_files.dart';
 import '../transfers/download_sheet.dart';
-import '../transfers/transfer_manager.dart';
 import '../sync/sync_models.dart';
+import '../transfers/transfer_manager.dart';
 import '../transfers/transfer_models.dart';
 import '../transfers/transfers_page.dart';
 import 'file_ops.dart';
@@ -73,15 +73,14 @@ class _FilesPageState extends ConsumerState<FilesPage> {
 
   List<SyncProfile> get _syncProfiles => SyncProfile.loadAll(ref.read(prefsProvider));
 
-  SyncProfile? _syncForPath(String path, String pointId) => _syncProfiles.where((p) => p.pointId == pointId && _normalizeSyncPath(p.remoteDir) == _normalizeSyncPath(path)).firstOrNull;
+  SyncProfile? _syncForPath(String path, String pointId) =>
+      _syncProfiles.where((p) => p.pointId == pointId && _normalizeSyncPath(p.remoteDir) == _normalizeSyncPath(path)).firstOrNull;
 
   static String _normalizeSyncPath(String path) {
     if (path.isEmpty) return '/';
     final value = path.replaceAll('\\\\', '/');
     if (value == '/') return '/';
-    return '/${value.replaceAll(RegExp(r'^/+|/+
-
-  @override
+    final trimmed = value.replaceAll(RegExp(r'^/+|/+
   void initState() {
     super.initState();
     _initPoints();
@@ -491,19 +490,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                         width: double.infinity,
                         margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                        decoration: BoxDecoration(
-                          color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                        decoration: BoxDecoration(color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65), borderRadius: BorderRadius.circular(10)),
                         child: Row(children: [
                           Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(
-                            error != null ? 'Sync Error: ' + error : 'Sync Folder · ' + sync.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer, fontWeight: FontWeight.w600),
-                          )),
+                          Expanded(child: Text(error != null ? 'Sync Error: ' + error : 'Sync Folder · ' + sync.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer, fontWeight: FontWeight.w600))),
                         ]),
                       );
                     }),
@@ -527,35 +518,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                     return ListTile(
                       selected: sel,
                       leading: explicitSelection || selecting
-                          ? SizedBox(
-                              width: 52,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: Checkbox(
-                                      value: sel,
-                                      onChanged: (_) => _toggle(n),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  if (sync != null)
-                                    Icon(Icons.sync_folder_outlined, size: 20, color: syncColor)
-                                  else
-                                    Icon(
-                                      iconFor(n),
-                                      size: 20,
-                                      color: n.isDir ? Theme.of(context).colorScheme.primary : null,
-                                    ),
-                                ],
-                              ),
-                            )
-                          : sync != null
-                              ? Icon(Icons.sync_folder_outlined, color: syncColor)
-                              : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
+                          ? SizedBox(width: 52, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              SizedBox(width: 24, height: 24, child: Checkbox(value: sel, onChanged: (_) => _toggle(n), visualDensity: VisualDensity.compact)),
+                              const SizedBox(width: 4),
+                              if (sync != null) Icon(Icons.sync_folder_outlined, size: 20, color: syncColor) else Icon(iconFor(n), size: 20, color: n.isDir ? Theme.of(context).colorScheme.primary : null),
+                            ]))
+                          : sync != null ? Icon(Icons.sync_folder_outlined, color: syncColor) : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
                       title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                       subtitle: Text(sync != null ? (syncError != null ? 'Sync Error' : 'Sync Folder') : (n.isDir ? fmtShort(n.modified) : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}')),
                       trailing: selecting
@@ -770,7 +738,8 @@ class _PendingRow extends StatelessWidget {
     );
   }
 }
-), '')}';
+), '');
+    return trimmed.isEmpty ? '/' : '/$trimmed';
   }
 
   @override
