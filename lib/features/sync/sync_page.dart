@@ -11,6 +11,7 @@ import '../../platform/desktop_window.dart';
 import 'sync_models.dart';
 import 'sync_service.dart';
 import 'sync_source.dart';
+import '../files/folder_picker.dart';
 
 class _SettingSwitch extends StatelessWidget {
   const _SettingSwitch({
@@ -119,7 +120,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     await _preview(cfg);
   }
 
-  Future<SyncProfile?> _configure(SyncProfile? existing, SyncSourceInfo source) async {
+  Future<SyncProfile?> _configure(SyncProfile? existing, SyncSourceInfo initialSource) async {
+    var source = initialSource;
     var name = existing?.name ?? source.label;
     var pointId = existing?.pointId ?? _points.first.id;
     var remoteDir = existing?.remoteDir ?? '/' + source.label;
@@ -129,7 +131,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     var wifiOnly = existing?.wifiOnly ?? true;
     var chargingOnly = existing?.chargingOnly ?? false;
     final nameCtl = TextEditingController(text: name);
-    final remoteCtl = TextEditingController(text: remoteDir);
 
     final result = await showDialog<SyncProfile>(
       context: context,
@@ -146,27 +147,53 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 decoration: const InputDecoration(labelText: 'Sync Name'),
                 onChanged: (v) => name = v,
               ),
+              const SizedBox(height: 10),
+              Text('Source', style: Theme.of(ctx).textTheme.titleSmall),
               const SizedBox(height: 4),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                leading: const Icon(Icons.folder_outlined),
-                title: const Text('Source'),
-                subtitle: Text(source.label, maxLines: 2, overflow: TextOverflow.ellipsis),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await pickSyncSource();
+                  if (picked != null) {
+                    set(() => source = picked);
+                  }
+                },
+                icon: const Icon(Icons.folder_open_outlined),
+                label: const Text('Browse'),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: pointId,
-                decoration: const InputDecoration(labelText: 'Destination Data Folder'),
-                items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
-                onChanged: (v) => set(() => pointId = v!),
+              Text(
+                source.location,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(ctx).textTheme.bodySmall,
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: remoteCtl,
-                decoration: const InputDecoration(labelText: 'Destination Folder'),
-                onChanged: (v) => remoteDir = v.startsWith('/') ? v : '/' + v,
+              const SizedBox(height: 14),
+              Text('Destination', style: Theme.of(ctx).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await pickFolder(
+                    ctx,
+                    initialPointId: pointId,
+                    initialPath: remoteDir,
+                    title: 'Choose destination',
+                  );
+                  if (picked != null) {
+                    set(() {
+                      pointId = picked.point.id;
+                      remoteDir = picked.path;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.folder_open_outlined),
+                label: const Text('Browse'),
               ),
-              const SizedBox(height: 10),
+              Text(
+                _pointName(pointId) + remoteDir,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 14),
               DropdownButtonFormField<int>(
                 initialValue: interval,
                 decoration: const InputDecoration(labelText: 'Sync Frequency'),
@@ -232,7 +259,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       ),
     );
     nameCtl.dispose();
-    remoteCtl.dispose();
     return result;
   }
 
