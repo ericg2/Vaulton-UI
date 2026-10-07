@@ -241,6 +241,8 @@ class Vaulton {
   Future<Paged<Json>> vfs({String? user, String? search, String? cursor, int limit = 100}) async =>
       Paged.from(await _req('GET', '/admin/vfs', q: _pg(cursor, limit, null, {'user': user, 'search': search})), (j) => j);
   Future<void> reloadVfs(String user) => _req('POST', '/admin/vfs/users/${_e(user)}/reload');
+  Future<void> resetQuota(String user, String pointId) =>
+      _req('POST', '/admin/vfs/users/${_e(user)}/points/${_e(pointId)}/quota/reset');
   Future<void> syncVfs() => _req('POST', '/admin/vfs/sync');
   Future<Paged<Json>> logs({
     String? search,
