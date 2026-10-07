@@ -175,7 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: Text('Recent accounts', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+          child: Text('Recent Accounts', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
         ),
         Card(
           margin: EdgeInsets.zero,
@@ -189,7 +189,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                 subtitle: Text(a.host),
                 onTap: () => _pick(a),
                 trailing: IconButton(
-                  tooltip: 'Remove from list',
+                  tooltip: 'Remove from List',
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: () => ref.read(accountsProvider.notifier).forget(a),
                 ),
@@ -274,7 +274,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         decoration: const InputDecoration(
-                          labelText: 'Server address',
+                          labelText: 'Server Address',
                           prefixIcon: Icon(Icons.dns_outlined),
                           hintText: '192.168.1.10 or vault.example.com',
                         ),
@@ -358,7 +358,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(_pwTitle ?? 'Password change required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
+                                      Text(_pwTitle ?? 'Password Change Required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
                                       Text('Enter the temporary password above, then choose a permanent one to sign-in.', style: TextStyle(color: cs.onTertiaryContainer)),
                                     ]),
                                   ),
@@ -368,7 +368,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 controller: _new,
                                 obscureText: !_show,
                                 textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(labelText: 'New password', prefixIcon: Icon(Icons.password), helperText: 'At least 8 characters'),
+                                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.password), helperText: 'At least 8 characters'),
                                 validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters' : null,
                               ),
                               gap,
@@ -377,7 +377,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                                 obscureText: !_show,
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => _submit(),
-                                decoration: const InputDecoration(labelText: 'Repeat new password', prefixIcon: Icon(Icons.password)),
+                                decoration: const InputDecoration(labelText: 'Repeat New Password', prefixIcon: Icon(Icons.password)),
                                 validator: (v) => v != _new.text ? 'Passwords do not match' : null,
                               ),
                             ]),
@@ -389,7 +389,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         controlAffinity: ListTileControlAffinity.leading,
                         value: _rememberPassword,
                         onChanged: (v) => setState(() => _rememberPassword = v ?? false),
-                        title: const Text('Remember password'),
+                        title: const Text('Remember Password'),
                         subtitle: const Text('Stored on this device.'),
                       ),
                     ),
@@ -430,7 +430,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         ),
                       ),
                     ),
-                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need help')))),
+                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline, size: 18), label: const Text('Need Help')))),
                   ]),
                 ),
               ),

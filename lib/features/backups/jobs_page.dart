@@ -253,7 +253,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final isNew = s == null;
     final curRepo = repos.items.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.items.first;
     final curData = datas.items.where((d) => d.id == s?.dataId).firstOrNull;
-    final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
+    final f = await formDialog(context, isNew ? 'New schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
       if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
       if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean Up Snapshots', 'Health Check'], initial: startMode ?? 'Backup'),
@@ -267,7 +267,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       FieldSpec('skip', 'Skip if already running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
     ], ok: 'Save', pick: (v) async {
       final d = dataMap[v['data']];
-      final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose folder to backup');
+      final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose Folder to Backup');
       return r?.path;
     }, intro: 'Choose how often this runs. Times follow the selected time zone.${isNew ? '\n\nTip: pair each backup schedule with a “Clean up snapshots” schedule, or old snapshots will slowly fill your vault.' : ''}');
     if (f == null || !mounted) return;

@@ -251,7 +251,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     ctx,
                     initialPointId: pointId,
                     initialPath: remoteDir,
-                    title: 'Choose destination',
+                    title: 'Choose Destination',
                   );
                   if (picked != null) {
                     set(() {
@@ -294,7 +294,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
               ],
               _SettingSwitch(
-                title: 'Match destination to source',
+                title: 'Match Destination to Source',
                 value: deleteExtras,
                 onChanged: (v) => set(() => deleteExtras = v),
               ),
@@ -675,7 +675,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       child: Icon(Icons.sync, color: cs.onPrimaryContainer, size: 28),
                     );
                     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Keep Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
+                      Text('Keep folders in sync', style: Theme.of(context).textTheme.headlineSmall),
                       const SizedBox(height: 4),
                       const Text('Automatically sync folders, and keep your data up-to-date.'),
                     ]);
@@ -779,7 +779,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ] else ...[
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(_frequencyLabel(p.intervalMinutes)),
-              _chip(p.deleteExtras ? 'Mirror Exactly' : 'Keep Destination Extras'),
+              _chip(p.deleteExtras ? 'Mirror Exactly' : 'Keep Extra Files at Destination'),
               if (p.nextRun > 0) _chip('Next Run: ' + fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))),
             ]),
             const SizedBox(height: 8),
@@ -845,10 +845,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   }
 
   String _frequencyLabel(int minutes) {
-    if (minutes < 60) return 'Every ' + minutes.toString() + ' Minutes';
-    if (minutes % 60 == 0) return 'Every ' + (minutes ~/ 60).toString() + ' Hours';
-    return 'Every ' + minutes.toString() + ' Minutes';
+    if (minutes < 60) return 'Every ' + minutes.toString() + ' minutes';
+    if (minutes % 60 == 0) return 'Every ' + (minutes ~/ 60).toString() + ' hours';
+    return 'Every ' + minutes.toString() + ' minutes';
   }
 
-  Widget _chip(String text) => Chip(label: Text(text, overflow: TextOverflow.ellipsis), visualDensity: VisualDensity.compact);
+  Widget _chip(String text) => chip(context, text);
 }

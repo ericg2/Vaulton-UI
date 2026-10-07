@@ -12,7 +12,7 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
     context,
     'Sign out?',
     busy ? 'Unfinished transfers will be cancelled. You can sign back in from the account list on the login screen.' : 'You can sign back in or switch to another server or account from the login screen.',
-    ok: 'Sign out',
+    ok: 'Sign Out',
     danger: busy,
   );
   if (!ok) return;

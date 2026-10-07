@@ -26,7 +26,7 @@ class ErrorView extends StatelessWidget {
           ],
           if (onRetry != null && !e.isForbidden) ...[
             const SizedBox(height: 12),
-            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('Try again')),
+            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('Try Again')),
           ],
         ]),
       ),
@@ -366,19 +366,27 @@ class _FadeSlideInState extends State<FadeSlideIn> with SingleTickerProviderStat
       );
 }
 
-Widget chip(BuildContext c, String text, {Color? color, IconData? icon}) {
+/// The one pill style used everywhere. Blue-tinted by default; pass [color] for
+/// status colours (e.g. errorContainer) and [mono] for IDs.
+Widget chip(BuildContext c, String text, {Color? color, IconData? icon, bool mono = false}) {
   final cs = Theme.of(c).colorScheme;
+  final isError = color == cs.errorContainer;
+  final bg = color ?? cs.primary.withValues(alpha: 0.10);
+  final fg = isError ? cs.onErrorContainer : (color == null ? cs.primary : cs.onSurface);
   return Container(
     margin: const EdgeInsets.only(right: 6, top: 4),
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    decoration: BoxDecoration(color: (color ?? cs.secondaryContainer), borderRadius: BorderRadius.circular(20)),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: (isError ? cs.error : cs.primary).withValues(alpha: 0.25)),
+    ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      if (icon != null) ...[Icon(icon, size: 12), const SizedBox(width: 4)],
-      Text(text, style: Theme.of(c).textTheme.labelSmall),
+      if (icon != null) ...[Icon(icon, size: 12, color: fg), const SizedBox(width: 4)],
+      Flexible(child: Text(text, overflow: TextOverflow.ellipsis, style: Theme.of(c).textTheme.labelSmall?.copyWith(color: fg, fontFamily: mono ? 'monospace' : null))),
     ]),
   );
 }
-
 
 /// Small dismissible tip. Once closed it stays hidden (remembered per [id]).
 class HintBanner extends ConsumerStatefulWidget {
@@ -410,7 +418,7 @@ class _HintBannerState extends ConsumerState<HintBanner> {
                 const SizedBox(width: 10),
                 Expanded(child: Text(widget.text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSecondaryContainer))),
                 IconButton(
-                  tooltip: 'Dismiss tip',
+                  tooltip: 'Dismiss Tip',
                   visualDensity: VisualDensity.compact,
                   icon: Icon(Icons.close, size: 16, color: cs.onSecondaryContainer),
                   onPressed: () {

@@ -68,7 +68,7 @@ class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProvid
           const SizedBox(height: 20),
           Text('Vaulton', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 6),
-          Text(host.isEmpty ? 'Signing you in…' : 'Connecting to $host…', style: TextStyle(color: cs.onSurfaceVariant)),
+          Text(host.isEmpty ? 'Signing You In…' : 'Connecting to $host…', style: TextStyle(color: cs.onSurfaceVariant)),
           const SizedBox(height: 20),
           SizedBox(width: 120, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: const LinearProgressIndicator(minHeight: 3))),
           const SizedBox(height: 16),
@@ -77,7 +77,7 @@ class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProvid
             duration: const Duration(milliseconds: 300),
             child: IgnorePointer(
               ignoring: !_showCancel,
-              child: TextButton(onPressed: () => ref.read(authProvider.notifier).cancelRestore(), child: const Text('Taking long? Cancel')),
+              child: TextButton(onPressed: () => ref.read(authProvider.notifier).cancelRestore(), child: const Text('Taking Long? Cancel')),
             ),
           ),
         ]),

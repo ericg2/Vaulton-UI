@@ -106,7 +106,7 @@ Future<void> restoreSnapshotFlow({
   );
   if (selected == null || selected.isEmpty || !context.mounted) return;
 
-  final dest = await pickFolder(context, title: 'Restore into…');
+  final dest = await pickFolder(context, title: 'Restore Into…');
   if (dest == null || !context.mounted) return;
 
   final label = selected.length == 1 ? selected.first.name : '${selected.length} items';
@@ -150,7 +150,7 @@ Future<void> restoreSnapshotFlow({
                   const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Delete extra files in destination'),
+                    title: const Text('Delete Extra Files in Destination'),
                     value: deleteExtras,
                     onChanged: (value) {
                       set(() => deleteExtras = value);
@@ -185,7 +185,7 @@ Future<void> restoreSnapshotFlow({
                     ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Test run'),
+                    title: const Text('Test Run'),
                     subtitle: const Text('Show what would be restored without changing the destination.'),
                     value: dryRun,
                     onChanged: (value) => set(() => dryRun = value),
@@ -280,7 +280,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Choose snapshot path'),
+      title: const Text('Choose Snapshot Path'),
       content: SizedBox(
         width: 520,
         height: (MediaQuery.sizeOf(context).height * 0.6).clamp(260.0, 460.0).toDouble(),
@@ -612,7 +612,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
               ),
               IconButton(tooltip: _desc ? 'Descending' : 'Ascending', icon: Icon(_desc ? Icons.arrow_downward : Icons.arrow_upward), onPressed: () => setState(() => _desc = !_desc)),
               IconButton(
-                tooltip: 'Restore this folder…',
+                tooltip: 'Restore This Folder…',
                 icon: const Icon(Icons.settings_backup_restore),
                 onPressed: () => _restore([(path: _cur ?? '/', isDir: true, name: _trail.isEmpty ? 'snapshot' : _trail.last.name)]),
               ),
@@ -705,7 +705,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                             PopupMenuItem(value: 'restore', child: Text('Restore…')),
                             PopupMenuItem(value: 'select', child: Text('Select')),
                             PopupMenuItem(value: 'info', child: Text('Details')),
-                            PopupMenuItem(value: 'copy', child: Text('Copy path')),
+                            PopupMenuItem(value: 'copy', child: Text('Copy Path')),
                           ],
                         ),
                   onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),

@@ -145,7 +145,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
   // ----------------------------------------------------------------- actions
   Future<void> _cancel(RepoJob j) async {
-    if (!await confirm(context, 'Cancel this job?', 'A running job is told to stop and finishes shortly after.', ok: 'Cancel job', danger: true)) return;
+    if (!await confirm(context, 'Cancel this job?', 'A running job is told to stop and finishes shortly after.', ok: 'Cancel Job', danger: true)) return;
     await guarded(context, () => _v.cancelJob(j.id, admin: widget.admin));
     _refresh();
   }
@@ -178,7 +178,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         appBar: AppBar(
           title: Text(j == null ? 'Job' : kindLabel(j.kind)),
           actions: [
-            if (j != null && j.active) IconButton(tooltip: 'Cancel job', icon: const Icon(Icons.stop_circle_outlined), onPressed: () => _cancel(j)),
+            if (j != null && j.active) IconButton(tooltip: 'Cancel Job', icon: const Icon(Icons.stop_circle_outlined), onPressed: () => _cancel(j)),
             if (j != null && !j.active && !widget.admin) IconButton(tooltip: 'Remove from History', icon: const Icon(Icons.delete_outline), onPressed: () => _delete(j)),
             IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _refresh),
           ],
@@ -383,7 +383,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                           child: Center(
                             child: _loadingOlder
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                : TextButton.icon(onPressed: _loadOlder, icon: const Icon(Icons.expand_less), label: const Text('Load older lines')),
+                                : TextButton.icon(onPressed: _loadOlder, icon: const Icon(Icons.expand_less), label: const Text('Load Older Lines')),
                           ),
                         );
                       }

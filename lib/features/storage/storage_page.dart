@@ -303,7 +303,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New ${widget.repo ? 'Backup Vault' : 'Data Folder'}')),
       body: CursorList<Point>(
         key: _key,
-        empty: 'No ${widget.repo ? 'Backup Vaults' : 'Data Folders'} Yet',
+        empty: 'No ${widget.repo ? 'Backup vaults' : 'Data folders'} Yet',
         emptyHint: widget.repo ? 'A backup vault is where your backups are kept safely. Tap “New backup vault” to create one.' : 'A data folder is where your files live. You set how much space it can use. Tap “New data folder” to create one.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
@@ -441,7 +441,7 @@ class _RootSheetState extends State<_RootSheet> {
     final cs = Theme.of(context).colorScheme;
     final used = (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes > 0 ? r.maxBytes : 1 << 62).toInt();
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
-    final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
+    final holds = [if (r.isDataAllowed) 'Data folders', if (r.isRepoAllowed) 'Backup vaults'];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -451,7 +451,7 @@ class _RootSheetState extends State<_RootSheet> {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(r.name, style: t.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(r.isOwner ? 'Owned by you' : 'Shared with you by ${r.userName}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              Text(r.isOwner ? 'Owned by You' : 'Shared with you by ${r.userName}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
             ]),
           ),
         ]),

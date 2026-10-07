@@ -87,7 +87,7 @@ class _StatusTab extends ConsumerWidget {
               color: ok ? null : Theme.of(ctx).colorScheme.errorContainer,
               child: ListTile(
                 leading: Icon(ok ? Icons.check_circle_outline : Icons.error_outline),
-                title: Text(ok ? 'Storage backend reachable' : 'Storage backend unreachable'),
+                title: Text(ok ? 'Storage Backend Reachable' : 'Storage Backend Unreachable'),
                 subtitle: Text('Version ${s['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}${s['backendError'] != null ? '\n${s['backendError']}' : ''}'),
               ),
             ),
@@ -145,7 +145,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   bool get _manage => ref.read(userProvider)!.has(Scopes.usersManage);
 
   Future<void> _create() async {
-    final f = await formDialog(context, 'New user', [
+    final f = await formDialog(context, 'New User', [
       const FieldSpec('u', 'User name', required: true),
       const FieldSpec('first', 'First name'),
       const FieldSpec('last', 'Last name'),
@@ -238,7 +238,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                   Text('${u.userName}${u.email != null ? ' · ${u.email}' : ''}\nLast sign-in ${fmtDate(u.lastLogin)}'),
                   Wrap(children: [
                     if (u.isLockedOut) chip(ctx, 'Locked', color: Theme.of(ctx).colorScheme.errorContainer),
-                    if (u.mustChangePassword) chip(ctx, 'Temp Password'),
+                    if (u.mustChangePassword) chip(ctx, 'Temporary Password'),
                     for (final s in u.scopes) chip(ctx, s),
                   ]),
                 ]),
@@ -267,10 +267,10 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'scopes', child: Text('Edit permissions')),
+                          const PopupMenuItem(value: 'scopes', child: Text('Edit Permissions')),
                           PopupMenuItem(value: 'lock', child: Text(u.isLockedOut ? 'Unlock' : 'Lock')),
-                          const PopupMenuItem(value: 'reset', child: Text('Reset password')),
-                          const PopupMenuItem(value: 'revoke', child: Text('Revoke sessions')),
+                          const PopupMenuItem(value: 'reset', child: Text('Reset Password')),
+                          const PopupMenuItem(value: 'revoke', child: Text('Revoke Sessions')),
                           if (u.userName != me.userName) const PopupMenuItem(value: 'del', child: Text('Delete')),
                         ],
                       )
@@ -313,7 +313,7 @@ class _VfsTab extends ConsumerWidget {
             ]),
             isThreeLine: true,
             trailing: IconButton(
-              tooltip: 'Reload user VFS',
+              tooltip: 'Reload User VFS',
               icon: const Icon(Icons.refresh),
               onPressed: () async {
                 await guarded(ctx, () => v.reloadVfs('${p['user']}'));

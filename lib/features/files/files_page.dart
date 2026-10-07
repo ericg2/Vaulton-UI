@@ -231,7 +231,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }
 
   Future<void> _newFolder() async {
-    final name = await promptText(context, 'New folder', 'Folder name', ok: 'Create');
+    final name = await promptText(context, 'New Folder', 'Folder name', ok: 'Create');
     if (name == null) return;
     await guarded(context, () => _v.mkdir(_point!.id, joinPath(_path, name)));
     _refresh();
@@ -344,9 +344,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.upload_file), title: const Text('Upload files'), onTap: () { Navigator.pop(ctx); _pickFiles(); }),
-          if (isDesktop) ListTile(leading: const Icon(Icons.drive_folder_upload_outlined), title: const Text('Upload folder'), onTap: () { Navigator.pop(ctx); _pickFolder(); }),
-          ListTile(leading: const Icon(Icons.create_new_folder_outlined), title: const Text('New folder'), onTap: () { Navigator.pop(ctx); _newFolder(); }),
+          ListTile(leading: const Icon(Icons.upload_file), title: const Text('Upload Files'), onTap: () { Navigator.pop(ctx); _pickFiles(); }),
+          if (isDesktop) ListTile(leading: const Icon(Icons.drive_folder_upload_outlined), title: const Text('Upload Folder'), onTap: () { Navigator.pop(ctx); _pickFolder(); }),
+          ListTile(leading: const Icon(Icons.create_new_folder_outlined), title: const Text('New Folder'), onTap: () { Navigator.pop(ctx); _newFolder(); }),
         ]),
       ),
     );
@@ -410,7 +410,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                   ),
             actions: [
               IconButton(
-                tooltip: 'Select all',
+                tooltip: 'Select All',
                 icon: const Icon(Icons.select_all),
                 onPressed: _loaded.isEmpty ? null : () => setState(() => _sel.addAll(_loaded.map((n) => n.name))),
               ),
@@ -507,8 +507,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                 PopupMenuItem(value: 'open', child: Text('Open')),
                                 PopupMenuItem(value: 'download', child: Text('Download')),
                                 PopupMenuItem(value: 'rename', child: Text('Rename')),
-                                PopupMenuItem(value: 'move', child: Text('Move to…')),
-                                PopupMenuItem(value: 'copy', child: Text('Copy to…')),
+                                PopupMenuItem(value: 'move', child: Text('Move To…')),
+                                PopupMenuItem(value: 'copy', child: Text('Copy To…')),
                                 PopupMenuItem(value: 'select', child: Text('Select')),
                                 PopupMenuItem(value: 'info', child: Text('Details')),
                                 PopupMenuDivider(),
@@ -526,7 +526,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               Positioned.fill(
                 child: Container(
                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                  child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.upload_file, size: 56), SizedBox(height: 8), Text('Drop to upload here')])),
+                  child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.upload_file, size: 56), SizedBox(height: 8), Text('Drop to Upload Here')])),
                 ),
               ),
           ]),
@@ -652,13 +652,13 @@ class _PendingRow extends StatelessWidget {
       if (isFolder) {
         subtitle = '${active.length} file${active.length == 1 ? '' : 's'} uploading${fraction != null && running ? ' · ${(fraction * 100).round()}%' : ''}';
       } else if (!running) {
-        subtitle = active.first.error ?? 'Waiting to upload…';
+        subtitle = active.first.error ?? 'Waiting to Upload…';
       } else {
         subtitle = fraction == null ? 'Uploading…' : 'Uploading · ${(fraction * 100).round()}% · ${fmtBytes(sent)} of ${fmtBytes(total)}';
       }
     } else {
       final err = failed.isEmpty ? null : failed.first.error;
-      subtitle = isFolder ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload failed');
+      subtitle = isFolder ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload Failed');
     }
     final exists = failed.any((x) => x.error?.toLowerCase().contains('exist') ?? false);
 
@@ -687,7 +687,7 @@ class _PendingRow extends StatelessWidget {
         title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: busy ? cs.onSurfaceVariant : cs.error)),
         trailing: busy
-            ? IconButton(tooltip: 'Cancel upload', icon: const Icon(Icons.close), onPressed: onCancel)
+            ? IconButton(tooltip: 'Cancel Upload', icon: const Icon(Icons.close), onPressed: onCancel)
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 if (exists && !isFolder) TextButton(onPressed: () => onRetry(overwrite: true), child: const Text('Overwrite')),
                 IconButton(tooltip: 'Retry', icon: const Icon(Icons.refresh), onPressed: () => onRetry()),

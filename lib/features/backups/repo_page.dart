@@ -110,7 +110,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   }
 
   Future<void> _password() async {
-    final f = await formDialog(context, 'Update vault password', [
+    final f = await formDialog(context, 'Update Vault Password', [
       const FieldSpec('cur', 'Current password', kind: 'secret', required: true),
       const FieldSpec('new', 'New password (at least 8 characters)', kind: 'secret', required: true),
     ], intro: 'This only updates the password Vaulton uses to open this vault. It doesn’t change the vault’s encryption, so use it if the saved password is wrong.');
@@ -128,10 +128,10 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           }
         },
         itemBuilder: (_) => const [
-          PopupMenuItem(value: 'check', child: Text('Run health check')),
-          PopupMenuItem(value: 'clean', child: Text('Clean up old snapshots…')),
+          PopupMenuItem(value: 'check', child: Text('Run Health Check')),
+          PopupMenuItem(value: 'clean', child: Text('Clean Up Old Snapshots…')),
           PopupMenuDivider(),
-          PopupMenuItem(value: 'pw', child: Text('Update vault password…')),
+          PopupMenuItem(value: 'pw', child: Text('Update Vault Password…')),
         ],
       );
 
@@ -171,7 +171,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           ],
           LayoutBuilder(builder: (context, c) {
             final backup = FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined, size: 18), label: label('Backup Now'));
-            final browse = FilledButton.tonalIcon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse Latest'));
+            final browse = OutlinedButton.icon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse Latest'));
             if (c.maxWidth < 300) {
               return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [backup, const SizedBox(height: 8), browse]);
             }

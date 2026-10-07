@@ -333,7 +333,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 focusNode: r.focus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: 'Space limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
+                decoration: InputDecoration(labelText: 'Space Limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
                 onChanged: (_) => setState(() {}),
               )),
               const SizedBox(width: 6),
@@ -383,7 +383,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 autocorrect: false,
                 enableSuggestions: false,
                 decoration: const InputDecoration(
-                  labelText: 'Add user',
+                  labelText: 'Add User',
                   hintText: 'Search by name or email',
                   prefixIcon: Icon(Icons.person_add_alt),
                   suffixIcon: Icon(Icons.arrow_drop_down),

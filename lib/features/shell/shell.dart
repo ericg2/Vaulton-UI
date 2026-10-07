@@ -177,8 +177,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: extended
-                      ? TextButton.icon(onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout), label: const Text('Sign out'))
-                      : IconButton(tooltip: 'Sign out', onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout)),
+                      ? TextButton.icon(onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout), label: const Text('Sign Out'))
+                      : IconButton(tooltip: 'Sign Out', onPressed: () => signOutFlow(context, ref), icon: const Icon(Icons.logout)),
                 ),
               ),
             ),
@@ -297,7 +297,7 @@ class _MorePage extends StatelessWidget {
               onTap: () => onOpen(d),
             ),
           const Divider(),
-          ListTile(leading: const Icon(Icons.logout), title: const Text('Sign out / switch account'), onTap: onSignOut),
+          ListTile(leading: const Icon(Icons.logout), title: const Text('Sign Out / Switch Account'), onTap: onSignOut),
         ]),
       );
 }

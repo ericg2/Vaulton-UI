@@ -61,7 +61,7 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
       final f = await formDialog(context, 'When should cleanup run?', [
         const FieldSpec('cron', 'Schedule', kind: 'cron', initial: '0 4 * * 0'),
         FieldSpec('tz', 'Time zone', kind: 'choice', options: timeZoneOptions(device: tz), initial: tz ?? 'UTC'),
-      ], ok: 'Turn on cleanup', intro: 'Pick a time after your backups usually finish. Weekly is plenty for most people.');
+      ], ok: 'Turn On Cleanup', intro: 'Pick a time after your backups usually finish. Weekly is plenty for most people.');
       if (f == null || !mounted) return;
       await guarded(context, () => v.createSchedule({
             'name': 'Snapshot cleanup',
@@ -97,7 +97,7 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
               Row(children: [
                 Icon(on ? Icons.auto_delete_outlined : Icons.warning_amber_rounded, color: on ? cs.primary : cs.onTertiaryContainer),
                 const SizedBox(width: 10),
-                Expanded(child: Text(on ? 'Automatic cleanup is on' : (s == null ? 'Old snapshots aren’t being cleaned up' : 'Automatic cleanup is paused'), style: t.titleSmall?.copyWith(color: fg))),
+                Expanded(child: Text(on ? 'Automatic Cleanup Is On' : (s == null ? 'Old snapshots aren’t being cleaned up' : 'Automatic cleanup is paused'), style: t.titleSmall?.copyWith(color: fg))),
               ]),
               const SizedBox(height: 6),
               if (on) ...[

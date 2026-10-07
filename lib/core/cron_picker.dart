@@ -186,7 +186,7 @@ class _CronFieldState extends State<CronField> {
       if (_f == _Freq.custom)
         TextFormField(
           controller: widget.controller,
-          decoration: const InputDecoration(labelText: 'Cron expression *', hintText: 'min hour day month weekday'),
+          decoration: const InputDecoration(labelText: 'Cron Expression *', hintText: 'min hour day month weekday'),
           onChanged: (_) => setState(() {}),
           validator: (v) => (v == null || v.trim().split(RegExp(r'\s+')).length < 5) ? 'Needs 5 fields' : null,
         ),

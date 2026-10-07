@@ -25,8 +25,8 @@ class TransfersPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(active > 0 ? 'Transfers ($active active)' : 'Transfers'),
         actions: [
-          if (active > 0) IconButton(tooltip: 'Cancel all', icon: const Icon(Icons.stop_circle_outlined), onPressed: mgr.cancelAll),
-          IconButton(tooltip: 'Clear finished', icon: const Icon(Icons.clear_all), onPressed: mgr.clearFinished),
+          if (active > 0) IconButton(tooltip: 'Cancel All', icon: const Icon(Icons.stop_circle_outlined), onPressed: mgr.cancelAll),
+          IconButton(tooltip: 'Clear Finished', icon: const Icon(Icons.clear_all), onPressed: mgr.clearFinished),
         ],
       ),
       body: tasks.isEmpty
@@ -91,7 +91,7 @@ class _TaskTile extends ConsumerWidget {
             ],
             // Only finished downloads have something to open or reveal.
             if (!up && task.state == TState.done && task.localPath != null && localFiles.supportsFilesystem) ...[
-              IconButton(icon: const Icon(Icons.open_in_new), tooltip: 'Open file', onPressed: () => openDownload(context, task.localPath!)),
+              IconButton(icon: const Icon(Icons.open_in_new), tooltip: 'Open File', onPressed: () => openDownload(context, task.localPath!)),
               IconButton(icon: const Icon(Icons.folder_open), tooltip: 'Show in Folder', onPressed: () => revealDownload(context, task.localPath!)),
             ],
             if (!task.active) IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Remove', onPressed: () => mgr.remove(task.id)),

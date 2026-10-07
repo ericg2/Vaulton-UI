@@ -20,11 +20,11 @@ Future<String?> chooseDownloadBase(BuildContext context, WidgetRef ref) async {
   final choice = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Download location'),
+      title: const Text('Download Location'),
       content: const Text('Choose where this download should be stored.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('Cancel')),
-        OutlinedButton(onPressed: () => Navigator.pop(ctx, 'custom'), child: const Text('Choose folder')),
+        OutlinedButton(onPressed: () => Navigator.pop(ctx, 'custom'), child: const Text('Choose Folder')),
         FilledButton(onPressed: () => Navigator.pop(ctx, 'default'), child: const Text('Default')),
       ],
     ),
@@ -32,7 +32,7 @@ Future<String?> chooseDownloadBase(BuildContext context, WidgetRef ref) async {
   if (choice == null || choice == 'cancel' || !context.mounted) return null;
   if (choice == 'default') return localFiles.downloadsDir();
 
-  final picked = await FilePicker.getDirectoryPath(dialogTitle: 'Choose download folder');
+  final picked = await FilePicker.getDirectoryPath(dialogTitle: 'Choose Download Folder');
   if (picked == null || picked.isEmpty) return null;
   // Dart File cannot write a SAF content URI directly. If a platform returns
   // one, fall back rather than creating an unusable transfer path.

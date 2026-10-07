@@ -119,8 +119,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final cap = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.maxBytes);
 
       final stats = [
-        _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data Folders', () => widget.onNavigate?.call('Data folders')),
-        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup vaults')),
+        _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data folders', () => widget.onNavigate?.call('Data Folders')),
+        _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup vaults', () => widget.onNavigate?.call('Backup Vaults')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
       ];
@@ -176,14 +176,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   color: cs.tertiaryContainer,
                   child: ListTile(
                     leading: Icon(Icons.rocket_launch_outlined, color: cs.onTertiaryContainer),
-                    title: Text('Get started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
+                    title: Text('Get Started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
                     subtitle: Text('Create a data folder under Storage first. It is the place your files are kept.', style: TextStyle(color: cs.onTertiaryContainer)),
                     trailing: Icon(Icons.chevron_right, color: cs.onTertiaryContainer),
-                    onTap: () => widget.onNavigate?.call('Data folders'),
+                    onTap: () => widget.onNavigate?.call('Data Folders'),
                   ),
                 ),
               ),
-            Section('Quick actions', children: [
+            Section('Quick Actions', children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
@@ -201,7 +201,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               ),
             ]),
             if (cap > 0)
-              Section('Storage usage', children: [
+              Section('Storage Usage', children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Card(
@@ -224,7 +224,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ]),
             if (_canJobs) ...[
-              Section('Running now', children: [
+              Section('Running Now', children: [
                 if (running.isEmpty && waiting == 0)
                   const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('No jobs are running.'))
                 else

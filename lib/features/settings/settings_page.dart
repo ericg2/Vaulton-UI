@@ -30,7 +30,7 @@ class SettingsPage extends ConsumerWidget {
               leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
               title: Text(u.displayName),
               subtitle: Text('${u.userName} · ${session.baseUrl}'),
-              trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit profile', onPressed: () async {
+              trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit Profile', onPressed: () async {
                 final f = await formDialog(context, 'Profile', [
                   FieldSpec('first', 'First name', initial: u.firstName ?? ''),
                   FieldSpec('last', 'Last name', initial: u.lastName ?? ''),
@@ -61,7 +61,7 @@ class SettingsPage extends ConsumerWidget {
         ]),
         Section('Transfers', children: [
           ListTile(
-            title: const Text('Simultaneous transfers'),
+            title: const Text('Simultaneous Transfers'),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Slider(value: s.concurrency.toDouble(), min: 1, max: 8, divisions: 7, label: '${s.concurrency}', onChanged: (v) => c.setConcurrency(v.round())),
               Text('How many files upload or download at once. Lower it on slow or metered connections.', style: Theme.of(context).textTheme.bodySmall),
@@ -72,7 +72,7 @@ class SettingsPage extends ConsumerWidget {
           // arbitrary folder, so downloads always go to the app's own storage there.
           if (isDesktop)
             ListTile(
-              title: const Text('Download folder'),
+              title: const Text('Download Folder'),
               subtitle: Text(s.downloadDir ?? 'Default (Vaulton folder in Downloads)'),
               trailing: s.downloadDir == null ? null : IconButton(icon: const Icon(Icons.restore), onPressed: () => c.setDownloadDir(null)),
               onTap: () async {
@@ -83,17 +83,17 @@ class SettingsPage extends ConsumerWidget {
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
             const ListTile(
               leading: Icon(Icons.folder_outlined),
-              title: Text('Download location'),
+              title: Text('Download Location'),
               subtitle: Text('App storage. Open a finished download from Transfers to view, share or save it elsewhere.'),
             ),
         ]),
         Section('Security', children: [
           ListTile(
             leading: const Icon(Icons.password),
-            title: const Text('Change password'),
+            title: const Text('Change Password'),
             subtitle: const Text('Also used for SMB file shares. Other sessions are signed out.'),
             onTap: () async {
-              final f = await formDialog(context, 'Change password', [
+              final f = await formDialog(context, 'Change Password', [
                 const FieldSpec('cur', 'Current password', kind: 'secret', required: true),
                 const FieldSpec('new', 'New password (min 8)', kind: 'secret', required: true),
               ]);
@@ -108,9 +108,9 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.devices_other),
-            title: const Text('Sign out everywhere'),
+            title: const Text('Sign Out Everywhere'),
             onTap: () async {
-              if (!await confirm(context, 'Sign out of all devices?', 'Every session of your account ends, including this one.', ok: 'Sign out')) return;
+              if (!await confirm(context, 'Sign out of all devices?', 'Every session of your account ends, including this one.', ok: 'Sign Out')) return;
               await guarded(context, v.logoutAll);
               ref.read(transferProvider.notifier).reset();
               await session.clear();
@@ -119,10 +119,10 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('Sign out'),
+            title: const Text('Sign Out'),
             onTap: () async {
               if (ref.read(transferProvider.notifier).hasActive &&
-                  !await confirm(context, 'Transfers in Progress', 'Signing out cancels unfinished transfers.', ok: 'Sign out', danger: true)) {
+                  !await confirm(context, 'Transfers in Progress', 'Signing out cancels unfinished transfers.', ok: 'Sign Out', danger: true)) {
                 return;
               }
               ref.read(transferProvider.notifier).reset();
@@ -131,7 +131,7 @@ class SettingsPage extends ConsumerWidget {
           ),
         ]),
         Section('About', children: [
-          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Vaulton client'), subtitle: const Text('Version $kAppVersion')),
+          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Vaulton Client'), subtitle: const Text('Version $kAppVersion')),
         ]),
       ]),
     );

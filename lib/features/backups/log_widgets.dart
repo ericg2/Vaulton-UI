@@ -108,7 +108,7 @@ class LogFilterBar extends StatelessWidget {
             ),
           if (onCopy != null)
             IconButton(
-              tooltip: 'Copy visible lines',
+              tooltip: 'Copy Visible Lines',
               icon: const Icon(Icons.copy_all_outlined),
               onPressed: copyEnabled ? onCopy : null,
             ),

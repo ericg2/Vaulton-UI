@@ -39,8 +39,30 @@ ThemeData buildTheme(ColorScheme scheme) {
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       color: scheme.surfaceContainerLow,
-      shape: shape,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      // Soft blue outline, shared by every card so the app reads as one piece.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+        side: BorderSide(color: scheme.primary.withValues(alpha: 0.22)),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    ),
+    chipTheme: ChipThemeData(
+      side: BorderSide(color: scheme.primary.withValues(alpha: 0.22)),
+      selectedColor: scheme.primaryContainer,
+      checkmarkColor: scheme.onPrimaryContainer,
+      labelStyle: TextStyle(color: scheme.onSurface),
+      shape: const StadiumBorder(),
+    ),
+    tabBarTheme: TabBarThemeData(
+      indicatorColor: scheme.primary,
+      labelColor: scheme.primary,
+      unselectedLabelColor: scheme.onSurfaceVariant,
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        splashFactory: InkRipple.splashFactory,
+        side: BorderSide(color: scheme.primary.withValues(alpha: 0.45)),
+      ),
     ),
     dialogTheme: DialogThemeData(shape: shape),
     listTileTheme: ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius * 0.75))),
@@ -50,7 +72,6 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: isWin ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)) : null)),
     textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(splashFactory: InkRipple.splashFactory)),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(splashFactory: InkRipple.splashFactory)),
     iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(splashFactory: InkRipple.splashFactory)),
     snackBarTheme: SnackBarThemeData(shape: shape),
     navigationBarTheme: NavigationBarThemeData(

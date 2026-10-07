@@ -276,14 +276,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     );
   }
 
-  Widget _pill(String text, {Color? bg, Color? fg, bool mono = false}) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg ?? cs.secondaryContainer, borderRadius: BorderRadius.circular(20)),
-      child: Text(text, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: fg ?? cs.onSecondaryContainer, fontFamily: mono ? 'monospace' : null)),
-    );
-  }
+  Widget _pill(String text, {bool mono = false, IconData? icon}) => chip(context, text, mono: mono, icon: icon);
 
   Widget _card(TimelineEntry e, Map<String, String> names) {
     final cs = Theme.of(context).colorScheme;
@@ -327,22 +320,15 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     final indent = MediaQuery.sizeOf(context).width >= 600 ? 52.0 : 0.0;
 
     final pills = <Widget>[
-      if (widget.snapshotOnly && s != null) _pill('Snapshot ID  ${shortId(s.id)}', mono: true, bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
-      if (!widget.snapshotOnly && browseId != null) _pill('Snapshot ${shortId(browseId)}', mono: true),
       if (s != null && s.locked) const SnapshotLockBadge(),
       if (s != null) for (final tg in s.tags) _pill('#$tg'),
     ];
 
     return Card(
-      margin: widget.snapshotOnly ? const EdgeInsets.fromLTRB(12, 6, 12, 6) : null,
-      shape: widget.snapshotOnly
-          ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: cs.primary.withValues(alpha: 0.28)))
-          : null,
-      color: widget.snapshotOnly ? cs.surfaceContainerLow : null,
       child: InkWell(
-        onTap: j != null ? () => _openJob(j) : (browseId != null ? () => _browse(browseId) : null),
+        onTap: widget.snapshotOnly && browseId != null ? () => _browse(browseId) : (j != null ? () => _openJob(j) : (browseId != null ? () => _browse(browseId) : null)),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 4, 10),
+          padding: const EdgeInsets.fromLTRB(16, 14, 4, 6),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               Container(
@@ -369,9 +355,9 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                     const PopupMenuItem(value: 'browse', child: Text('Browse Files')),
                     const PopupMenuItem(value: 'restore', child: Text('Restore…')),
                     PopupMenuItem(value: 'lock', child: Text(s.locked ? 'Unlock' : 'Lock')),
-                    const PopupMenuItem(value: 'copy', child: Text('Copy snapshot ID')),
+                    const PopupMenuItem(value: 'copy', child: Text('Copy Snapshot ID')),
                     const PopupMenuDivider(),
-                    const PopupMenuItem(value: 'forget', child: Text('Delete snapshot')),
+                    const PopupMenuItem(value: 'forget', child: Text('Delete Snapshot')),
                   ],
                 )
               else
@@ -383,10 +369,6 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                 if (what != null && what.isNotEmpty) Text(what, style: t.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                 if (result != null) ...[const SizedBox(height: 4), Text(result, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
                 if (note != null) ...[const SizedBox(height: 4), Text(note, style: t.bodySmall?.copyWith(color: cs.outline))],
-                if (widget.snapshotOnly && j != null) ...[
-                  const SizedBox(height: 4),
-                  Text('${j.kind == 'backup' ? 'Backup Job' : kindLabel(j.kind)} · ${j.id.substring(0, j.id.length.clamp(0, 8))}', style: t.bodySmall?.copyWith(color: cs.outline, fontFamily: 'monospace')),
-                ],
                 if (j != null && phase == JobPhase.running) ...[
                   const SizedBox(height: 10),
                   ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: j.liveFraction, minHeight: 6)),
@@ -397,26 +379,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                 ],
                 if (err.isNotEmpty) ...[const SizedBox(height: 6), Text(err, maxLines: 3, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: cs.error))],
                 if (pills.isNotEmpty) ...[const SizedBox(height: 8), Wrap(spacing: 6, runSpacing: 6, children: pills)],
-                if (browseId != null || j != null) ...[
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 8, runSpacing: 0, children: [
-                    if (browseId != null && widget.repo != null)
-                      TextButton.icon(
-                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        onPressed: () => _browse(browseId),
-                        icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('Browse Files'),
-                      ),
-                    if (j != null)
-                      TextButton.icon(
-                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id, showVaultLink: false, initialTab: 1))),
-                        icon: const Icon(Icons.work_history_outlined, size: 18),
-                        label: Text(widget.snapshotOnly ? 'View Job' : 'Job Log'),
-                      ),
-                  ]),
-                ] else
-                  const SizedBox(height: 4),
+                const SizedBox(height: 8),
               ]),
             ),
           ]),
@@ -450,7 +413,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     // [header?] [filters] [banner?] [entries or empty] [footer]
     return Scaffold(
       floatingActionButton: widget.showFab
-          ? FloatingActionButton.extended(onPressed: widget.onBackup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup now'))
+          ? FloatingActionButton.extended(onPressed: widget.onBackup, icon: const Icon(Icons.backup_outlined), label: const Text('Backup Now'))
           : null,
       body: Align(
         alignment: Alignment.topCenter,
@@ -486,7 +449,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                           child: Center(
                             child: _loadingMore
                                 ? const CircularProgressIndicator(strokeWidth: 2)
-                                : TextButton.icon(onPressed: _more, icon: const Icon(Icons.expand_more), label: Text(widget.snapshotOnly ? 'Load older snapshots' : 'Load older history')),
+                                : TextButton.icon(onPressed: _more, icon: const Icon(Icons.expand_more), label: Text(widget.snapshotOnly ? 'Load Older Snapshots' : 'Load Older History')),
                           ),
                         );
                       }

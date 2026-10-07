@@ -142,7 +142,7 @@ class _BackupSheetState extends State<_BackupSheet> {
               if (widget.datas.length > 1)
                 DropdownButtonFormField<Point>(
                   initialValue: _data,
-                  decoration: const InputDecoration(labelText: 'Back up from', prefixIcon: Icon(Icons.folder_outlined)),
+                  decoration: const InputDecoration(labelText: 'Backup From', prefixIcon: Icon(Icons.folder_outlined)),
                   items: [for (final d in widget.datas) DropdownMenuItem(value: d, child: Text(d.name))],
                   onChanged: (d) => setState(() {
                     if (d != null) {
@@ -175,7 +175,7 @@ class _BackupSheetState extends State<_BackupSheet> {
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(value: false, label: Text('Everything')),
-                  ButtonSegment(value: true, label: Text('Only certain files')),
+                  ButtonSegment(value: true, label: Text('Only Certain Files')),
                 ],
                 selected: {_onlySome},
                 onSelectionChanged: (s) => setState(() => _onlySome = s.first),
@@ -190,7 +190,7 @@ class _BackupSheetState extends State<_BackupSheet> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _kinds(_includePresets, _includeKinds),
                           const SizedBox(height: 12),
-                          ChipInput(label: 'Other file types', hint: 'For example *.csv', values: _customInclude, onChanged: (v) => setState(() => _customInclude = v)),
+                          ChipInput(label: 'Other File Types', hint: 'For example *.csv', values: _customInclude, onChanged: (v) => setState(() => _customInclude = v)),
                         ]),
                       )
                     : const SizedBox(width: double.infinity),
@@ -205,11 +205,11 @@ class _BackupSheetState extends State<_BackupSheet> {
                   ChoiceChip(label: Text(c.$1), selected: _maxSize == c.$2, onSelected: (_) => setState(() => _maxSize = c.$2)),
               ]),
               _heading('Labels', 'Optional. Add a word or two to help you find this snapshot later.'),
-              ChipInput(label: 'Add a label', hint: 'For example Before upgrade', values: _labels, onChanged: (v) => setState(() => _labels = v)),
+              ChipInput(label: 'Add a Label', hint: 'For example Before upgrade', values: _labels, onChanged: (v) => setState(() => _labels = v)),
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Test run only'),
+                title: const Text('Test Run Only'),
                 subtitle: const Text('See what would be backed up without saving anything.'),
                 value: _dry,
                 onChanged: (v) => setState(() => _dry = v),
@@ -223,7 +223,7 @@ class _BackupSheetState extends State<_BackupSheet> {
           child: Row(children: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             const Spacer(),
-            FilledButton.icon(onPressed: _start, icon: const Icon(Icons.backup_outlined), label: Text(_dry ? 'Start test run' : 'Start backup')),
+            FilledButton.icon(onPressed: _start, icon: const Icon(Icons.backup_outlined), label: Text(_dry ? 'Start Test Run' : 'Start Backup')),
           ]),
         ),
       ]),
@@ -329,7 +329,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.forSchedule ? 'Automatic cleanup plan' : 'Clean up old snapshots once', style: t.headlineSmall),
+            Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean up old snapshots once', style: t.headlineSmall),
             const SizedBox(height: 4),
             Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Choose which snapshots to keep; older ones are removed to free up space. Locked snapshots and the newest snapshot of each data folder are always kept.',
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
@@ -355,7 +355,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
                 collapsedShape: const Border(),
                 leading: const Icon(Icons.tune),
                 title: const Text('Custom'),
-                subtitle: const Text('Set each rule yourself'),
+                subtitle: const Text('Set Each Rule Yourself'),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 children: [
                   _rule('keepLast', 'Latest snapshots', 'Always keep the newest few'),
@@ -388,7 +388,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
             if (!widget.forSchedule)
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Preview first'),
+              title: const Text('Preview First'),
               subtitle: const Text('Shows what would be removed in the job log. Nothing is deleted.'),
               value: _preview,
               onChanged: (v) => setState(() => _preview = v),
@@ -405,7 +405,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
           FilledButton.icon(
             onPressed: empty ? null : () => Navigator.pop(context, RetentionRequest(Map.of(_v), _preview)),
             icon: Icon(widget.forSchedule ? Icons.check : (_preview ? Icons.visibility_outlined : Icons.auto_delete_outlined)),
-            label: Text(widget.forSchedule ? 'Use this plan' : (_preview ? 'Preview cleanup' : 'Clean up now')),
+            label: Text(widget.forSchedule ? 'Use This Plan' : (_preview ? 'Preview cleanup' : 'Clean up now')),
           ),
         ]),
       ),
