@@ -8,7 +8,7 @@ import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import '../backups/jobs_page.dart';
 import '../backups/log_widgets.dart';
-import 'settings_page.dart';
+import 'configuration_page.dart';
 
 class AdminPage extends ConsumerWidget {
   const AdminPage({super.key});
