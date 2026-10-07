@@ -37,7 +37,7 @@ class _ConfigurationTabState extends ConsumerState<_ConfigurationTab> {
     final f = await formDialog(context, 'Wake-on-LAN', [
       FieldSpec('enabled', 'Enable Wake-on-LAN', kind: 'bool', initial: '$_enabled'),
       FieldSpec('url', 'Cloudflare Worker URL', initial: _brokerUrl),
-      FieldSpec('admin', 'Worker admin token', kind: 'secret', help: 'Leave blank to keep the existing token.'),
+      FieldSpec('admin', 'Worker admin token', kind: 'secret', hint: 'Leave blank to keep the existing token.'),
       FieldSpec('wake', 'Worker wake token', kind: 'secret', help: 'Leave blank to keep the existing token.'),
       FieldSpec('minutes', 'Wake before scheduled job (minutes)', initial: '$_wakeBeforeMinutes'),
     ], ok: 'Save');
@@ -93,7 +93,9 @@ class _ConfigurationTabState extends ConsumerState<_ConfigurationTab> {
               leading: const Icon(Icons.schedule),
               title: const Text('Automatic Wake'),
               subtitle: Text(_enabled
-                  ? 'The server will wake ${_wakeBeforeMinutes == 0 ? 'when' : '${_wakeBeforeMinutes minutes before'}'} a scheduled job needs it.'
+                  ? (_wakeBeforeMinutes == 0
+                      ? 'The server will wake when a scheduled job needs it.'
+                      : 'The server will wake $_wakeBeforeMinutes minutes before a scheduled job needs it.')
                   : 'Enable Wake-on-LAN to wake the server for scheduled jobs.'),
             ),
             ListTile(
