@@ -193,12 +193,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   if (_canJobs) FilledButton.icon(onPressed: () => startBackup(context, ref), icon: const Icon(Icons.backup_outlined), label: const Text('Backup Now')),
-                  FilledButton.tonalIcon(
+                  OutlinedButton.icon(
                     onPressed: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => const FilesPage()));
                       if (mounted) _load(); // usage may have changed while you were in Files
                     },
-                    icon: const Icon(Icons.upload_file_outlined),
+                    icon: const Icon(Icons.upload_file),
                     label: const Text('Upload'),
                   ),
                   OutlinedButton.icon(onPressed: () => widget.onNavigate?.call('Storage'), icon: const Icon(Icons.storage_outlined), label: const Text('Storage')),

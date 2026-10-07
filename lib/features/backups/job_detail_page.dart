@@ -290,7 +290,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                 Icon(Icons.error_outline, size: 20, color: cs.onErrorContainer),
                 const SizedBox(width: 12),
                 Expanded(child: SelectableText(err, style: TextStyle(color: cs.onErrorContainer))),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: Icon(Icons.copy_outlined, size: 18, color: cs.onErrorContainer), onPressed: () => copyText(context, err)),
+                _copyBtn(err, color: cs.onErrorContainer),
               ]),
             ),
           ],
@@ -318,12 +318,20 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         ),
       );
 
-  Widget _kv(String k, Widget v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 112, child: Text(k, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline))),
-          Expanded(child: v),
+  Widget _kv(String k, Widget v) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 36),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          SizedBox(width: 112, child: Text(k, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))),
+          Expanded(child: DefaultTextStyle.merge(style: Theme.of(context).textTheme.bodyMedium, child: v)),
         ]),
+      );
+
+  Widget _copyBtn(String v, {Color? color}) => IconButton(
+        tooltip: 'Copy',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+        icon: Icon(Icons.copy_outlined, size: 18, color: color),
+        onPressed: () => copyText(context, v),
       );
 
   Widget _stagesCard(RepoJob j) => _card('Progress', [
@@ -347,34 +355,19 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   Widget _detailsCard(RepoJob j) {
     Widget copyable(String v) => Row(children: [
           Expanded(child: SelectableText(v, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))),
-          IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: const Icon(Icons.copy_outlined, size: 18), onPressed: () => copyText(context, v)),
+          _copyBtn(v),
         ]);
     Widget namedId(String? name, String id) {
       final cs = Theme.of(context).colorScheme;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium),
-          Row(children: [
-            Expanded(
-              child: SelectableText(
-                id,
-                style: TextStyle(
-                  color: cs.onSurfaceVariant,
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: 'Copy',
-              icon: Icon(Icons.copy_outlined, size: 18, color: cs.onSurfaceVariant),
-              onPressed: () => copyText(context, id),
-            ),
+      return Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium),
+            SelectableText(id, style: TextStyle(color: cs.onSurfaceVariant, fontFamily: 'monospace', fontSize: 13)),
           ]),
-        ],
-      );
+        ),
+        _copyBtn(id, color: cs.onSurfaceVariant),
+      ]);
     }
     return _card('Details', [
       _kv('Job ID', copyable(j.id)),
@@ -420,7 +413,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       Widget? w;
       if (v == null || v == false || v == '' || (v is List && v.isEmpty) || (v is Map && v.isEmpty)) continue;
       if (v is List) {
-        w = Wrap(children: [for (final x in v) chip(context, '$x')]);
+        w = Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Wrap(spacing: 6, runSpacing: 6, children: [for (final x in v) chip(context, '$x', inline: true)]));
       } else if (v is Map) {
         final parts = v.entries.where((x) => x.value != null && x.value != 0 && x.value != false).map((x) => '${pretty('${x.key}')}: ${x.value}');
         if (parts.isEmpty) continue;
