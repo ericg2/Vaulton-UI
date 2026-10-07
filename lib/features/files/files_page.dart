@@ -361,7 +361,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     if (_points == null) return Scaffold(appBar: AppBar(title: const Text('Files')), body: const Center(child: CircularProgressIndicator()));
     if (_point == null) {
       return Scaffold(appBar: AppBar(title: const Text('Files')),
-          body: const EmptyView('No data folders yet.\nCreate one under Storage to start storing files.', icon: Icons.folder_off_outlined));
+          body: const EmptyView('No Data Folders Yet.\nCreate one under Storage to start storing files.', icon: Icons.folder_off_outlined));
     }
     final pt = _point!;
     final selecting = _sel.isNotEmpty;
