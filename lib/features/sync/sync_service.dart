@@ -234,16 +234,16 @@ Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, Sh
     onProgress?.call(status);
   }
 
-  final manifest = <String, SyncManifestEntry>{
-    for (final entry in plan.changes
-        .map((x) => x.source)
-        .whereType<SyncSourceEntry>()
-        .where((x) => !x.isDir))
-      entry.relative: SyncManifestEntry(
-        size: entry.size,
-        modified: entry.modified.millisecondsSinceEpoch,
-      ),
-  };
+  final manifest = loadSyncManifest(prefs, profile.id);
+  for (final entry in plan.changes
+      .map((x) => x.source)
+      .whereType<SyncSourceEntry>()
+      .where((x) => !x.isDir)) {
+    manifest[entry.relative] = SyncManifestEntry(
+      size: entry.size,
+      modified: entry.modified.millisecondsSinceEpoch,
+    );
+  }
   await saveSyncManifest(prefs, profile.id, manifest);
 
   status
