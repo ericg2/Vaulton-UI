@@ -159,7 +159,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     final selectedDestination = _selectedLabel == null ? null : dests.indexWhere((d) => d.label == _selectedLabel);
     final effectiveIndex = wide
-        ? (selectedDestination != null && selectedDestination >= 0 ? selectedDestination : _index.clamp(0, dests.length - 1))
+        ? (selectedDestination != null && selectedDestination >= 0 ? selectedDestination : _index.clamp(0, dests.length - 1).toInt())
         : (selectedDestination != null && selectedDestination >= 0 && selectedDestination < 4 ? selectedDestination : 4);
 
     if (!wide && _pages.hasClients && (_pages.page?.round() ?? -1) != effectiveIndex) {
