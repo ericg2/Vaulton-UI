@@ -675,7 +675,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       child: Icon(Icons.sync, color: cs.onPrimaryContainer, size: 28),
                     );
                     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Keep folders in sync', style: Theme.of(context).textTheme.headlineSmall),
+                      Text('Keep folders in sync', style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 4),
                       const Text('Automatically sync folders, and keep your data up-to-date.'),
                     ]);
@@ -766,6 +766,24 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             ),
           ]),
           const SizedBox(height: 12),
+          if (!p.enabled && st.message != null && st.error != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.errorContainer.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(st.error!, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: cs.onErrorContainer)),
+                  const SizedBox(height: 2),
+                  Text(st.message!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onErrorContainer)),
+                ])),
+              ]),
+            ),
           if (running) ...[
             Text(st.phase, style: Theme.of(context).textTheme.labelLarge),
             if (st.current != null) Text(st.current!, maxLines: 1, overflow: TextOverflow.ellipsis),
