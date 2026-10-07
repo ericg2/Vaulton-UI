@@ -60,8 +60,31 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        minimumSize: Size(0, isWin || isLinux ? 40 : 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         splashFactory: InkRipple.splashFactory,
         side: BorderSide(color: scheme.primary.withValues(alpha: 0.45)),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: Size(0, isWin || isLinux ? 40 : 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shape: isWin ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)) : null,
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        minimumSize: Size(0, isWin || isLinux ? 40 : 44),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        splashFactory: InkRipple.splashFactory,
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: Size.square(isWin || isLinux ? 40 : 48),
+        padding: EdgeInsets.zero,
+        splashFactory: InkRipple.splashFactory,
       ),
     ),
     dialogTheme: DialogThemeData(shape: shape),
