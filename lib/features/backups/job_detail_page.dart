@@ -178,11 +178,6 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     _refresh();
   }
 
-  Future<void> _delete(RepoJob j) async {
-    await guarded(context, () => _v.deleteJob(j.id));
-    if (mounted) Navigator.pop(context);
-  }
-
   Future<void> _openRepo(RepoJob j) async {
     final repo = await guarded(context, () => _v.repo(j.repoId));
     if (repo != null && mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: repo.id, repo: repo)));
@@ -207,7 +202,6 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           title: Text(j == null ? 'Job' : kindLabel(j.kind)),
           actions: [
             if (j != null && j.active) IconButton(tooltip: 'Cancel Job', icon: const Icon(Icons.stop_circle_outlined), onPressed: () => _cancel(j)),
-            if (j != null && !j.active && !widget.admin) IconButton(tooltip: 'Remove from History', icon: const Icon(Icons.delete_outline), onPressed: () => _delete(j)),
             IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _refresh),
           ],
           bottom: TabBar(tabs: [const Tab(text: 'Overview'), Tab(text: _log.isEmpty ? 'Log' : 'Log (${_log.length}${_hasOlder ? '+' : ''})')]),
