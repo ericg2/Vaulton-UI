@@ -119,7 +119,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final cap = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.maxBytes);
 
       final stats = [
-        _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data folders', () => widget.onNavigate?.call('Data Folders')),
+        _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data Folders', () => widget.onNavigate?.call('Data Folders')),
         _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup Vaults')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
@@ -213,7 +213,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         const SizedBox(height: 8),
                         Text('${fmtBytes(used)} used of ${fmtBytes(cap)} allocated', style: t.bodySmall),
                         const SizedBox(height: 2),
-                        Text('Total across all data folders and backup vaults you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                        Text('Total across all Data Folders and Backup Vaults you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         if (lastOk != null) ...[
                           const SizedBox(height: 4),
                           Text('Last successful backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700)),
@@ -237,10 +237,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 else
                   for (final j in d.jobs.where((j) => !j.active).take(5))
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('Show More')),
-                ),
+                if (d.jobs.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(onPressed: () => widget.onNavigate?.call('Activity'), child: const Text('Show More')),
+                  ),
               ]),
             ],
           ],
