@@ -1,118 +1,87 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const kSyncSettings = 'sync_settings';
-const kSyncStatus = 'sync_status';
-const kFolderPairs = 'folder_pairs';
+const kSyncProfiles = 'sync_profiles_v2';
+const kSyncRunPrefix = 'sync_run_v2_';
 
-class SyncSettings {
-  SyncSettings({
-    this.enabled = false,
-    this.pointId,
-    this.remoteDir = '/Camera Backup',
-    this.wifiOnly = true,
-    this.chargingOnly = false,
-    this.includeVideos = true,
-    this.organizeByDate = true,
-    this.intervalMinutes = 60,
-    List<String>? albumIds,
-  }) : albumIds = albumIds ?? [];
-
-  bool enabled, wifiOnly, chargingOnly, includeVideos, organizeByDate;
-  String? pointId;
-  String remoteDir;
-  int intervalMinutes;
-  List<String> albumIds; // empty = all photos
+class SyncProfile {
+  SyncProfile({
+    required this.id, required this.name, required this.sourceKind, required this.sourceLocation,
+    required this.sourceLabel, required this.pointId, required this.remoteDir,
+    this.enabled = true, this.deleteExtras = true, this.intervalMinutes = 60,
+    this.wifiOnly = true, this.chargingOnly = false, this.lastRun = 0, this.nextRun = 0,
+  });
+  final String id, name, sourceKind, sourceLocation, sourceLabel, pointId, remoteDir;
+  bool enabled, deleteExtras, wifiOnly, chargingOnly;
+  int intervalMinutes, lastRun, nextRun;
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled, 'pointId': pointId, 'remoteDir': remoteDir, 'wifiOnly': wifiOnly,
-        'chargingOnly': chargingOnly, 'includeVideos': includeVideos, 'organizeByDate': organizeByDate,
-        'intervalMinutes': intervalMinutes, 'albumIds': albumIds,
-      };
+    'id': id, 'name': name, 'sourceKind': sourceKind, 'sourceLocation': sourceLocation,
+    'sourceLabel': sourceLabel, 'pointId': pointId, 'remoteDir': remoteDir,
+    'enabled': enabled, 'deleteExtras': deleteExtras, 'intervalMinutes': intervalMinutes,
+    'wifiOnly': wifiOnly, 'chargingOnly': chargingOnly, 'lastRun': lastRun, 'nextRun': nextRun,
+  };
 
-  factory SyncSettings.fromJson(Map<String, dynamic> j) => SyncSettings(
-        enabled: j['enabled'] ?? false,
-        pointId: j['pointId'],
-        remoteDir: j['remoteDir'] ?? '/Camera Backup',
-        wifiOnly: j['wifiOnly'] ?? true,
-        chargingOnly: j['chargingOnly'] ?? false,
-        includeVideos: j['includeVideos'] ?? true,
-        organizeByDate: j['organizeByDate'] ?? true,
-        intervalMinutes: j['intervalMinutes'] ?? 60,
-        albumIds: List<String>.from(j['albumIds'] ?? const []),
-      );
+  factory SyncProfile.fromJson(Map<String, dynamic> j) => SyncProfile(
+    id: '${j['id']}', name: '${j['name'] ?? 'Folder Sync'}',
+    sourceKind: '${j['sourceKind'] ?? 'path'}', sourceLocation: '${j['sourceLocation'] ?? ''}',
+    sourceLabel: '${j['sourceLabel'] ?? j['sourceLocation'] ?? 'Source Folder'}',
+    pointId: '${j['pointId']}', remoteDir: '${j['remoteDir'] ?? '/'}',
+    enabled: j['enabled'] ?? true, deleteExtras: j['deleteExtras'] ?? true,
+    intervalMinutes: j['intervalMinutes'] ?? 60, wifiOnly: j['wifiOnly'] ?? true,
+    chargingOnly: j['chargingOnly'] ?? false, lastRun: j['lastRun'] ?? 0, nextRun: j['nextRun'] ?? 0,
+  );
 
-  static SyncSettings load(SharedPreferences p) {
-    final raw = p.getString(kSyncSettings);
-    if (raw == null) return SyncSettings();
-    try {
-      return SyncSettings.fromJson(Map<String, dynamic>.from(jsonDecode(raw)));
-    } catch (_) {
-      return SyncSettings();
-    }
-  }
-
-  Future<void> save(SharedPreferences p) => p.setString(kSyncSettings, jsonEncode(toJson()));
-}
-
-class SyncStatus {
-  SyncStatus({this.running = false, this.uploaded = 0, this.skipped = 0, this.failed = 0, this.current,
-      this.error, this.updatedAt = 0, this.lastRun = 0, this.more = false, this.totalSynced = 0});
-  bool running, more;
-  int uploaded, skipped, failed, updatedAt, lastRun, totalSynced;
-  String? current, error;
-
-  Map<String, dynamic> toJson() => {
-        'running': running, 'uploaded': uploaded, 'skipped': skipped, 'failed': failed, 'current': current,
-        'error': error, 'updatedAt': updatedAt, 'lastRun': lastRun, 'more': more, 'totalSynced': totalSynced,
-      };
-
-  factory SyncStatus.fromJson(Map<String, dynamic> j) => SyncStatus(
-        running: j['running'] ?? false, uploaded: j['uploaded'] ?? 0, skipped: j['skipped'] ?? 0,
-        failed: j['failed'] ?? 0, current: j['current'], error: j['error'], updatedAt: j['updatedAt'] ?? 0,
-        lastRun: j['lastRun'] ?? 0, more: j['more'] ?? false, totalSynced: j['totalSynced'] ?? 0);
-
-  static SyncStatus load(SharedPreferences p) {
-    final raw = p.getString(kSyncStatus);
-    if (raw == null) return SyncStatus();
-    try {
-      return SyncStatus.fromJson(Map<String, dynamic>.from(jsonDecode(raw)));
-    } catch (_) {
-      return SyncStatus();
-    }
-  }
-
-  Future<void> save(SharedPreferences p) {
-    updatedAt = DateTime.now().millisecondsSinceEpoch;
-    return p.setString(kSyncStatus, jsonEncode(toJson()));
-  }
-
-  bool get isLive => running && DateTime.now().millisecondsSinceEpoch - updatedAt < 60000;
-}
-
-/// A local folder mirrored (one-way, upload) into a data point. Desktop only.
-class FolderPair {
-  FolderPair({required this.id, required this.localDir, required this.pointId, required this.remoteDir,
-      this.enabled = true, this.intervalMinutes = 15, this.lastRun = 0});
-  final String id, localDir, pointId, remoteDir;
-  bool enabled;
-  int intervalMinutes, lastRun;
-
-  Map<String, dynamic> toJson() => {'id': id, 'localDir': localDir, 'pointId': pointId, 'remoteDir': remoteDir,
-        'enabled': enabled, 'intervalMinutes': intervalMinutes, 'lastRun': lastRun};
-  factory FolderPair.fromJson(Map<String, dynamic> j) => FolderPair(id: j['id'], localDir: j['localDir'], pointId: j['pointId'],
-      remoteDir: j['remoteDir'], enabled: j['enabled'] ?? true, intervalMinutes: j['intervalMinutes'] ?? 15, lastRun: j['lastRun'] ?? 0);
-
-  static List<FolderPair> loadAll(SharedPreferences p) {
-    final raw = p.getString(kFolderPairs);
+  static List<SyncProfile> loadAll(SharedPreferences p) {
+    final raw = p.getString(kSyncProfiles);
     if (raw == null) return [];
-    try {
-      return [for (final j in jsonDecode(raw) as List) FolderPair.fromJson(Map<String, dynamic>.from(j))];
-    } catch (_) {
-      return [];
-    }
+    try { return [for (final j in jsonDecode(raw) as List) SyncProfile.fromJson(Map<String, dynamic>.from(j))]; }
+    catch (_) { return []; }
   }
 
-  static Future<void> saveAll(SharedPreferences p, List<FolderPair> l) =>
-      p.setString(kFolderPairs, jsonEncode([for (final f in l) f.toJson()]));
+  static Future<void> saveAll(SharedPreferences p, List<SyncProfile> profiles) =>
+      p.setString(kSyncProfiles, jsonEncode([for (final x in profiles) x.toJson()]));
+}
+
+class SyncRunStatus {
+  SyncRunStatus({
+    this.running = false, this.phase = 'Idle', this.current, this.scannedSource = 0,
+    this.scannedDestination = 0, this.totalFiles = 0, this.totalBytes = 0, this.newFiles = 0,
+    this.updatedFiles = 0, this.deletedFiles = 0, this.unchangedFiles = 0, this.completed = 0,
+    this.failed = 0, this.bytesDone = 0, this.bytesTotal = 0, this.startedAt = 0,
+    this.finishedAt = 0, this.error, this.message,
+  });
+  bool running;
+  String phase;
+  String? current, error, message;
+  int scannedSource, scannedDestination, totalFiles, totalBytes, newFiles, updatedFiles, deletedFiles;
+  int unchangedFiles, completed, failed, bytesDone, bytesTotal, startedAt, finishedAt;
+
+  Map<String, dynamic> toJson() => {
+    'running': running, 'phase': phase, 'current': current, 'error': error, 'message': message,
+    'scannedSource': scannedSource, 'scannedDestination': scannedDestination,
+    'totalFiles': totalFiles, 'totalBytes': totalBytes, 'newFiles': newFiles,
+    'updatedFiles': updatedFiles, 'deletedFiles': deletedFiles, 'unchangedFiles': unchangedFiles,
+    'completed': completed, 'failed': failed, 'bytesDone': bytesDone, 'bytesTotal': bytesTotal,
+    'startedAt': startedAt, 'finishedAt': finishedAt,
+  };
+
+  factory SyncRunStatus.fromJson(Map<String, dynamic> j) => SyncRunStatus(
+    running: j['running'] ?? false, phase: '${j['phase'] ?? 'Idle'}', current: j['current'],
+    error: j['error'], message: j['message'], scannedSource: j['scannedSource'] ?? 0,
+    scannedDestination: j['scannedDestination'] ?? 0, totalFiles: j['totalFiles'] ?? 0,
+    totalBytes: j['totalBytes'] ?? 0, newFiles: j['newFiles'] ?? 0, updatedFiles: j['updatedFiles'] ?? 0,
+    deletedFiles: j['deletedFiles'] ?? 0, unchangedFiles: j['unchangedFiles'] ?? 0,
+    completed: j['completed'] ?? 0, failed: j['failed'] ?? 0, bytesDone: j['bytesDone'] ?? 0,
+    bytesTotal: j['bytesTotal'] ?? 0, startedAt: j['startedAt'] ?? 0, finishedAt: j['finishedAt'] ?? 0,
+  );
+
+  static SyncRunStatus load(SharedPreferences p, String id) {
+    final raw = p.getString('$kSyncRunPrefix$id');
+    if (raw == null) return SyncRunStatus();
+    try { return SyncRunStatus.fromJson(Map<String, dynamic>.from(jsonDecode(raw))); } catch (_) { return SyncRunStatus(); }
+  }
+
+  Future<void> save(SharedPreferences p, String id) =>
+      p.setString('$kSyncRunPrefix$id', jsonEncode(toJson()));
 }

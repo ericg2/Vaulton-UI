@@ -1,0 +1,1 @@
+export 'sync_source_stub.dart' if (dart.library.io) 'sync_source_io.dart';
