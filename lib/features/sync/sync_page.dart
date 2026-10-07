@@ -126,7 +126,9 @@ class _RootWarning extends StatelessWidget {
 }
 
 class SyncPage extends ConsumerStatefulWidget {
-  const SyncPage({super.key});
+  const SyncPage({super.key, this.settingsSyncId});
+
+  final String? settingsSyncId;
   @override ConsumerState<SyncPage> createState() => _SyncPageState();
 }
 
@@ -173,6 +175,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         _points = points;
         for (final p in profiles) _status[p.id] = SyncRunStatus.load(prefs, p.id);
       });
+      await _openRequestedSettings(profiles);
     } catch (_) {
       if (mounted) setState(() => _profiles = profiles);
     }
@@ -186,6 +189,22 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       _profiles = SyncProfile.loadAll(prefs);
       for (final p in _profiles) _status[p.id] = SyncRunStatus.load(prefs, p.id);
     });
+  }
+
+  Future<void> _openRequestedSettings(List<SyncProfile> profiles) async {
+    final id = widget.settingsSyncId;
+    if (id == null) return;
+    final profile = profiles.where((p) => p.id == id).firstOrNull;
+    if (profile == null || !mounted) return;
+    final source = SyncSourceInfo(kind: profile.sourceKind, location: profile.sourceLocation, label: profile.sourceLabel);
+    final updated = await _configure(profile, source);
+    if (updated == null || !mounted) return;
+    final i = _profiles.indexWhere((p) => p.id == profile.id);
+    if (i < 0) return;
+    _profiles[i] = updated;
+    await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+    await configureSyncSchedules(_profiles);
+    if (mounted) setState(() {});
   }
 
   Future<void> _add() async {
