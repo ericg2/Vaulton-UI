@@ -321,7 +321,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   chargingOnly: chargingOnly,
                   lastRun: existing?.lastRun ?? 0,
                   nextRun: existing?.nextRun ?? (DateTime.now().millisecondsSinceEpoch + interval * 60000),
-                )),
+                )));
               },
               child: const Text('Save'),
             ),
