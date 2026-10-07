@@ -390,7 +390,22 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       setState(() => _plans[p.id] = plan);
       await _showPlan(p, plan);
     } catch (e) {
-      if (mounted) toast(context, e.toString(), error: true);
+      final error = e.toString();
+      if (error.toLowerCase().contains('source folder is no longer available')) {
+        p.enabled = false;
+        final status = SyncRunStatus(
+          phase: 'Failed',
+          error: 'Source folder is unavailable.',
+          message: 'Sync paused. Choose the source folder again to resume.',
+          finishedAt: DateTime.now().millisecondsSinceEpoch,
+        );
+        await status.save(ref.read(prefsProvider), p.id);
+        await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+        await configureSyncSchedules(_profiles);
+        if (mounted) setState(() => _status[p.id] = status);
+      } else if (mounted) {
+        toast(context, error, error: true);
+      }
     }
   }
 
