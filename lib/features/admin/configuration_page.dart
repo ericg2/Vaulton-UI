@@ -38,7 +38,7 @@ class _ConfigurationTabState extends ConsumerState<_ConfigurationTab> {
       FieldSpec('enabled', 'Enable Wake-on-LAN', kind: 'bool', initial: '$_enabled'),
       FieldSpec('url', 'Cloudflare Worker URL', initial: _brokerUrl),
       FieldSpec('admin', 'Worker admin token', kind: 'secret', hint: 'Leave blank to keep the existing token.'),
-      FieldSpec('wake', 'Worker wake token', kind: 'secret', help: 'Leave blank to keep the existing token.'),
+      FieldSpec('wake', 'Worker wake token', kind: 'secret', hint: 'Leave blank to keep the existing token.'),
       FieldSpec('minutes', 'Wake before scheduled job (minutes)', initial: '$_wakeBeforeMinutes'),
     ], ok: 'Save');
 
