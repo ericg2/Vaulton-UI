@@ -17,6 +17,7 @@ class SyncSourceEntry {
 abstract class SyncSource {
   Future<List<SyncSourceEntry>> scan();
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry);
+  Future<void> delete(SyncSourceEntry entry);
 }
 class _PathSource implements SyncSource {
   _PathSource(this.root);
