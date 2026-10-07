@@ -413,7 +413,6 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                             label: Text('Open $repoName'),
                           ),
                       ]),
-                    ]),
                   ),
                 ),
               );
