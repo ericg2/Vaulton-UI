@@ -37,7 +37,7 @@ To pick up newer package releases later: `flutter pub upgrade --major-versions`.
 * Downloads are stored in the app's own storage (scoped storage forbids writing to arbitrary folders). Open a finished
   download from the Transfers tab to view, share or save it elsewhere. Folder upload and the custom download folder are
   desktop-only for the same reason.
-* `applicationId` is still `com.example.vaulton`; change it (and the `MainActivity` package) before publishing.
+* The Android application ID is `com.ericg2.vaulton`.
 
 ## Features
 
