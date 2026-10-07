@@ -19,7 +19,7 @@ import 'share_logic.dart';
 class StoragePage extends StatefulWidget {
   const StoragePage({super.key, this.initialTab = 0, this.onBoundarySwipe});
   final int initialTab;
-  final VoidCallback? onBoundarySwipe;
+  final ValueChanged<int>? onBoundarySwipe;
   @override
   State<StoragePage> createState() => _StoragePageState();
 }
@@ -44,7 +44,7 @@ class _StoragePageState extends State<StoragePage> {
           if (direction != _lastBoundaryDirection || now.difference(_lastBoundaryAt) > const Duration(milliseconds: 500)) {
             _lastBoundaryDirection = direction;
             _lastBoundaryAt = now;
-            widget.onBoundarySwipe?.call();
+            widget.onBoundarySwipe?.call(direction);
           }
           return false;
         }, child: const TabBarView(children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)])),
