@@ -285,13 +285,40 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
 }
 
 // -------------------------------------------------------------------- vfs
-class _VfsTab extends ConsumerWidget {
+class _VfsTab extends ConsumerStatefulWidget {
   const _VfsTab();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_VfsTab> createState() => _VfsTabState();
+}
+
+class _VfsTabState extends ConsumerState<_VfsTab> {
+  final _key = GlobalKey<CursorListState<Json>>();
+
+  Future<void> _resetQuota(Json p) async {
+    final user = '${p['user']}';
+    final pointId = '${p['pointId']}';
+    final pointName = '${p['name']}';
+    final ok = await confirm(
+      context,
+      'Reset Quota Usage?',
+      'This is a serious administrative action. It will set Vaulton’s tracked quota usage for "$pointName" owned by "$user" to 0 bytes. It does not delete remote data. Only use this after the remote data has actually been deleted and the tracked usage is stale.',
+      ok: 'Reset Usage',
+      danger: true,
+    );
+    if (!ok || !mounted) return;
+
+    await guarded(context, () => ref.read(vaultonProvider).resetQuota(user, pointId));
+    if (!mounted) return;
+    await _key.currentState?.refresh();
+    if (mounted) toast(context, 'Quota usage reset for $pointName');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final v = ref.read(vaultonProvider);
     return CursorList<Json>(
-      empty: 'No points',
+      key: _key,
+      empty: 'No Points',
       fetch: (c) => v.vfs(cursor: c),
       itemBuilder: (ctx, p, i) {
         final err = toStr(p['error']);
@@ -299,6 +326,7 @@ class _VfsTab extends ConsumerWidget {
         final updatedRaw = p['healthUpdatedAt'] ?? p['updatedAt'] ?? p['updated'] ?? p['lastHealthCheck'];
         final updated = updatedRaw == null ? null : toDate(updatedRaw);
         final cs = Theme.of(ctx).colorScheme;
+        final remote = toBool(p['remote']);
         return Card(
           child: ListTile(
             leading: Icon(err != null ? Icons.error_outline : Icons.storage_outlined, color: err != null ? cs.error : null),
@@ -306,19 +334,34 @@ class _VfsTab extends ConsumerWidget {
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Wrap(spacing: 6, runSpacing: 4, children: [
                 chip(ctx, '${p['user']}'),
+                chip(ctx, remote ? 'Remote' : 'Local'),
                 chip(ctx, updated == null ? health : '$health · ${fmtDate(updated)}', color: err != null ? cs.errorContainer : null),
               ]),
               const SizedBox(height: 4),
-              Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'read/write' : 'read-only'}${err != null ? '\n$err' : ''}'),
+              Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Read/Write' : 'Read-Only'}${err != null ? '\\n$err' : ''}'),
             ]),
             isThreeLine: true,
-            trailing: IconButton(
-              tooltip: 'Reload User VFS',
-              icon: const Icon(Icons.refresh),
-              onPressed: () async {
-                await guarded(ctx, () => v.reloadVfs('${p['user']}'));
-                if (ctx.mounted) toast(ctx, 'Reloaded ${p['user']}');
-              },
+            trailing: Wrap(
+              spacing: 2,
+              children: [
+                if (remote)
+                  IconButton(
+                    tooltip: 'Reset Quota Usage',
+                    icon: const Icon(Icons.restart_alt),
+                    onPressed: () => _resetQuota(p),
+                  ),
+                IconButton(
+                  tooltip: 'Reload User VFS',
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () async {
+                    await guarded(ctx, () => v.reloadVfs('${p['user']}'));
+                    if (ctx.mounted) {
+                      await _key.currentState?.refresh();
+                      toast(ctx, 'Reloaded ${p['user']}');
+                    }
+                  },
+                ),
+              ],
             ),
           ),
         );
