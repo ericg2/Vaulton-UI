@@ -72,6 +72,7 @@ List<TimelineEntry> buildTimeline(Iterable<RepoJob> jobs, Iterable<Snapshot> sna
 }
 
 const _filters = ['Backups', 'Other Activity', 'Failed', 'All'];
+const _snapshotFilters = ['All', 'Locked', 'Unlocked'];
 
 class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
   const _TimelineFilterDelegate(this.child);
@@ -90,12 +91,13 @@ class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
 /// The "History" tab. Backups come first by default; restores, cleanups and
 /// health checks live under "Other activity".
 class VaultTimeline extends ConsumerStatefulWidget {
-  const VaultTimeline({super.key, required this.repoId, required this.repo, required this.onBackup, this.header, this.showFab = true});
+  const VaultTimeline({super.key, required this.repoId, required this.repo, required this.onBackup, this.header, this.showFab = true, this.snapshotOnly = false});
   final String repoId;
   final Point? repo;
   final VoidCallback onBackup;
   final Widget? header;
   final bool showFab;
+  final bool snapshotOnly;
   @override
   ConsumerState<VaultTimeline> createState() => _VaultTimelineState();
 }
@@ -186,6 +188,15 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
 
   bool _match(TimelineEntry e) {
     final j = e.job;
+    if (widget.snapshotOnly) {
+      final s = e.snap;
+      if (s == null) return false;
+      switch (_filter) {
+        case 1: return s.locked;
+        case 2: return !s.locked;
+        default: return true;
+      }
+    }
     switch (_filter) {
       case 0: return e.snap != null || j?.kind == 'backup';
       case 1: return j != null && j.kind != 'backup';
@@ -237,10 +248,10 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   Widget _filterBar() => SizedBox(
         height: 52,
         child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(12, 8, 12, 8), children: [
-          for (var i = 0; i < _filters.length; i++)
+          for (var i = 0; i < (widget.snapshotOnly ? _snapshotFilters : _filters).length; i++)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(label: Text(_filters[i]), selected: _filter == i, onSelected: (_) => setState(() => _filter = i)),
+              child: ChoiceChip(label: Text(widget.snapshotOnly ? _snapshotFilters[i] : _filters[i]), selected: _filter == i, onSelected: (_) => setState(() => _filter = i)),
             ),
         ]),
       );
@@ -277,7 +288,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   Widget _card(TimelineEntry e, Map<String, String> names) {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
-    final j = e.job, s = e.snap;
+    final j = widget.snapshotOnly ? null : e.job, s = e.snap;
     final phase = j?.phase ?? JobPhase.succeeded;
     final st = phaseStyle(context, phase);
     final dry = j?.options['dryRun'] == true;
@@ -412,14 +423,14 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     final entries = all.where(_match).toList();
     final hasHeader = widget.header != null;
     final more = _jobMore || _snapMore;
-    final busy = _filter == 0 ? _jobs.values.where((j) => j.active && j.kind != 'backup').firstOrNull : null;
+    final busy = !widget.snapshotOnly && _filter == 0 ? _jobs.values.where((j) => j.active && j.kind != 'backup').firstOrNull : null;
 
     Widget emptySlot() {
       if (_loading) return const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()));
       if (_error != null && all.isEmpty) return SizedBox(height: 260, child: ErrorView(_error!, onRetry: () => _load(spinner: true, replace: true)));
       final msg = all.isEmpty
-          ? 'No history yet'
-          : (_filter == 0 ? 'No backups yet' : (_filter == 1 ? 'No other activity' : 'Nothing failed'));
+          ? (widget.snapshotOnly ? 'No snapshots yet' : 'No history yet')
+          : (widget.snapshotOnly ? (_filter == 1 ? 'No locked snapshots' : (_filter == 2 ? 'No unlocked snapshots' : 'No snapshots yet')) : (_filter == 0 ? 'No backups yet' : (_filter == 1 ? 'No other activity' : 'Nothing failed')));
       return SizedBox(
         height: 220,
         child: EmptyView(msg, icon: Icons.history, hint: all.isEmpty ? 'Run a backup and it will show up here, together with its snapshot.' : null),
@@ -465,7 +476,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                           child: Center(
                             child: _loadingMore
                                 ? const CircularProgressIndicator(strokeWidth: 2)
-                                : TextButton.icon(onPressed: _more, icon: const Icon(Icons.expand_more), label: const Text('Load older history')),
+                                : TextButton.icon(onPressed: _more, icon: const Icon(Icons.expand_more), label: Text(widget.snapshotOnly ? 'Load older snapshots' : 'Load older history')),
                           ),
                         );
                       }

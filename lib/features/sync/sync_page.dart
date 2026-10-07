@@ -780,7 +780,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(_frequencyLabel(p.intervalMinutes)),
               _chip(p.deleteExtras ? 'Mirror Exactly' : 'Keep Destination Extras'),
-              if (p.nextRun > 0) _chip('Next Run ' + fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))),
+              if (p.nextRun > 0) _chip('Next Run: ' + fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))),
             ]),
             const SizedBox(height: 8),
             if (st.finishedAt > 0)
@@ -808,7 +808,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               ),
           ],
           const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+          Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
             FilledButton.tonalIcon(
               onPressed: running ? null : () => _run(p),
               icon: const Icon(Icons.sync),

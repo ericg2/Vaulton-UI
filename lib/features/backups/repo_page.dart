@@ -18,9 +18,7 @@ const double _kWideWidth = 840;
 const double _kSidebarWidth = 400;
 const double _kMaxWide = 1280;
 
-/// One backup vault. Two tabs:
-///  * History: every run (backup, restore, maintenance) joined to its snapshot.
-///  * Automation: schedules and automatic cleanup.
+/// One backup vault. Activity, snapshots, and automation each have a focused view.
 class RepoPage extends ConsumerStatefulWidget {
   const RepoPage({super.key, required this.repoId, this.repo, this.initialTab = 0});
   final String repoId;
@@ -39,7 +37,7 @@ class RepoPage extends ConsumerStatefulWidget {
 
 class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderStateMixin {
   final _cleanupKey = GlobalKey<CleanupCardState>();
-  late final TabController _tc = TabController(length: 2, vsync: this, initialIndex: widget.initialTab >= 2 ? 1 : 0);
+  late final TabController _tc = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.clamp(0, 2));
   Point? _repo;
   Timer? _usageTimer;
   Vaulton get _v => ref.read(vaultonProvider);
@@ -196,7 +194,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         indicatorSize: TabBarIndicatorSize.tab,
         labelPadding: const EdgeInsets.symmetric(horizontal: 8),
         padding: EdgeInsets.zero,
-        tabs: const [Tab(text: 'History'), Tab(text: 'Automation')],
+        tabs: const [Tab(text: 'Activity'), Tab(text: 'Snapshots'), Tab(text: 'Automation')],
       );
 
   @override
@@ -210,6 +208,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         appBar: AppBar(title: title, actions: [_menu()], bottom: _tabs()),
         body: TabBarView(controller: _tc, children: [
           VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, header: _summary()),
+          VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true),
           _automation(),
         ]),
       );
@@ -228,6 +227,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                 Expanded(
                   child: TabBarView(controller: _tc, children: [
                     VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false),
+                    VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true, showFab: false),
                     _automation(),
                   ]),
                 ),

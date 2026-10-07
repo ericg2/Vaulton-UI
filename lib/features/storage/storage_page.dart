@@ -326,8 +326,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               label: const Text('Browse'),
             ),
             FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup Here')),
-            OutlinedButton.icon(onPressed: () => _openRepo(p), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Snapshots')),
-            OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 1), icon: const Icon(Icons.work_history_outlined), label: const Text('Jobs')),
+            OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 1), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Snapshots')),
+            OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 0), icon: const Icon(Icons.work_history_outlined), label: const Text('Jobs')),
             OutlinedButton.icon(onPressed: () => _openRepo(p, tab: 2), icon: const Icon(Icons.schedule), label: const Text('Schedules')),
           ]
         : <Widget>[
