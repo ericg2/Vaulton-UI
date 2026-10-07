@@ -210,9 +210,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
                 key: _key,
                 child: AutofillGroup(
@@ -229,8 +229,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                           child: AnimatedBuilder(
                             animation: _breath,
                             builder: (_, child) => Container(
-                              width: 88,
-                              height: 88,
+                              width: 72,
+                              height: 72,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: cs.primaryContainer,
@@ -238,16 +238,16 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                               ),
                               child: child,
                             ),
-                            child: Icon(Icons.lock_outline_rounded, size: 44, color: cs.onPrimaryContainer),
+                            child: Icon(Icons.lock_outline_rounded, size: 36, color: cs.onPrimaryContainer),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                     _stagger(1, Text('Vaulton', textAlign: TextAlign.center, style: t.headlineMedium)),
                     const SizedBox(height: 4),
                     _stagger(1, Text('Sign in to your server', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant))),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
                     _stagger(2, AnimatedSize(duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic, alignment: Alignment.topCenter, child: _recent(cs))),
                     AnimatedSize(
                       duration: const Duration(milliseconds: 250),
@@ -414,7 +414,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                               ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                     _stagger(
                       8,
                       FilledButton(
