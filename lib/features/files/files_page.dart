@@ -16,6 +16,7 @@ import '../../platform/local_files.dart';
 import '../transfers/download_sheet.dart';
 import '../transfers/transfer_manager.dart';
 import '../sync/sync_models.dart';
+import '../sync/sync_page.dart';
 import '../transfers/transfer_models.dart';
 import '../transfers/transfers_page.dart';
 import 'file_ops.dart';
@@ -494,31 +495,37 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                           final status = SyncRunStatus.load(ref.read(prefsProvider), sync.id);
                           final error = status.error;
                           final cs = Theme.of(context).colorScheme;
-                          return Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                            decoration: BoxDecoration(
-                              color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
-                              borderRadius: BorderRadius.circular(10),
+                          return InkWell(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => SyncPage(settingsSyncId: sync.id)),
                             ),
-                            child: Row(children: [
-                              Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  error != null ? 'Sync Error: $error' : 'Sync Folder · ${sync.name}',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer,
-                                    fontWeight: FontWeight.w600,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(children: [
+                                Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    error != null ? 'Sync Error: $error' : 'Sync Folder · undefined',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ]),
-                          );
-                        },
+                              ]),
+                            ),
+                          );                        },
                       ),
                     Expanded(
                       child: CursorList<Node>(
