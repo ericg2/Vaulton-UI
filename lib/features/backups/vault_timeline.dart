@@ -288,13 +288,13 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   Widget _card(TimelineEntry e, Map<String, String> names) {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
-    final j = widget.snapshotOnly ? null : e.job, s = e.snap;
+    final j = e.job, s = e.snap;
     final phase = j?.phase ?? JobPhase.succeeded;
     final st = phaseStyle(context, phase);
     final dry = j?.options['dryRun'] == true;
     final isBackup = j == null || j.kind == 'backup';
     final okBackup = j != null && isBackup && phase == JobPhase.succeeded && !dry;
-    final title = j == null ? 'Backup' : '${kindLabel(j.kind)}${dry ? ' · test run' : ''}';
+    final title = widget.snapshotOnly ? 'Snapshot' : (j == null ? 'Backup' : '${kindLabel(j.kind)}${dry ? ' · test run' : ''}');
     final dur = j?.duration;
     final meta = [
       fmtDate(e.time),
@@ -327,12 +327,18 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     final indent = MediaQuery.sizeOf(context).width >= 600 ? 52.0 : 0.0;
 
     final pills = <Widget>[
-      if (browseId != null) _pill('Snapshot ${shortId(browseId)}', mono: true),
+      if (widget.snapshotOnly && s != null) _pill('Snapshot ID  ${shortId(s.id)}', mono: true, bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
+      if (!widget.snapshotOnly && browseId != null) _pill('Snapshot ${shortId(browseId)}', mono: true),
       if (s != null && s.locked) const SnapshotLockBadge(),
       if (s != null) for (final tg in s.tags) _pill('#$tg'),
     ];
 
     return Card(
+      margin: widget.snapshotOnly ? const EdgeInsets.fromLTRB(12, 6, 12, 6) : null,
+      shape: widget.snapshotOnly
+          ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: cs.primary.withValues(alpha: 0.28)))
+          : null,
+      color: widget.snapshotOnly ? cs.surfaceContainerLow : null,
       child: InkWell(
         onTap: j != null ? () => _openJob(j) : (browseId != null ? () => _browse(browseId) : null),
         child: Padding(
@@ -377,6 +383,10 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                 if (what != null && what.isNotEmpty) Text(what, style: t.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                 if (result != null) ...[const SizedBox(height: 4), Text(result, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
                 if (note != null) ...[const SizedBox(height: 4), Text(note, style: t.bodySmall?.copyWith(color: cs.outline))],
+                if (widget.snapshotOnly && j != null) ...[
+                  const SizedBox(height: 4),
+                  Text('${j.kind == 'backup' ? 'Backup Job' : kindLabel(j.kind)} · ${j.id.substring(0, j.id.length.clamp(0, 8))}', style: t.bodySmall?.copyWith(color: cs.outline, fontFamily: 'monospace')),
+                ],
                 if (j != null && phase == JobPhase.running) ...[
                   const SizedBox(height: 10),
                   ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: j.liveFraction, minHeight: 6)),
@@ -401,8 +411,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                       TextButton.icon(
                         style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id, showVaultLink: false, initialTab: 1))),
-                        icon: const Icon(Icons.notes, size: 18),
-                        label: const Text('Job Log'),
+                        icon: const Icon(Icons.work_history_outlined, size: 18),
+                        label: Text(widget.snapshotOnly ? 'View Job' : 'Job Log'),
                       ),
                   ]),
                 ] else
