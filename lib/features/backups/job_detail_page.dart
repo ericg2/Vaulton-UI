@@ -31,6 +31,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   Object? _error;
   Timer? _timer;
   bool _busy = false;
+  String? _repoName, _dataName;
+  String? _loadedContextJobId;
 
   // log state, newest first
   final List<JobMessage> _log = [];
@@ -69,11 +71,37 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         _job = j;
         _error = null;
       });
+      if (_loadedContextJobId != j.id) {
+        _loadedContextJobId = j.id;
+        await _loadContext(j);
+      }
       await _refreshLog(j);
     } catch (e) {
       if (mounted) setState(() => _error = e);
     } finally {
       _busy = false;
+    }
+  }
+
+  Future<void> _loadContext(RepoJob j) async {
+    try {
+      final results = await Future.wait([
+        _v.repo(j.repoId),
+        if (j.dataId != null) _v.datas(search: j.dataId, limit: 100),
+      ]);
+      if (!mounted) return;
+      final repo = results[0] as Point;
+      Point? data;
+      if (j.dataId != null && results.length > 1) {
+        final pg = results[1] as Paged<Point>;
+        data = pg.items.where((p) => p.id == j.dataId).firstOrNull;
+      }
+      setState(() {
+        _repoName = repo.name;
+        _dataName = data?.name;
+      });
+    } catch (_) {
+      // Names are supplementary; the IDs remain available if lookup fails.
     }
   }
 
@@ -315,14 +343,24 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           Expanded(child: SelectableText(v, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))),
           IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: const Icon(Icons.copy, size: 16), onPressed: () => copyText(context, v)),
         ]);
+    Widget namedId(String? name, String id) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium),
+            copyable(id),
+          ],
+        );
     return _card('Details', [
       _kv('Job ID', copyable(j.id)),
-      _kv('Backup vault', copyable(j.repoId)),
-      if (j.dataId != null) _kv('Data point', copyable(j.dataId!)),
+      _kv('Job Type', Text(kindLabel(j.kind))),
+      _kv('Status', Text(phaseStyle(context, j.phase).label)),
+      _kv('Backup Vault', namedId(_repoName, j.repoId)),
+      if (j.dataId != null) _kv('Data Point', namedId(_dataName, j.dataId!)),
       if (j.scheduleId != null) _kv('Schedule', copyable(j.scheduleId!)),
       if (j.snapshotId != null) _kv('Snapshot', copyable(j.snapshotId!)),
+      if (j.options['dryRun'] == true) _kv('Test Run', const Text('Yes')),
       _kv('Created', Text(fmtDate(j.createdAt))),
-      if (j.scheduleDate != null) _kv('Not before', Text(fmtDate(j.scheduleDate))),
+      if (j.scheduleDate != null) _kv('Not Before', Text(fmtDate(j.scheduleDate))),
       if (j.startDate != null) _kv('Started', Text(fmtDate(j.startDate))),
       if (j.endDate != null) _kv('Finished', Text(fmtDate(j.endDate))),
       if (j.duration != null) _kv('Duration', Text(fmtDuration(j.duration!))),
