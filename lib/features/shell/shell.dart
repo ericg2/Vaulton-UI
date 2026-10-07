@@ -38,6 +38,7 @@ class HomeShell extends ConsumerStatefulWidget {
 
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
+  String? _selectedLabel = 'Dashboard';
   int _storageTab = 0;
   final _visited = <int>{0};
   final PageController _pages = PageController();
@@ -79,13 +80,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final from = _index;
     setState(() {
       _index = i;
+      _selectedLabel = i < dests.length ? dests[i].label : null;
       _visited.add(i);
     });
     if (_pages.hasClients && from != i) {
       if ((i - from).abs() > 1) {
         _pages.jumpToPage(i);
       } else {
-        _pages.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+        _pages.animateToPage(i, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
       }
     }
   }
@@ -154,10 +156,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final unread = ref.watch(unreadProvider).value ?? 0;
     final active = ref.watch(transferProvider.select((l) => l.where((t) => t.active).length));
     final extended = MediaQuery.sizeOf(context).width >= 1150;
-    if (_index >= (wide ? dests.length : 5)) {
-      _index = 0;
+
+    final selectedDestination = _selectedLabel == null ? null : dests.indexWhere((d) => d.label == _selectedLabel);
+    final effectiveIndex = wide
+        ? (selectedDestination != null && selectedDestination >= 0 ? selectedDestination : _index.clamp(0, dests.length - 1))
+        : (selectedDestination != null && selectedDestination >= 0 && selectedDestination < 4 ? selectedDestination : 4);
+
+    if (!wide && _pages.hasClients && (_pages.page?.round() ?? -1) != effectiveIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_pages.hasClients) _pages.jumpToPage(0);
+        if (mounted && _pages.hasClients) _pages.jumpToPage(effectiveIndex);
       });
     }
 
@@ -168,7 +175,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         body: Row(children: [
           NavigationRail(
             extended: extended,
-            selectedIndex: _index,
+            selectedIndex: effectiveIndex,
             labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
             onDestinationSelected: _select,
             trailing: Expanded(
@@ -194,7 +201,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 ),
             ],
           ),
-          Expanded(child: _FadeIndexed(index: _index, children: [for (var i = 0; i < dests.length; i++) body(i)])),
+          Expanded(child: _FadeIndexed(index: effectiveIndex, children: [for (var i = 0; i < dests.length; i++) body(i)])),
         ]),
       ));
     }
@@ -208,6 +215,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         controller: _pages,
         onPageChanged: (i) => setState(() {
           _index = i;
+          _selectedLabel = i < primary.length ? primary[i].label : null;
           _visited.add(i);
         }),
         children: [
@@ -257,7 +265,7 @@ class _FadeIndexed extends StatefulWidget {
 }
 
 class _FadeIndexedState extends State<_FadeIndexed> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 160), value: 1);
   late final Animation<double> _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
 
   @override
