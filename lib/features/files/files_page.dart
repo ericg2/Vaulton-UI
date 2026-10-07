@@ -527,7 +527,32 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                     return ListTile(
                       selected: sel,
                       leading: explicitSelection || selecting
-                          ? Checkbox(value: sel, onChanged: (_) => _toggle(n))
+                          ? SizedBox(
+                              width: 52,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: Checkbox(
+                                      value: sel,
+                                      onChanged: (_) => _toggle(n),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  if (sync != null)
+                                    Icon(Icons.sync_folder_outlined, size: 20, color: syncColor)
+                                  else
+                                    Icon(
+                                      iconFor(n),
+                                      size: 20,
+                                      color: n.isDir ? Theme.of(context).colorScheme.primary : null,
+                                    ),
+                                ],
+                              ),
+                            )
                           : sync != null
                               ? Icon(Icons.sync_folder_outlined, color: syncColor)
                               : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
