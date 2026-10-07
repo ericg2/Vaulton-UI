@@ -162,12 +162,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  SizedBox(
-                    height: 40,
-                    child: FilledButton.tonalIcon(
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                  OutlinedButton.icon(
                     onPressed: () async {
                       final picked = await pickSyncSource();
                       if (picked != null) {
@@ -176,7 +171,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     },
                     icon: const Icon(Icons.folder_open_outlined),
                     label: const Text('Browse'),
-                    ),
                   ),
                 ],
               ),
@@ -214,7 +208,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     },
                     icon: const Icon(Icons.folder_open_outlined),
                     label: const Text('Browse'),
-                    ),
                   ),
                 ],
               ),
