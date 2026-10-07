@@ -514,7 +514,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    error != null ? 'Sync Error: $error' : 'Sync Folder · undefined',
+                                    error != null ? 'Sync Error: $error' : 'Sync Folder · ${sync.name}',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
