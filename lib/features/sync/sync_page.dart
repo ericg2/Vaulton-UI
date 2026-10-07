@@ -150,48 +150,64 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               const SizedBox(height: 10),
               Text('Source', style: Theme.of(ctx).textTheme.titleSmall),
               const SizedBox(height: 4),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await pickSyncSource();
-                  if (picked != null) {
-                    set(() => source = picked);
-                  }
-                },
-                icon: const Icon(Icons.folder_open_outlined),
-                label: const Text('Browse'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      source.location,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(ctx).textTheme.bodyMedium,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: () async {
+                      final picked = await pickSyncSource();
+                      if (picked != null) {
+                        set(() => source = picked);
+                      }
+                    },
+                    icon: const Icon(Icons.folder_open_outlined),
+                    label: const Text('Browse'),
+                  ),
+                ],
               ),
-              Text(
-                source.location,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Text('Destination', style: Theme.of(ctx).textTheme.titleSmall),
               const SizedBox(height: 4),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await pickFolder(
-                    ctx,
-                    initialPointId: pointId,
-                    initialPath: remoteDir,
-                    title: 'Choose destination',
-                  );
-                  if (picked != null) {
-                    set(() {
-                      pointId = picked.point.id;
-                      remoteDir = picked.path;
-                    });
-                  }
-                },
-                icon: const Icon(Icons.folder_open_outlined),
-                label: const Text('Browse'),
-              ),
-              Text(
-                _pointName(pointId) + remoteDir,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(ctx).textTheme.bodySmall,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _pointName(pointId) + remoteDir,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(ctx).textTheme.bodyMedium,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: () async {
+                      final picked = await pickFolder(
+                        ctx,
+                        initialPointId: pointId,
+                        initialPath: remoteDir,
+                        title: 'Choose destination',
+                      );
+                      if (picked != null) {
+                        set(() {
+                          pointId = picked.point.id;
+                          remoteDir = picked.path;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.folder_open_outlined),
+                    label: const Text('Browse'),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<int>(
