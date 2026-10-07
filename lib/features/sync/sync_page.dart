@@ -47,7 +47,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final prefs = ref.read(prefsProvider);
     final profiles = SyncProfile.loadAll(prefs);
     try {
-      final points = await loadAllPoints(ref);
+      final points = <Point>[];
+      String? cursor;
+      do {
+        final page = await ref.read(vaultonProvider).datas(cursor: cursor, limit: 200);
+        points.addAll(page.items);
+        cursor = page.hasMore ? page.nextCursor : null;
+      } while (cursor != null);
       if (!mounted) return;
       setState(() {
         _profiles = profiles;
