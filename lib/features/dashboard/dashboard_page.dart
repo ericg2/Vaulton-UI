@@ -256,7 +256,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 980),
-          child: AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: body),
+          child: AnimatedSwitcher(duration: const Duration(milliseconds: 160), child: body),
         ),
       ),
     );
