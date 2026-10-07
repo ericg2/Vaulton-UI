@@ -209,7 +209,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Phones: 4 main tabs plus "More". Pages slide with your finger and snap into place.
     final primary = dests.take(4).toList();
     final rest = dests.skip(4).toList();
-    final onMore = _index == 4;
+    final onMore = effectiveIndex == 4;
     return _withAndroidBack(Scaffold(
       body: PageView(
         controller: _pages,
@@ -224,7 +224,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
+        selectedIndex: effectiveIndex,
         onDestinationSelected: (i) => _select(i, isMore: i == 4),
         destinations: [
           for (final d in primary)
