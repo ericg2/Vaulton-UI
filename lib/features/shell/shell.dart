@@ -18,7 +18,6 @@ import '../files/files_page.dart';
 import '../messages/messages_page.dart';
 import '../settings/settings_page.dart';
 import '../storage/storage_page.dart';
-import '../sync/folder_sync.dart';
 import '../sync/sync_models.dart';
 import '../sync/sync_page.dart';
 import '../transfers/transfer_manager.dart';
@@ -43,7 +42,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   final _visited = <int>{0};
   final PageController _pages = PageController();
   late final AppLifecycleListener _life;
-  Timer? _folderTimer;
 
   @override
   void initState() {
@@ -66,31 +64,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       );
       return r ?? true;
     });
-    // Desktop folder-sync scheduler (runs while the app is open).
-    if (isDesktop) {
-      _folderTimer = Timer.periodic(const Duration(minutes: 1), (_) => _tickFolders());
-      Future.delayed(const Duration(seconds: 5), _tickFolders);
-    }
   }
 
-  Future<void> _tickFolders() async {
-    final prefs = ref.read(prefsProvider);
-    final pairs = FolderPair.loadAll(prefs);
-    final now = DateTime.now().millisecondsSinceEpoch;
-    var changed = false;
-    for (final p in pairs.where((p) => p.enabled && now - p.lastRun >= p.intervalMinutes * 60000)) {
-      try {
-        await runFolderPair(p, prefs, ref.read(transferProvider.notifier));
-      } catch (_) {}
-      changed = true;
-    }
-    if (changed) await FolderPair.saveAll(prefs, pairs);
-  }
 
   @override
   void dispose() {
     _life.dispose();
-    _folderTimer?.cancel();
     _pages.dispose();
     super.dispose();
   }
