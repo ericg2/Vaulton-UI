@@ -209,6 +209,36 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   ),
                 ],
               ),
+              if (remoteDir == '/') ...[
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final cs = Theme.of(context).colorScheme;
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.errorContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'The Data Folder root is selected. This sync can add, update, and delete files throughout the entire folder.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: cs.onErrorContainer,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 14),
               DropdownButtonFormField<int>(
                 initialValue: interval,
