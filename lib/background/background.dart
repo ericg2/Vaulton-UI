@@ -101,17 +101,24 @@ Future<void> initBackground() async {
 
 Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
   if (!backgroundSupported) return;
-  if (profiles.every((p) => !p.enabled)) {
-    await Workmanager().cancelByUniqueName('vaulton-sync');
-    return;
+  for (final p in profiles) {
+    final unique = 'vaulton-sync-' + p.id;
+    if (!p.enabled) {
+      await Workmanager().cancelByUniqueName(unique);
+      continue;
+    }
+    await Workmanager().registerPeriodicTask(
+      unique,
+      _kSync,
+      frequency: const Duration(minutes: 15),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      constraints: Constraints(
+        networkType: p.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+        requiresCharging: p.chargingOnly,
+        requiresBatteryNotLow: true,
+      ),
+    );
   }
-  await Workmanager().registerPeriodicTask(
-    'vaulton-sync',
-    _kSync,
-    frequency: const Duration(minutes: 15),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    constraints: Constraints(networkType: NetworkType.connected),
-  );
 }
 
 Future<void> triggerSyncNow() async {

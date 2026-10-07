@@ -172,7 +172,7 @@ Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, Sh
     ..sort((a, b) => a.path.split('/').length.compareTo(b.path.split('/').length));
 
   for (final x in dirs) {
-    cancel?.throwIfCancelled();
+    if (cancel?.isCancelled == true) throw Exception('Sync cancelled');
     status.phase = 'Creating Folders';
     status.current = x.path;
     final remote = joinPath(profile.remoteDir, x.path);
@@ -189,7 +189,7 @@ Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, Sh
       (x.kind == SyncChangeKind.replace && x.source?.isDir == false)).toList();
 
   for (final x in actions) {
-    cancel?.throwIfCancelled();
+    if (cancel?.isCancelled == true) throw Exception('Sync cancelled');
     final src = x.source!;
     status.phase = x.kind == SyncChangeKind.add ? 'Uploading New Files' : 'Updating Files';
     status.current = x.path;
@@ -219,7 +219,7 @@ Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, Sh
     ..sort((a, b) => b.path.split('/').length.compareTo(a.path.split('/').length));
 
   for (final x in deletes) {
-    cancel?.throwIfCancelled();
+    if (cancel?.isCancelled == true) throw Exception('Sync cancelled');
     status.phase = 'Removing Destination Extras';
     status.current = x.path;
     await v.deleteEntry(profile.pointId, joinPath(profile.remoteDir, x.path));

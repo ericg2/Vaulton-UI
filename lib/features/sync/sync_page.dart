@@ -24,6 +24,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   final Map<String, SyncRunStatus> _status = {};
   final Map<String, SyncPlan> _plans = {};
   Timer? _poll;
+  Timer? _desktopSchedule;
   CancelToken? _cancel;
 
   @override
@@ -31,11 +32,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     super.initState();
     _load();
     _poll = Timer.periodic(const Duration(seconds: 2), (_) => _refreshStatus());
+    _desktopSchedule = Timer.periodic(const Duration(seconds: 30), (_) => _runDueDesktop());
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _desktopSchedule?.cancel();
     _cancel?.cancel();
     super.dispose();
   }
@@ -201,6 +204,23 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     return result;
   }
 
+  Future<void> _runDueDesktop() async {
+    if (!isDesktop || !mounted) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final p in [..._profiles]) {
+      if (!p.enabled || _status[p.id]?.running == true) continue;
+      if (p.nextRun > 0 && now < p.nextRun) continue;
+      try {
+        await runScheduledSync(
+          ref.read(apiClientProvider),
+          ref.read(prefsProvider),
+          p,
+        );
+      } catch (_) {}
+    }
+    await _refreshStatus();
+  }
+
   Future<void> _preview(SyncProfile p) async {
     try {
       final plan = await buildSyncPlan(
@@ -278,6 +298,52 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               tile(Icons.delete_outline, 'Destination Extras', plan.deletedFiles,
                   fmtBytes(plan.deleteBytes), danger: plan.deletedFiles > 0),
               tile(Icons.check_circle_outline, 'Already In Sync', s.unchangedFiles, '0 B'),
+              const SizedBox(height: 12),
+              Text(
+                'Source: ' + s.scannedSource.toString() + ' items · Destination: ' + s.scannedDestination.toString() + ' items',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              if (plan.changes.isNotEmpty)
+                Card(
+                  child: ExpansionTile(
+                    title: const Text('All Planned Changes'),
+                    subtitle: Text(plan.changes.length.toString() + ' items'),
+                    children: [
+                      for (final change in plan.changes.take(500))
+                        ListTile(
+                          dense: true,
+                          leading: Icon(
+                            change.kind == SyncChangeKind.delete
+                                ? Icons.delete_outline
+                                : change.kind == SyncChangeKind.add
+                                    ? Icons.add_circle_outline
+                                    : change.kind == SyncChangeKind.mkdir
+                                        ? Icons.create_new_folder_outlined
+                                        : Icons.sync,
+                            color: change.kind == SyncChangeKind.delete ? cs.error : null,
+                          ),
+                          title: Text(change.path, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Text(
+                            change.kind == SyncChangeKind.delete
+                                ? 'Delete from destination'
+                                : change.kind == SyncChangeKind.add
+                                    ? 'New file · ' + fmtBytes(change.bytes)
+                                    : change.kind == SyncChangeKind.update
+                                        ? 'Update · ' + fmtBytes(change.bytes)
+                                        : change.kind == SyncChangeKind.mkdir
+                                            ? 'Create folder'
+                                            : 'Replace · ' + fmtBytes(change.bytes),
+                          ),
+                        ),
+                      if (plan.changes.length > 500)
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Text('Showing the first 500 changes.'),
+                        ),
+                    ],
+                  ),
+                ),
               if (plan.changes.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
