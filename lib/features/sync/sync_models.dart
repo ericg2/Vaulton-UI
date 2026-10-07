@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const kSyncProfiles = 'sync_profiles_v2';
 const kSyncRunPrefix = 'sync_run_v2_';
+const kSyncManifestPrefix = 'sync_manifest_v1_';
 
 class SyncProfile {
   SyncProfile({
@@ -42,6 +43,42 @@ class SyncProfile {
   static Future<void> saveAll(SharedPreferences p, List<SyncProfile> profiles) =>
       p.setString(kSyncProfiles, jsonEncode([for (final x in profiles) x.toJson()]));
 }
+
+class SyncManifestEntry {
+  const SyncManifestEntry({required this.size, required this.modified});
+  final int size;
+  final int modified;
+
+  Map<String, dynamic> toJson() => {'size': size, 'modified': modified};
+
+  factory SyncManifestEntry.fromJson(Map<String, dynamic> j) => SyncManifestEntry(
+    size: j['size'] ?? 0,
+    modified: j['modified'] ?? 0,
+  );
+}
+
+Map<String, SyncManifestEntry> loadSyncManifest(SharedPreferences p, String id) {
+  final raw = p.getString('$kSyncManifestPrefix$id');
+  if (raw == null) return {};
+  try {
+    final data = Map<String, dynamic>.from(jsonDecode(raw));
+    return {
+      for (final e in data.entries)
+        e.key: SyncManifestEntry.fromJson(Map<String, dynamic>.from(e.value)),
+    };
+  } catch (_) {
+    return {};
+  }
+}
+
+Future<void> saveSyncManifest(
+  SharedPreferences p,
+  String id,
+  Map<String, SyncManifestEntry> manifest,
+) => p.setString(
+  '$kSyncManifestPrefix$id',
+  jsonEncode({for (final e in manifest.entries) e.key: e.value.toJson()}),
+);
 
 class SyncRunStatus {
   SyncRunStatus({
