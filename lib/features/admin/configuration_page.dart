@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
+import '../../core/models.dart';
 import '../../core/vaulton.dart';
 import '../../core/util.dart';
 import '../../core/widgets.dart';
 
-class _ConfigurationTab extends ConsumerStatefulWidget {
-  const _ConfigurationTab();
+class ConfigurationTab extends ConsumerStatefulWidget {
+  const ConfigurationTab();
   @override
-  ConsumerState<_ConfigurationTab> createState() => _ConfigurationTabState();
+  ConsumerState<ConfigurationTab> createState() => _ConfigurationTabState();
 }
 
-class _ConfigurationTabState extends ConsumerState<_ConfigurationTab> {
+class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   bool _enabled = false;
   String _brokerUrl = '';
   int _wakeBeforeMinutes = 5;
