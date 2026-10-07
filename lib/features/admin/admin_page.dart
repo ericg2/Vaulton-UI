@@ -301,7 +301,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
     final ok = await confirm(
       context,
       'Reset Quota Usage?',
-      'This is a serious administrative action. It will set Vaulton’s tracked quota usage for "$pointName" owned by "$user" to 0 bytes. It does not delete remote data. Only use this after the remote data has actually been deleted and the tracked usage is stale.',
+      'This permanently resets Vaulton’s tracked quota usage to 0; use only after the remote data has been deleted.',
       ok: 'Reset Usage',
       danger: true,
     );
@@ -329,6 +329,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
         final remote = toBool(p['remote']);
         return Card(
           child: ListTile(
+            contentPadding: const EdgeInsets.only(left: 8, right: 4),
             leading: Icon(err != null ? Icons.error_outline : Icons.storage_outlined, color: err != null ? cs.error : null),
             title: Text('${p['name']}'),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -348,7 +349,8 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                   OutlinedButton.icon(
                     onPressed: () => _resetQuota(p),
                     icon: const Icon(Icons.restart_alt, size: 18),
-                    label: const Text('Reset Quota Usage'),
+                    label: const Text('Reset Quota'),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 36)),
                   ),
                 IconButton(
                   tooltip: 'Reload User VFS',
