@@ -350,7 +350,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                     onPressed: () => _resetQuota(p),
                     icon: const Icon(Icons.restart_alt, size: 18),
                     label: const Text('Reset Quota', textAlign: TextAlign.center),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 36)),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 40)),
                   ),
                 IconButton(
                   tooltip: 'Reload User VFS',
