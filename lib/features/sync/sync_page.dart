@@ -149,7 +149,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               ),
               const SizedBox(height: 10),
               Text('Source', style: Theme.of(ctx).textTheme.titleSmall),
-              const SizedBox(height: 4),
+              const SizedBox(height: 0),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -161,8 +161,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       style: Theme.of(ctx).textTheme.bodyMedium,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 40,
+                    child: FilledButton.tonalIcon(
                     onPressed: () async {
                       final picked = await pickSyncSource();
                       if (picked != null) {
@@ -171,12 +173,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     },
                     icon: const Icon(Icons.folder_open_outlined),
                     label: const Text('Browse'),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text('Destination', style: Theme.of(ctx).textTheme.titleSmall),
-              const SizedBox(height: 4),
+              const SizedBox(height: 0),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -188,8 +191,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       style: Theme.of(ctx).textTheme.bodyMedium,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 40,
+                    child: FilledButton.tonalIcon(
                     onPressed: () async {
                       final picked = await pickFolder(
                         ctx,
@@ -206,6 +211,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     },
                     icon: const Icon(Icons.folder_open_outlined),
                     label: const Text('Browse'),
+                    ),
                   ),
                 ],
               ),
