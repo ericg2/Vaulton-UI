@@ -104,6 +104,13 @@ class Vaulton {
   Future<Paged<Snapshot>> snapshots(String id, {String? tag, String? path, bool? locked, String? idPrefix, String? cursor, int limit = 50}) async =>
       Paged.from(await _req('GET', '/repos/$id/snapshots', q: _pg(cursor, limit, 'Desc', {'tag': tag, 'path': path, 'locked': locked, 'idPrefix': idPrefix})), Snapshot.fromJson);
 
+  Future<Paged<Node>> browseSnapshot(String id, String snap, {String? path, String? search, String? cursor, int limit = 100, String order = 'Asc'}) async =>
+      Paged.from(
+        await _req('GET', '/repos/$id/snapshots/${_e(snap)}/browse',
+            q: _pg(cursor, limit, order, {'path': path, 'search': search})),
+        Node.fromJson,
+      );
+
   Future<Json> lockSnapshot(String id, String snap, bool lock) async =>
       toJson(await _req('POST', '/repos/$id/snapshots/${_e(snap)}/${lock ? 'lock' : 'unlock'}'));
 
