@@ -259,7 +259,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       if (mounted) toast(context, 'Sync complete');
       await _refreshStatus();
     } catch (e) {
-      if (mounted) toast(context, CancelToken.isCancel(e) ? 'Sync cancelled' : e.toString(), error: true);
+      if (mounted) toast(context, e is DioException && CancelToken.isCancel(e) ? 'Sync cancelled' : e.toString(), error: true);
     } finally {
       _cancel = null;
     }
