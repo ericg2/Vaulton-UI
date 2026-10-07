@@ -67,56 +67,55 @@ class LogFilterBar extends StatelessWidget {
     final dateLabel = from == null
         ? 'Any Date'
         : '${fmtDate(from)} – ${fmtDate(to!.subtract(const Duration(seconds: 1)))}';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(
-            width: 280,
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
-                hintText: 'Search Log',
-                suffixIcon: search.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          searchController.clear();
-                          onSearch('');
-                        },
-                      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 560;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(narrow ? 8 : 12, 8, narrow ? 8 : 12, 4),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              SizedBox(
+                width: narrow ? constraints.maxWidth - 16 : 280,
+                child: TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Search Log',
+                    suffixIcon: search.isEmpty ? null : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () { searchController.clear(); onSearch(''); },
+                    ),
+                  ),
+                  onSubmitted: onSearch,
+                ),
               ),
-              onSubmitted: onSearch,
-            ),
+              for (final option in logPriorityOptions)
+                ChoiceChip(
+                  label: Text(option.$1),
+                  selected: priority == option.$2,
+                  onSelected: (_) => onPriority(option.$2),
+                ),
+              if (onDates != null)
+                OutlinedButton.icon(
+                  onPressed: onDates,
+                  icon: const Icon(Icons.date_range),
+                  label: Text(dateLabel),
+                ),
+              if (onCopy != null)
+                IconButton(
+                  tooltip: 'Copy Visible Lines',
+                  icon: const Icon(Icons.copy_all_outlined),
+                  onPressed: copyEnabled ? onCopy : null,
+                ),
+            ],
           ),
-          for (final option in logPriorityOptions)
-            ChoiceChip(
-              label: Text(option.$1),
-              selected: priority == option.$2,
-              onSelected: (_) => onPriority(option.$2),
-            ),
-          if (onDates != null)
-            OutlinedButton.icon(
-              onPressed: onDates,
-              icon: const Icon(Icons.date_range),
-              label: Text(dateLabel),
-            ),
-          if (onCopy != null)
-            IconButton(
-              tooltip: 'Copy Visible Lines',
-              icon: const Icon(Icons.copy_all_outlined),
-              onPressed: copyEnabled ? onCopy : null,
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
-}
+}}
 
 class LogLine extends StatelessWidget {
   const LogLine({super.key, required this.time, required this.priority, required this.message});
