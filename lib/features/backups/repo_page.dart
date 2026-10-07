@@ -153,24 +153,32 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           else ...[
             Row(children: [
               Expanded(child: Text('Storage', style: tt.titleSmall)),
-              chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null),
+              Flexible(child: chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null)),
             ]),
             const SizedBox(height: 10),
             UsageBar(used: r.usedBytes, max: r.maxBytes),
             const SizedBox(height: 8),
-            Row(children: [
-              Text('${fmtBytes(r.usedBytes)} used', style: tt.bodyMedium),
-              const Spacer(),
-              Text(r.maxBytes > 0 ? '${(r.usedBytes / r.maxBytes * 100).round()}% of ${fmtBytes(r.maxBytes)}' : 'No limit', style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-            ]),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 2,
+              children: [
+                Text('${fmtBytes(r.usedBytes)} used', style: tt.bodyMedium),
+                Text(r.maxBytes > 0 ? '${(r.usedBytes / r.maxBytes * 100).round()}% of ${fmtBytes(r.maxBytes)}' : 'No limit', style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              ],
+            ),
             if (r.error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(r.error!, style: TextStyle(color: cs.error, fontSize: 12))),
             const SizedBox(height: 14),
           ],
-          Row(children: [
-            Expanded(child: FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined, size: 18), label: label('Backup Now'))),
-            const SizedBox(width: 8),
-            Expanded(child: FilledButton.tonalIcon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse Latest'))),
-          ]),
+          LayoutBuilder(builder: (context, c) {
+            final backup = FilledButton.icon(onPressed: r == null ? null : _backup, icon: const Icon(Icons.backup_outlined, size: 18), label: label('Backup Now'));
+            final browse = FilledButton.tonalIcon(onPressed: r == null ? null : _browseLatest, icon: const Icon(Icons.folder_open, size: 18), label: label('Browse Latest'));
+            if (c.maxWidth < 300) {
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [backup, const SizedBox(height: 8), browse]);
+            }
+            return Row(children: [Expanded(child: backup), const SizedBox(width: 8), Expanded(child: browse)]);
+          }),
         ]),
       ),
     );
@@ -186,7 +194,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         isScrollable: false,
         tabAlignment: TabAlignment.fill,
         indicatorSize: TabBarIndicatorSize.tab,
-        labelPadding: EdgeInsets.zero,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 8),
         padding: EdgeInsets.zero,
         tabs: const [Tab(text: 'History'), Tab(text: 'Automation')],
       );

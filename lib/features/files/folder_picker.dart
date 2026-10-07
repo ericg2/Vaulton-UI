@@ -97,7 +97,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
       title: Text(widget.title),
       content: SizedBox(
         width: 460,
-        height: 420,
+        height: (MediaQuery.sizeOf(context).height * 0.6).clamp(260.0, 420.0).toDouble(),
         child: _point == null && _error == null
             ? const Center(child: CircularProgressIndicator())
             : Column(children: [

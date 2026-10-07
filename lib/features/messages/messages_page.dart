@@ -44,7 +44,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
             title: const Text('Select Recipients'),
             content: SizedBox(
               width: 520,
-              height: 520,
+              height: (MediaQuery.sizeOf(ctx).height * 0.6).clamp(260.0, 520.0).toDouble(),
               child: Column(children: [
                 TextField(
                   autofocus: true,
@@ -134,6 +134,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(full.subject),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         content: SizedBox(
           width: 520,
           child: SingleChildScrollView(

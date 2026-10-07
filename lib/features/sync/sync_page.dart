@@ -40,6 +40,91 @@ class _SettingSwitch extends StatelessWidget {
       );
 }
 
+/// A labelled path row (Source / Destination). Stacks the Browse button under the
+/// text on narrow screens so nothing gets squeezed or cut off.
+class _PathRow extends StatelessWidget {
+  const _PathRow({required this.label, required this.value, required this.onBrowse});
+  final String label;
+  final String value;
+  final VoidCallback onBrowse;
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return LayoutBuilder(builder: (context, c) {
+      final narrow = c.maxWidth < 380;
+      final text = Text(
+        value,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+      );
+      final button = OutlinedButton.icon(
+        onPressed: onBrowse,
+        icon: const Icon(Icons.folder_open_outlined, size: 18),
+        label: const Text('Browse'),
+      );
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: tt.titleSmall),
+        const SizedBox(height: 4),
+        if (narrow) ...[
+          text,
+          const SizedBox(height: 8),
+          button,
+        ] else
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Expanded(child: text),
+            const SizedBox(width: 10),
+            button,
+          ]),
+      ]);
+    });
+  }
+}
+
+class _RootWarning extends StatelessWidget {
+  const _RootWarning();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.error, width: 1.2),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: cs.error, shape: BoxShape.circle),
+          child: Icon(Icons.priority_high_rounded, size: 18, color: cs.onError),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              'Root folder selected',
+              style: tt.titleSmall?.copyWith(color: cs.error, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'This syncs to the top level of the entire data folder. Existing files '
+              'outside your source may be overwritten or permanently deleted. '
+              'Choose a subfolder unless you are certain.',
+              style: tt.bodySmall?.copyWith(color: cs.onErrorContainer, height: 1.35),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
 class SyncPage extends ConsumerStatefulWidget {
   const SyncPage({super.key});
   @override ConsumerState<SyncPage> createState() => _SyncPageState();
@@ -137,6 +222,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
           title: Text(existing == null ? 'New Sync' : 'Sync Settings'),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           content: SizedBox(
             width: 520,
             child: ListView(
@@ -148,96 +234,36 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 onChanged: (v) => name = v,
               ),
               const SizedBox(height: 10),
-              Text('Source', style: Theme.of(ctx).textTheme.titleSmall),
-              const SizedBox(height: 0),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      source.location,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(ctx).textTheme.bodyMedium,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await pickSyncSource();
-                      if (picked != null) {
-                        set(() => source = picked);
-                      }
-                    },
-                    icon: const Icon(Icons.folder_open_outlined),
-                    label: const Text('Browse'),
-                  ),
-                ],
+              _PathRow(
+                label: 'Source',
+                value: source.location,
+                onBrowse: () async {
+                  final picked = await pickSyncSource();
+                  if (picked != null) set(() => source = picked);
+                },
               ),
-              const SizedBox(height: 10),
-              Text('Destination', style: Theme.of(ctx).textTheme.titleSmall),
-              const SizedBox(height: 0),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      _pointName(pointId) + remoteDir,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(ctx).textTheme.bodyMedium,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await pickFolder(
-                        ctx,
-                        initialPointId: pointId,
-                        initialPath: remoteDir,
-                        title: 'Choose destination',
-                      );
-                      if (picked != null) {
-                        set(() {
-                          pointId = picked.point.id;
-                          remoteDir = picked.path;
-                        });
-                      }
-                    },
-                    icon: const Icon(Icons.folder_open_outlined),
-                    label: const Text('Browse'),
-                  ),
-                ],
+              const SizedBox(height: 14),
+              _PathRow(
+                label: 'Destination',
+                value: _pointName(pointId) + remoteDir,
+                onBrowse: () async {
+                  final picked = await pickFolder(
+                    ctx,
+                    initialPointId: pointId,
+                    initialPath: remoteDir,
+                    title: 'Choose destination',
+                  );
+                  if (picked != null) {
+                    set(() {
+                      pointId = picked.point.id;
+                      remoteDir = picked.path;
+                    });
+                  }
+                },
               ),
               if (remoteDir == '/') ...[
-                const SizedBox(height: 8),
-                Builder(
-                  builder: (context) {
-                    final cs = Theme.of(context).colorScheme;
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: cs.errorContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Root selected. Changes may affect entire point.',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: cs.onErrorContainer,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                const SizedBox(height: 12),
+                const _RootWarning(),
               ],
               const SizedBox(height: 14),
               DropdownButtonFormField<int>(
@@ -409,17 +435,28 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             child: ListTile(
               leading: Icon(icon, color: danger ? cs.error : null),
               title: Text(title),
-              trailing: Text(count.toString() + (bytes == '0 B' ? '' : ' · ' + bytes)),
+              trailing: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 110),
+                child: Text(
+                  count.toString() + (bytes == '0 B' ? '' : ' · ' + bytes),
+                  textAlign: TextAlign.end,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
           );
         }
         return AlertDialog(
           title: const Text('Review Sync'),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           content: SizedBox(
             width: 560,
             child: ListView(shrinkWrap: true, children: [
               Text(
                 p.sourceLabel + ' → ' + _pointName(p.pointId) + p.remoteDir,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(ctx).textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
@@ -541,9 +578,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
           title: const Text('Safe to Delete'),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           content: SizedBox(
             width: 620,
-            height: 520,
+            height: MediaQuery.sizeOf(ctx).height * 0.6,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 'These files were successfully mirrored to Vaulton. Nothing is deleted until you choose the files and confirm.',
@@ -627,25 +665,40 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             children: [
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(22),
-                  child: Row(children: [
-                    Container(
+                  padding: EdgeInsets.all(desktop ? 22 : 16),
+                  child: LayoutBuilder(builder: (context, c) {
+                    final narrow = c.maxWidth < 520;
+                    final icon = Container(
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(16)),
                       child: Icon(Icons.sync, color: cs.onPrimaryContainer, size: 28),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Keep Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
-                        const SizedBox(height: 4),
-                        const Text('Automatically sync folders, and keep your data up-to-date.'),
-                      ]),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Sync')),
-                  ]),
+                    );
+                    final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Keep Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
+                      const SizedBox(height: 4),
+                      const Text('Automatically sync folders, and keep your data up-to-date.'),
+                    ]);
+                    final add = FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Sync'));
+                    if (narrow) {
+                      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          icon,
+                          const SizedBox(width: 14),
+                          Expanded(child: text),
+                        ]),
+                        const SizedBox(height: 14),
+                        SizedBox(width: double.infinity, child: add),
+                      ]);
+                    }
+                    return Row(children: [
+                      icon,
+                      const SizedBox(width: 16),
+                      Expanded(child: text),
+                      const SizedBox(width: 12),
+                      add,
+                    ]);
+                  }),
                 ),
               ),
               const SizedBox(height: 16),
@@ -693,7 +746,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p.name, style: Theme.of(context).textTheme.titleMedium),
+                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
                 Text(
                   p.sourceLabel + ' → ' + (point?.name ?? 'Data Folder') + p.remoteDir,
                   maxLines: 2,
@@ -719,7 +772,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             const SizedBox(height: 8),
             LinearProgressIndicator(value: progress),
             const SizedBox(height: 8),
-            Text(fmtBytes(st.bytesDone) + ' of ' + fmtBytes(st.bytesTotal) + ' · ' + st.completed.toString() + ' completed · ' + st.failed.toString() + ' failed'),
+            Text(
+              fmtBytes(st.bytesDone) + ' of ' + fmtBytes(st.bytesTotal) + ' · ' + st.completed.toString() + ' completed · ' + st.failed.toString() + ' failed',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ] else ...[
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(_frequencyLabel(p.intervalMinutes)),
@@ -794,5 +850,5 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     return 'Every ' + minutes.toString() + ' Minutes';
   }
 
-  Widget _chip(String text) => Chip(label: Text(text), visualDensity: VisualDensity.compact);
+  Widget _chip(String text) => Chip(label: Text(text, overflow: TextOverflow.ellipsis), visualDensity: VisualDensity.compact);
 }

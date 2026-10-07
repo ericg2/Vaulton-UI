@@ -158,7 +158,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
       title: const Text('Choose snapshot path'),
       content: SizedBox(
         width: 520,
-        height: 460,
+        height: (MediaQuery.sizeOf(context).height * 0.6).clamp(260.0, 460.0).toDouble(),
         child: Column(children: [
           Row(children: [
             IconButton(
@@ -172,7 +172,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
                 context,
                 [(path: _path, isDir: true, name: _path == '/' ? 'snapshot' : baseName(_path))],
               ),
-              child: const Text('Select folder'),
+              child: Text(MediaQuery.sizeOf(context).width < 420 ? 'Select' : 'Select folder'),
             ),
           ]),
           const Divider(height: 1),

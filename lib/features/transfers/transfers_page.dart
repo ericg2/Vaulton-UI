@@ -81,9 +81,9 @@ class _TaskTile extends ConsumerWidget {
                 Text(task.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: task.state == TState.failed ? cs.error : cs.onSurfaceVariant)),
+                if (task.origin != 'manual') chip(context, switch (task.origin) { 'photos' => 'Photos', 'snapshot' => 'Backup', _ => 'Folder sync' }),
               ]),
             ),
-            if (task.origin != 'manual') chip(context, switch (task.origin) { 'photos' => 'Photos', 'snapshot' => 'Backup', _ => 'Folder sync' }),
             if (task.active) IconButton(icon: const Icon(Icons.close), tooltip: 'Cancel', onPressed: () => mgr.cancel(task.id)),
             if (task.state == TState.failed || task.state == TState.canceled) ...[
               if (exists && up) TextButton(onPressed: () => mgr.retry(task.id, overwrite: true), child: const Text('Overwrite')),

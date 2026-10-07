@@ -309,24 +309,25 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
       key: ObjectKey(r),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          CircleAvatar(child: Text(u?.initial ?? (r.userName.isEmpty ? '?' : r.userName[0].toUpperCase()))),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(u?.title ?? r.userName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
-                if (sub.isNotEmpty)
-                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: unknown ? cs.error : cs.outline)),
-                if (u?.isLockedOut == true) chip(context, 'Locked', color: cs.errorContainer),
-              ]),
+        child: LayoutBuilder(builder: (context, box) {
+          final narrow = box.maxWidth < 520;
+          final who = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            CircleAvatar(child: Text(u?.initial ?? (r.userName.isEmpty ? '?' : r.userName[0].toUpperCase()))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(u?.title ?? r.userName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+                  if (sub.isNotEmpty)
+                    Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: unknown ? cs.error : cs.outline)),
+                  if (u?.isLockedOut == true) chip(context, 'Locked', color: cs.errorContainer),
+                ]),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 220,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ]);
+          final remove = IconButton(tooltip: 'Remove', icon: const Icon(Icons.remove_circle_outline), onPressed: () => _remove(r));
+          final quota = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: TextField(
                 controller: r.quota,
                 focusNode: r.focus,
@@ -346,10 +347,21 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                   setState(() { r.unit = u; r.quota.text = bytesToCapacity(current, u); });
                 },
               )),
-            ]),
-          ),
-          IconButton(tooltip: 'Remove', icon: const Icon(Icons.remove_circle_outline), onPressed: () => _remove(r)),
-        ]),
+          ]);
+          if (narrow) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: who), remove]),
+              const SizedBox(height: 8),
+              Padding(padding: const EdgeInsets.only(right: 8), child: quota),
+            ]);
+          }
+          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: who),
+            const SizedBox(width: 8),
+            SizedBox(width: 220, child: quota),
+            remove,
+          ]);
+        }),
       ),
     );
   }
