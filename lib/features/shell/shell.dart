@@ -77,11 +77,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   /// Switches tab. On phones the page slides, so taps and swipes feel the same.
-  void _select(int i, {bool isMore = false}) {
+  void _select(int i, {String? label, bool isMore = false}) {
     final from = _index;
     setState(() {
       _index = i;
-      _selectedLabel = isMore ? null : (i < dests.length ? dests[i].label : null);
+      _selectedLabel = isMore ? null : label;
       _visited.add(i);
     });
     if (_pages.hasClients && from != i) {
@@ -97,13 +97,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (label == 'Data Folders' || label == 'Backup Vaults') {
       _storageTab = label == 'Data Folders' ? 1 : 2;
       final storage = dests.indexWhere((d) => d.label == 'Storage');
-      if (storage >= 0) _select(storage);
+      if (storage >= 0) _select(storage, label: dests[storage].label);
       return;
     }
     final i = dests.indexWhere((d) => d.label == label);
     if (i < 0) return;
     if (wide || i < 4) {
-      _select(i);
+      _select(i, label: dests[i].label);
     } else {
       Navigator.push(context, MaterialPageRoute(builder: (_) => dests[i].build()));
     }
@@ -139,7 +139,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_index != 0) {
-          _select(0);
+          _select(0, label: 'Dashboard');
         } else {
           SystemNavigator.pop();
         }
@@ -181,7 +181,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             extended: extended,
             selectedIndex: effectiveIndex,
             labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-            onDestinationSelected: _select,
+            onDestinationSelected: (i) => _select(i, label: dests[i].label),
             trailing: Expanded(
               child: Align(
                 alignment: Alignment.bottomCenter,
@@ -233,7 +233,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: effectiveIndex,
-        onDestinationSelected: (i) => _select(i, isMore: i == 4),
+        onDestinationSelected: (i) => _select(i, label: i < primary.length ? primary[i].label : null, isMore: i == 4),
         destinations: [
           for (final d in primary)
             NavigationDestination(icon: _icon(d, false, unread, active), selectedIcon: _icon(d, true, unread, active), label: d.label),
