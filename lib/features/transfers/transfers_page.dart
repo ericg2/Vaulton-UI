@@ -30,7 +30,7 @@ class TransfersPage extends ConsumerWidget {
         ],
       ),
       body: tasks.isEmpty
-          ? const EmptyView('No Transfers Yet', icon: Icons.swap_vert, hint: 'Uploads and downloads appear here so you can follow, retry or cancel them.')
+          ? const EmptyView('No transfers yet.', icon: Icons.swap_vert, hint: 'Uploads and downloads appear here so you can follow, retry or cancel them.')
           : ListView.builder(
               itemCount: tasks.length + 1,
               itemBuilder: (c, i) {
