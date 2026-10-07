@@ -27,6 +27,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   int _powerScheduleProtectionMinutes = 120;
   bool _hasPowerAgentKey = false;
   Json? _powerAgentStatus;
+  Json? _powerDecision;
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -54,7 +55,6 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     setState(() {
       _powerAgentStatus = status;
       _powerDecision = decision;
-    });
     });
   }
 
