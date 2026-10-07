@@ -12,6 +12,30 @@ import 'sync_models.dart';
 import 'sync_service.dart';
 import 'sync_source.dart';
 
+class _SettingSwitch extends StatelessWidget {
+  const _SettingSwitch({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: Text(title)),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+      );
+}
+
 class SyncPage extends ConsumerStatefulWidget {
   const SyncPage({super.key});
   @override ConsumerState<SyncPage> createState() => _SyncPageState();
@@ -139,12 +163,30 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 onChanged: (v) => remoteDir = v.startsWith('/') ? v : '/' + v,
               ),
               const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Mirror Exactly'),
-                subtitle: const Text('Remove destination files and folders that are not in the source.'),
-                value: deleteExtras,
-                onChanged: (v) => set(() => deleteExtras = v),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Mirror Exactly'),
+                          SizedBox(height: 2),
+                          Text(
+                            'Remove destination files and folders that are not in the source.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: deleteExtras,
+                      onChanged: (v) => set(() => deleteExtras = v),
+                    ),
+                  ],
+                ),
               ),
               DropdownButtonFormField<int>(
                 initialValue: interval,
@@ -161,22 +203,19 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 onChanged: (v) => set(() => interval = v!),
               ),
               if (backgroundSupported) ...[
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Wi-Fi / Unmetered Only'),
+                _SettingSwitch(
+                  title: 'Wi-Fi / Unmetered Only',
                   value: wifiOnly,
                   onChanged: (v) => set(() => wifiOnly = v),
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Only While Charging'),
+                _SettingSwitch(
+                  title: 'Only While Charging',
                   value: chargingOnly,
                   onChanged: (v) => set(() => chargingOnly = v),
                 ),
               ],
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Enabled'),
+              _SettingSwitch(
+                title: 'Enabled',
                 value: enabled,
                 onChanged: (v) => set(() => enabled = v),
               ),
