@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
@@ -24,6 +26,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   int _powerIdleMinutes = 30;
   int _powerScheduleProtectionMinutes = 120;
   bool _hasPowerAgentKey = false;
+  Json? _powerAgentStatus;
+  Json? _powerDecision;
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -44,6 +48,14 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       _powerScheduleProtectionMinutes = toInt(power['scheduleProtectionMinutes']);
       _hasPowerAgentKey = toBool(power['hasAgentKey']);
       _loaded = true;
+    });
+    final status = await guarded(context, _v.powerAgentStatus);
+    final decision = await guarded(context, _v.powerDecision);
+    if (!mounted) return;
+    setState(() {
+      _powerAgentStatus = status;
+      _powerDecision = decision;
+    });
     });
   }
 
@@ -132,15 +144,33 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: key,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: 'Host Agent Key',
-                      helperText: _hasPowerAgentKey
-                          ? 'Leave blank to keep the existing key.'
-                          : 'Use at least 32 random characters.',
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: key,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: 'Host Agent Key',
+                            helperText: _hasPowerAgentKey
+                                ? 'Leave blank to keep the existing key.'
+                                : 'Use at least 32 random characters.',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: OutlinedButton(
+                          onPressed: () {
+                            final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
+                            key.text = base64UrlEncode(bytes);
+                          },
+                          child: const Text('Generate'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -190,6 +220,29 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (mounted) toast(context, 'Automatic power settings saved');
   }
 
+  Future<void> _testPowerDecision() async {
+    final decision = await guarded(context, _v.powerDecision);
+    if (decision == null || !mounted) return;
+    setState(() => _powerDecision = decision);
+    final execute = toBool(decision['execute']);
+    final reason = toStr(decision['blockReason']);
+    final action = toStr(decision['action']);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Power Management Test'),
+        content: Text(
+          execute
+              ? 'The server is currently eligible for ${action ?? _powerAction.toLowerCase()}. The host agent would perform the action on its next poll.'
+              : 'Power down is currently blocked${reason == null || reason.isEmpty ? '.' : ': $reason.'}',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -224,10 +277,21 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               subtitle: Text(_powerEnabled
                   ? '${_powerAction} after ${_powerIdleMinutes} minutes of inactivity'
                   : 'Disabled'),
-              trailing: FilledButton.tonalIcon(
-                onPressed: _editPower,
-                icon: const Icon(Icons.settings_outlined),
-                label: const Text('Configure'),
+              trailing: Wrap(
+                spacing: 8,
+                children: [
+                  if (_powerEnabled)
+                    OutlinedButton.icon(
+                      onPressed: _testPowerDecision,
+                      icon: const Icon(Icons.fact_check_outlined),
+                      label: const Text('Test'),
+                    ),
+                  FilledButton.tonalIcon(
+                    onPressed: _editPower,
+                    icon: const Icon(Icons.settings_outlined),
+                    label: const Text('Configure'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -264,6 +328,13 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               leading: Icon(_hasPowerAgentKey ? Icons.check_circle_outline : Icons.warning_amber_outlined),
               title: const Text('Host Agent Key'),
               subtitle: Text(_hasPowerAgentKey ? 'Configured securely.' : 'Not configured.'),
+            ),
+            ListTile(
+              leading: Icon(_powerAgentStatus?['seen'] == true ? Icons.check_circle_outline : Icons.help_outline),
+              title: const Text('Host Agent'),
+              subtitle: Text(_powerAgentStatus?['seen'] == true
+                  ? 'Last seen ${toStr(_powerAgentStatus?['lastSeenAt']) ?? 'recently'} · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'}'
+                  : 'No host agent heartbeat has been received yet.'),
             ),
           ]),
           const Padding(
