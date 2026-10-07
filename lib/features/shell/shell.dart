@@ -93,6 +93,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
   }
 
+  void _swipeStorageBoundary() {
+    if (!_pages.hasClients) return;
+    final next = (_index + 1).clamp(0, 3);
+    final previous = (_index - 1).clamp(0, 3);
+    // Storage is the last primary tab when swiping right, and the first when swiping left.
+    // The nested TabBarView handles movement between Storage's own tabs; this callback
+    // advances the main PageView when that nested view reaches an edge.
+    final page = _pages.page ?? _index.toDouble();
+    if (page > _index) {
+      _pages.animateToPage(next, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
+    } else {
+      _pages.animateToPage(previous, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
+    }
+  }
+
   void _goto(String label, List<_Dest> dests, bool wide) {
     if (label == 'Data Folders' || label == 'Backup Vaults') {
       _storageTab = label == 'Data Folders' ? 1 : 2;
@@ -113,7 +128,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _Dest('Dashboard', Icons.dashboard_outlined, Icons.dashboard, () => DashboardPage(onNavigate: (l) => _goto(l, _dests(ref.read(userProvider)!, wide), wide))),
         _Dest('Files', Icons.folder_outlined, Icons.folder, () => const FilesPage()),
         _Dest('Transfers', Icons.swap_vert, Icons.swap_vert, () => const TransfersPage()),
-        _Dest('Storage', Icons.storage_outlined, Icons.storage, () => StoragePage(key: ValueKey(_storageTab), initialTab: _storageTab)),
+        _Dest('Storage', Icons.storage_outlined, Icons.storage, () => StoragePage(key: ValueKey(_storageTab), initialTab: _storageTab, onBoundarySwipe: _swipeStorageBoundary)),
         if (u.has(Scopes.jobsManage)) _Dest('Activity', Icons.history_outlined, Icons.history, () => const BackupsPage()),
         _Dest('Sync', Icons.cloud_sync_outlined, Icons.cloud_sync, () => const SyncPage()),
         _Dest('Messages', Icons.mail_outline, Icons.mail, () => const MessagesPage()),
