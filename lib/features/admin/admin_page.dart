@@ -345,10 +345,10 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
               spacing: 2,
               children: [
                 if (remote)
-                  IconButton(
-                    tooltip: 'Reset Quota Usage',
-                    icon: const Icon(Icons.restart_alt),
+                  OutlinedButton.icon(
                     onPressed: () => _resetQuota(p),
+                    icon: const Icon(Icons.restart_alt, size: 18),
+                    label: const Text('Reset Quota Usage'),
                   ),
                 IconButton(
                   tooltip: 'Reload User VFS',
