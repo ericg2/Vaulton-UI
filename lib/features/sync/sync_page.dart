@@ -8,7 +8,6 @@ import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
-import '../files/folder_picker.dart';
 import 'sync_models.dart';
 import 'sync_service.dart';
 import 'sync_source.dart';
@@ -106,7 +105,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           title: Text(existing == null ? 'New Sync' : 'Sync Settings'),
           content: SizedBox(
             width: 520,
-            child: ListView(shrinkWrap: true, children: [
+            child: ListView(
+              shrinkWrap: true,
+              children: [
               TextField(
                 controller: nameCtl,
                 decoration: const InputDecoration(labelText: 'Sync Name'),
@@ -114,7 +115,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               ),
               const SizedBox(height: 12),
               ListTile(
-                contentPadding: EdgeInsets.zero,
+                contentPadding: const EdgeInsets.symmetric(vertical: 4),
                 leading: const Icon(Icons.folder_outlined),
                 title: const Text('Source'),
                 subtitle: Text(source.label, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -630,12 +631,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
-            if (plan != null && plan.changes.isNotEmpty && !running)
-              OutlinedButton.icon(
-                onPressed: () => _showPlan(p, plan),
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('Review Changes'),
-              ),
             OutlinedButton(
               onPressed: () async {
                 final source = SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel);
