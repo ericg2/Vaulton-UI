@@ -305,8 +305,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New ${widget.repo ? 'Backup Vault' : 'Data Folder'}')),
       body: CursorList<Point>(
         key: _key,
-        empty: 'No ${widget.repo ? 'Backup Vaults' : 'Data Folders'} Yet',
-        emptyHint: widget.repo ? 'A Backup Vault stores your backups. Tap “New Backup Vault” to create one.' : 'A Data Folder stores your files. Set its space limit when you create it.',
+        empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet',
+        emptyHint: widget.repo ? 'A backup vault stores your backups. Tap “New Backup Vault” to create one.' : 'A data folder stores your files. Set its space limit when you create it.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
