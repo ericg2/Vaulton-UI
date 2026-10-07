@@ -175,7 +175,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                           Text('Mirror Exactly'),
                           SizedBox(height: 2),
                           Text(
-                            'Keep destination identical to source.',
+                            'Match destination to source.',
                             style: TextStyle(fontSize: 12),
                           ),
                         ],
