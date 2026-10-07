@@ -80,6 +80,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     final idle = TextEditingController(text: '$_powerIdleMinutes');
     final protection = TextEditingController(text: '$_powerScheduleProtectionMinutes');
     String action = _powerAction;
+    bool powerEnabled = _powerEnabled;
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -96,8 +97,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Enable Automatic Power Management'),
-                    value: _powerEnabled,
-                    onChanged: (v) => setDialogState(() => _powerEnabled = v),
+                    value: powerEnabled,
+                    onChanged: (v) => setDialogState(() => powerEnabled = v),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -159,12 +160,12 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                   toast(context, 'Idle time must be 5–10080 minutes and schedule protection must be 0–10080 minutes.', error: true);
                   return;
                 }
-                if (_powerEnabled && !_hasPowerAgentKey && key.text.trim().length < 32) {
+                if (powerEnabled && !_hasPowerAgentKey && key.text.trim().length < 32) {
                   toast(context, 'Enter a host agent key with at least 32 characters.', error: true);
                   return;
                 }
                 Navigator.pop(dialogContext, {
-                  'enabled': _powerEnabled,
+                  'enabled': powerEnabled,
                   'action': action,
                   'idleMinutes': i,
                   'scheduleProtectionMinutes': p,
