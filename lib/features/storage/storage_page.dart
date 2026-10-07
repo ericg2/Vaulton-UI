@@ -165,7 +165,7 @@ class _RootsTabState extends ConsumerState<_RootsTab> {
       floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New Location')) : null,
       body: CursorList<Root>(
         key: _key,
-        empty: 'No Storage Locations',
+        empty: 'No storage locations.',
         emptyHint: canCreate ? 'A location is where your data is stored, such as a disk, network share or cloud account. Tap “New location” to connect one.' : 'Ask an administrator to share a storage location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
