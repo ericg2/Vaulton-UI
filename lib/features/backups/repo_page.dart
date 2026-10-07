@@ -24,7 +24,7 @@ class RepoPage extends ConsumerStatefulWidget {
   final String repoId;
   final Point? repo;
 
-  /// Legacy values still work: 0 snapshots, 1 jobs -> History; 2 schedules -> Automation.
+  /// Tab order: 0 snapshots, 1 activity, 2 automation.
   final int initialTab;
 
   static final Map<String, int> _open = {};
@@ -194,7 +194,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         indicatorSize: TabBarIndicatorSize.tab,
         labelPadding: const EdgeInsets.symmetric(horizontal: 8),
         padding: EdgeInsets.zero,
-        tabs: const [Tab(text: 'Activity'), Tab(text: 'Snapshots'), Tab(text: 'Automation')],
+        tabs: const [Tab(text: 'Snapshots'), Tab(text: 'Activity'), Tab(text: 'Automation')],
       );
 
   @override
@@ -207,8 +207,8 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       return Scaffold(
         appBar: AppBar(title: title, actions: [_menu()], bottom: _tabs()),
         body: TabBarView(controller: _tc, children: [
-          VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, header: _summary()),
           VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true),
+          VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, header: _summary()),
           _automation(),
         ]),
       );
@@ -226,8 +226,8 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                 _tabs(),
                 Expanded(
                   child: TabBarView(controller: _tc, children: [
-                    VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false),
                     VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true, showFab: false),
+                    VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false),
                     _automation(),
                   ]),
                 ),
