@@ -84,7 +84,7 @@ class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
     return Material(color: cs.surface, elevation: overlapsContent ? 2 : 0, child: child);
   }
   @override
-  bool shouldRebuild(covariant _TimelineFilterDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _TimelineFilterDelegate oldDelegate) => true;
 }
 
 /// The "History" tab. Backups come first by default; restores, cleanups and

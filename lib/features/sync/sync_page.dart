@@ -679,7 +679,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       const SizedBox(height: 4),
                       const Text('Automatically sync folders, and keep your data up-to-date.'),
                     ]);
-                    final add = FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Sync'));
+                    final add = FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Folder'));
                     if (narrow) {
                       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -717,7 +717,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 const Card(
                   child: Padding(
                     padding: EdgeInsets.all(28),
-                    child: EmptyView('No syncs yet. Add a source folder to get started.', icon: Icons.sync),
+                    child: EmptyView('No folders added.', icon: Icons.sync),
                   ),
                 ),
               for (final p in _profiles) _profileCard(p),

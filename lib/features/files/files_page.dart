@@ -381,7 +381,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _sel.addAll(_loaded.map((n) => n.name)))),
+              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) _sel.clear(); else _sel.addAll(_loaded.map((n) => n.name)); })),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(tooltip: 'Move', icon: const Icon(Icons.drive_file_move_outline), onPressed: () => _moveCopy(_selected, false)),
               IconButton(tooltip: 'Copy', icon: const Icon(Icons.copy_outlined), onPressed: () => _moveCopy(_selected, true)),
@@ -409,6 +409,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                     ),
                   ),
             actions: [
+              IconButton(
+                tooltip: 'Select all',
+                icon: const Icon(Icons.select_all),
+                onPressed: _loaded.isEmpty ? null : () => setState(() => _sel.addAll(_loaded.map((n) => n.name))),
+              ),
               IconButton(
                 tooltip: 'Search',
                 icon: Icon(_searching ? Icons.search_off : Icons.search),

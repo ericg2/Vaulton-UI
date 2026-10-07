@@ -238,7 +238,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                   Text('${u.userName}${u.email != null ? ' · ${u.email}' : ''}\nLast sign-in ${fmtDate(u.lastLogin)}'),
                   Wrap(children: [
                     if (u.isLockedOut) chip(ctx, 'Locked', color: Theme.of(ctx).colorScheme.errorContainer),
-                    if (u.mustChangePassword) chip(ctx, 'Temp password'),
+                    if (u.mustChangePassword) chip(ctx, 'Temp Password'),
                     for (final s in u.scopes) chip(ctx, s),
                   ]),
                 ]),

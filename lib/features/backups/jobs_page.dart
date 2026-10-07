@@ -350,7 +350,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                         leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
                         title: Text(s.name),
                         subtitle: Text(
-                          '${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}${s.lastError != null ? '\n${s.lastError}' : ''}',
+                          '${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}',
                         ),
                         isThreeLine: true,
                         trailing: PopupMenuButton<String>(
@@ -381,13 +381,31 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                           ],
                         ),
                       ),
-                      Wrap(spacing: 8, children: [
-                        if (s.lastJobId != null)
-                          TextButton.icon(
-                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: s.lastJobId!, showVaultLink: widget.repoId == null))),
-                            icon: const Icon(Icons.history, size: 18),
-                            label: const Text('Last run'),
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              s.lastRunAt == null ? 'Last Run: Never' : 'Last Run: ${fmtDate(s.lastRunAt)}',
+                              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+                            ),
+                            chip(
+                              ctx,
+                              s.lastRunAt == null ? 'Never Run' : (s.lastError == null ? 'Succeeded' : 'Failed'),
+                              color: s.lastRunAt == null ? null : (s.lastError == null ? Theme.of(ctx).colorScheme.primaryContainer : Theme.of(ctx).colorScheme.errorContainer),
+                            ),
+                            if (s.lastJobId != null)
+                              TextButton.icon(
+                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: s.lastJobId!, showVaultLink: widget.repoId == null))),
+                                icon: const Icon(Icons.history, size: 18),
+                                label: const Text('Last Run'),
+                              ),
+                          ],
+                        ),
+                      ),
                         if (widget.repoId == null)
                           TextButton.icon(
                             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: s.repoId, initialTab: 2))),

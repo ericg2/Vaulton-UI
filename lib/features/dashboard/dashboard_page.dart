@@ -216,7 +216,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         Text('Total across all data folders and backup vaults you can access.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         if (lastOk != null) ...[
                           const SizedBox(height: 4),
-                          Text('Last successful backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                          Text('Last successful backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700)),
                         ],
                       ]),
                     ),

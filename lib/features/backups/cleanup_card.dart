@@ -113,7 +113,7 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final narrow = constraints.maxWidth < 600;
-                  final setupLabel = on ? 'Change plan' : (s == null ? 'Turn on cleanup' : 'Review plan');
+                  final setupLabel = on ? 'Change Plan' : (s == null ? 'Turn on cleanup' : 'Review plan');
                   final buttons = [
                     FilledButton.icon(onPressed: _setUp, icon: Icon(on ? Icons.edit_outlined : Icons.auto_delete_outlined), label: Text(setupLabel))
                   ];

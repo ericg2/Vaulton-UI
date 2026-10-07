@@ -35,6 +35,46 @@ typedef _Crumb = ({String name, String path});
 
 typedef SnapshotRestoreTarget = ({String path, bool isDir, String name});
 
+Future<int> _countFilesInPoint(Vaulton vaulton, String pointId, String path) async {
+  var count = 0;
+  String? cursor;
+  do {
+    final page = await vaulton.list(pointId, path, cursor: cursor, limit: 200);
+    for (final n in page.items) {
+      if (n.isDir) {
+        count += await _countFilesInPoint(vaulton, pointId, n.pathIn(path));
+      } else {
+        count++;
+      }
+    }
+    cursor = page.hasMore ? page.nextCursor : null;
+  } while (cursor != null);
+  return count;
+}
+
+Widget _restoreLocationCard(BuildContext context, {required String label, required String value, required IconData icon}) {
+  final cs = Theme.of(context).colorScheme;
+  final tt = Theme.of(context).textTheme;
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: cs.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: cs.outlineVariant),
+    ),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: cs.primary),
+      const SizedBox(width: 10),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: tt.labelMedium?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        Text(value, style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+      ])),
+    ]),
+  );
+}
+
 class SnapshotLockBadge extends StatelessWidget {
   const SnapshotLockBadge({super.key});
 
@@ -70,19 +110,104 @@ Future<void> restoreSnapshotFlow({
   if (dest == null || !context.mounted) return;
 
   final label = selected.length == 1 ? selected.first.name : '${selected.length} items';
-  final f = await formDialog(
-    context,
-    'Restore $label',
-    [
-      const FieldSpec('delete', 'Delete extra files in the destination', kind: 'bool'),
-      const FieldSpec('dry', 'Test run only', kind: 'bool'),
-    ],
-    ok: 'Restore',
-    intro: 'From snapshot: ${selected.map((x) => x.path).join(', ')}\n'
-        'To: ${dest.point.name}${dest.path == '/' ? '' : dest.path}\n'
-        'Folders are restored into a subfolder with their own name; existing files with the same name may be overwritten.',
+  final destinationFileCountFuture = _countFilesInPoint(vaulton, dest.point.id, dest.path);
+  final options = await showDialog<Map<String, bool>>(
+    context: context,
+    builder: (ctx) {
+      var deleteExtras = false;
+      var dryRun = false;
+      var counting = false;
+      int? destinationFileCount;
+
+      Future<void> refreshCount(StateSetter set) async {
+        set(() => counting = true);
+        try {
+          final count = await destinationFileCountFuture;
+          if (ctx.mounted) set(() {
+            destinationFileCount = count;
+            counting = false;
+          });
+        } catch (_) {
+          if (ctx.mounted) set(() => counting = false);
+        }
+      }
+
+      final fromText = selected.map((x) => x.path).join(', ');
+      final toText = '${dest.point.name}${dest.path == '/' ? '' : dest.path}';
+
+      return StatefulBuilder(
+        builder: (ctx, set) {
+          final cs = Theme.of(ctx).colorScheme;
+          return AlertDialog(
+            title: Text('Restore $label'),
+            content: SizedBox(
+              width: 460,
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _restoreLocationCard(ctx, label: 'From', value: fromText, icon: Icons.camera_alt_outlined),
+                  const SizedBox(height: 8),
+                  _restoreLocationCard(ctx, label: 'To', value: toText, icon: Icons.folder_outlined),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Delete extra files in destination'),
+                    value: deleteExtras,
+                    onChanged: (value) {
+                      set(() => deleteExtras = value);
+                      if (value && destinationFileCount == null && !counting) refreshCount(set);
+                    },
+                  ),
+                  if (deleteExtras)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: cs.errorContainer,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Icon(Icons.warning_amber_rounded, size: 19, color: cs.onErrorContainer),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              counting
+                                  ? 'Checking the destination…'
+                                  : destinationFileCount == null
+                                      ? 'Extra files in the destination may be deleted.'
+                                      : 'Up to $destinationFileCount existing file${destinationFileCount == 1 ? '' : 's'} may be deleted.',
+                              style: TextStyle(color: cs.onErrorContainer, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Test run'),
+                    subtitle: const Text('Show what would be restored without changing the destination.'),
+                    value: dryRun,
+                    onChanged: (value) => set(() => dryRun = value),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Folders are restored into a subfolder with their own name; existing files with the same name may be overwritten.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ]),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, {'delete': deleteExtras, 'dry': dryRun}), child: const Text('Restore')),
+            ],
+          );
+        },
+      );
+    },
   );
-  if (f == null) return;
+  if (options == null) return;
 
   RepoJob? last;
   var queued = 0;
@@ -94,8 +219,8 @@ Future<void> restoreSnapshotFlow({
         'snapshotId': snapshot.id,
         'snapshotPath': t.path,
         'outputPath': t.isDir && t.path != '/' ? joinPath(dest.path, t.name) : dest.path,
-        'delete': f['delete'] == 'true',
-        'dryRun': f['dry'] == 'true',
+        'delete': options['delete'] == true,
+        'dryRun': options['dry'] == true,
       }),
     );
     if (job == null) break;
@@ -447,7 +572,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _sel.addAll(_loaded.map((n) => n.name)))),
+              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) _sel.clear(); else _sel.addAll(_loaded.map((n) => n.name)); })),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(
                 tooltip: 'Restore…',
