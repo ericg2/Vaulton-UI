@@ -113,6 +113,11 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final u = await _v.me().timeout(const Duration(seconds: 8));
+      try {
+        await WakeService.refreshConfig(_v, _s);
+      } catch (_) {
+        // Keep the cached wake token if the server is temporarily unavailable.
+      }
       await settle();
       if (generation != _restoreGeneration) return;
       state = AuthState(AuthStatus.signedIn, user: u);
