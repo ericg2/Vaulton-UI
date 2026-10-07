@@ -12,6 +12,7 @@ import '../backups/jobs_page.dart';
 import '../backups/repo_page.dart';
 import '../backups/snapshot_browser.dart';
 import '../files/files_page.dart';
+import '../transfers/transfer_manager.dart';
 import 'root_shares_page.dart';
 import 'share_logic.dart';
 
@@ -287,6 +288,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       return;
     }
     await guarded(context, () => widget.repo ? _v.deleteRepo(p.id) : _v.deleteData(p.id));
+    if (!widget.repo) ref.read(transferProvider.notifier).clearForPoint(p.id);
     _key.currentState?.refresh();
     ref.invalidate(pointNamesProvider);
     ref.read(epochProvider.notifier).bump();
@@ -303,8 +305,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New ${widget.repo ? 'Backup Vault' : 'Data Folder'}')),
       body: CursorList<Point>(
         key: _key,
-        empty: 'No ${widget.repo ? 'Backup vaults' : 'Data folders'} Yet',
-        emptyHint: widget.repo ? 'A backup vault is where your backups are kept safely. Tap “New backup vault” to create one.' : 'A data folder is where your files live. You set how much space it can use. Tap “New data folder” to create one.',
+        empty: 'No ${widget.repo ? 'Backup Vaults' : 'Data Folders'} Yet',
+        emptyHint: widget.repo ? 'A Backup Vault stores your backups. Tap “New Backup Vault” to create one.' : 'A Data Folder stores your files. Set its space limit when you create it.',
         emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
@@ -460,13 +462,13 @@ class _RootSheetState extends State<_RootSheet> {
         const SizedBox(height: 6),
         Text('${fmtBytes(used)} used · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
         const SizedBox(height: 8),
-        if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection type', scheme),
-        _row(Icons.inventory_2_outlined, 'Can hold', holds.isEmpty ? 'Nothing yet' : holds.join(' and ')),
+        if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection Type', scheme),
+        _row(Icons.inventory_2_outlined, 'Can Hold', holds.isEmpty ? 'Nothing Yet' : holds.join(' and ')),
         const Divider(height: 28),
-        Text('Who can use it', style: t.titleSmall),
+        Text('Who Can Use It', style: t.titleSmall),
         const SizedBox(height: 8),
         if (!r.isOwner)
-          Text('Only the owner can change who has access.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
+          Text('Only the owner can manage access.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
         else if (_failed)
           Text('Couldn’t load sharing details.', style: t.bodyMedium?.copyWith(color: cs.error))
         else if (_shares == null)
