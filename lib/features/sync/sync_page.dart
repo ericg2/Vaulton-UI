@@ -227,7 +227,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Data Folder root selected. Changes may affect the entire folder.',
+                              'Root selected. Changes may affect entire point.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: cs.onErrorContainer,
                                   ),
