@@ -372,16 +372,25 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
       final pg = await _v.snapshots(widget.repo.id, limit: 100);
       var list = pg.items;
       Snapshot? pick;
-      if (keep?.time != null) pick = list.where((s) => s.time == keep!.time).firstOrNull;
+      if (keep != null) pick = list.where((s) => s.id == keep.id).firstOrNull;
       final want = widget.snapshotId;
       if (pick == null && keep == null && want != null && want.isNotEmpty && want != 'latest') {
         pick = list.where((s) => s.id == want || s.id.startsWith(want)).firstOrNull;
         if (pick == null) {
-          pick = (await _v.snapshots(widget.repo.id, idPrefix: want, limit: 1)).items.firstOrNull;
-          if (pick != null) list = [pick, ...list];
+          pick = (await _v.snapshots(widget.repo.id, idPrefix: want, limit: 2)).items.where((s) => s.id == want).firstOrNull;
         }
+        if (pick == null) {
+          if (!mounted) return;
+          setState(() {
+            _snaps = list;
+            _snap = null;
+            _error = Exception('Snapshot "$want" could not be found in this backup vault.');
+          });
+          return;
+        }
+      } else if (pick == null) {
+        pick = list.firstOrNull;
       }
-      pick ??= list.firstOrNull;
       if (!mounted) return;
       setState(() {
         _snaps = list;
