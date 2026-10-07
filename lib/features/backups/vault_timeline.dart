@@ -412,7 +412,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       if (_loading) return const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()));
       if (_error != null && all.isEmpty) return SizedBox(height: 260, child: ErrorView(_error!, onRetry: () => _load(spinner: true, replace: true)));
       final msg = all.isEmpty
-          ? (widget.snapshotOnly ? 'No snapshots yet' : 'No history yet')
+          ? (widget.snapshotOnly ? 'No snapshots yet.' : 'No history yet')
           : (widget.snapshotOnly ? (_filter == 1 ? 'No locked snapshots' : (_filter == 2 ? 'No unlocked snapshots' : 'No snapshots yet')) : (_filter == 0 ? 'No backups yet' : (_filter == 1 ? 'No other activity' : 'Nothing failed')));
       return SizedBox(
         height: 220,
