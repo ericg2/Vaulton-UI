@@ -296,7 +296,9 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     ].join('  ·  ');
 
     // Snapshot to browse: the paired one, or the id the job recorded (the browser resolves it).
-    final browseId = s?.id ?? (okBackup && (j.snapshotId?.isNotEmpty ?? false) ? j.snapshotId : null);
+    // Only browse a snapshot we actually resolved. Falling back to a job's
+    // snapshot ID lets SnapshotBrowser choose a different snapshot by prefix.
+    final browseId = s?.id;
 
     String? what;
     if (j != null) {
@@ -315,13 +317,17 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
         : '${fmtBytes(toInt(sum['totalBytesProcessed']))} · ${toInt(sum['totalFilesProcessed'])} files · +${fmtBytes(toInt(sum['bytesAdded']))} new';
     String? note;
     if (j == null) note = 'No job record for this snapshot.';
-    if (okBackup && browseId == null) note = 'This run did not record a snapshot.';
+    if (okBackup && browseId == null) {
+      note = j?.snapshotId?.isNotEmpty == true
+          ? 'Snapshot ${shortId(j!.snapshotId!)} could not be found in this vault.'
+          : 'This run did not record a snapshot.';
+    }
     final err = cleanJobError(j?.error);
     final indent = MediaQuery.sizeOf(context).width >= 600 ? 52.0 : 0.0;
 
     final pills = <Widget>[
       if (s != null && s.locked) const SnapshotLockBadge(),
-      if (s != null) for (final tg in s.tags) _pill('#$tg'),
+      if (s != null) for (final tg in s.tags.where((tag) => tag.trim().isNotEmpty)) _pill('#$tg'),
     ];
 
     return Card(
