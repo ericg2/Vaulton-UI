@@ -572,7 +572,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     if (_error != null) return Scaffold(appBar: AppBar(title: title), body: ErrorView(_error!, onRetry: _init));
     if (_snaps == null) return Scaffold(appBar: AppBar(title: title), body: const Center(child: CircularProgressIndicator()));
     if (_snap == null) {
-      return Scaffold(appBar: AppBar(title: title), body: const EmptyView('This backup vault has no snapshots yet.\nRun a backup first.', icon: Icons.camera_alt_outlined));
+      return Scaffold(appBar: AppBar(title: title), body: const EmptyView('This Backup Vault Has No Snapshots Yet.\nRun a backup first.', icon: Icons.camera_alt_outlined));
     }
     final snap = _snap!;
     final selecting = _sel.isNotEmpty;
