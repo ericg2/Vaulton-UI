@@ -377,7 +377,8 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
       if (pick == null && keep == null && want != null && want.isNotEmpty && want != 'latest') {
         pick = list.where((s) => s.id == want || s.id.startsWith(want)).firstOrNull;
         if (pick == null) {
-          pick = (await _v.snapshots(widget.repo.id, idPrefix: want, limit: 2)).items.where((s) => s.id == want).firstOrNull;
+          final matches = (await _v.snapshots(widget.repo.id, idPrefix: want, limit: 2)).items;
+          if (matches.length == 1) pick = matches.single;
         }
         if (pick == null) {
           if (!mounted) return;
