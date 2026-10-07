@@ -175,7 +175,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                           Text('Mirror Exactly'),
                           SizedBox(height: 2),
                           Text(
-                            'Keep the destination identical to the source.',
+                            'Keep destination identical to source.',
                             style: TextStyle(fontSize: 12),
                           ),
                         ],
@@ -556,9 +556,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Keep Your Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
+                        Text('Keep Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
                         const SizedBox(height: 4),
-                        const Text('Automatically sync folders and keep your data up to date.'),
+                        const Text('Automatically sync folders, and keep your data up-to-date.'),
                       ]),
                     ),
                     const SizedBox(width: 12),
