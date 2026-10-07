@@ -165,6 +165,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   SizedBox(
                     height: 40,
                     child: FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     onPressed: () async {
                       final picked = await pickSyncSource();
                       if (picked != null) {
