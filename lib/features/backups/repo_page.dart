@@ -151,7 +151,10 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
           else ...[
             Row(children: [
               Expanded(child: Text('Storage', style: tt.titleSmall)),
-              Flexible(child: chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null)),
+              Align(
+                alignment: Alignment.centerRight,
+                child: chip(context, r.healthLabel, color: r.isError ? cs.errorContainer : null),
+              ),
             ]),
             const SizedBox(height: 10),
             UsageBar(used: r.usedBytes, max: r.maxBytes),
