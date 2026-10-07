@@ -166,35 +166,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 decoration: const InputDecoration(labelText: 'Destination Folder'),
                 onChanged: (v) => remoteDir = v.startsWith('/') ? v : '/' + v,
               ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Mirror Exactly'),
-                          SizedBox(height: 2),
-                          Text(
-                            'Match destination to source.',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Transform.scale(
-                      scale: 0.82,
-                      child: Switch(
-                        value: deleteExtras,
-                        onChanged: (v) => set(() => deleteExtras = v),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 10),
               DropdownButtonFormField<int>(
                 initialValue: interval,
                 decoration: const InputDecoration(labelText: 'Sync Frequency'),
@@ -222,6 +194,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   onChanged: (v) => set(() => chargingOnly = v),
                 ),
               ],
+              _SettingSwitch(
+                title: 'Match destination to source',
+                value: deleteExtras,
+                onChanged: (v) => set(() => deleteExtras = v),
+              ),
               _SettingSwitch(
                 title: 'Enabled',
                 value: enabled,
