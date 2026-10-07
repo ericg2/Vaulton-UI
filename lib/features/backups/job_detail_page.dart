@@ -387,7 +387,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
     return _card('Backup Summary', [
       for (final e in summary.entries)
-        if (e.value != null && e.value != '' && !(e.value is num && e.value == 0))
+        if (e.value != null && e.value != '')
           _kv(pretty(e.key), SelectableText(value(e.key, e.value))),
     ]);
   }
