@@ -175,7 +175,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                           Text('Mirror Exactly'),
                           SizedBox(height: 2),
                           Text(
-                            'Remove destination files and folders that are not in the source.',
+                            'Keep the destination identical to the source.',
                             style: TextStyle(fontSize: 12),
                           ),
                         ],
@@ -690,10 +690,15 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               },
               child: const Text('Settings'),
             ),
-            IconButton(
-              tooltip: 'Remove Sync',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _delete(p),
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                tooltip: 'Remove Sync',
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _delete(p),
+              ),
             ),
           ]),
         ]),
