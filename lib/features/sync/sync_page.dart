@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../background/background_api.dart';
@@ -9,334 +9,506 @@ import '../../core/util.dart';
 import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
 import '../files/folder_picker.dart';
-import '../transfers/transfer_manager.dart';
-import 'folder_sync.dart';
-import 'sync_api.dart';
 import 'sync_models.dart';
+import 'sync_service.dart';
+import 'sync_source.dart';
 
 class SyncPage extends ConsumerStatefulWidget {
   const SyncPage({super.key});
-  @override
-  ConsumerState<SyncPage> createState() => _SyncPageState();
+  @override ConsumerState<SyncPage> createState() => _SyncPageState();
 }
 
 class _SyncPageState extends ConsumerState<SyncPage> {
-  late SyncSettings _s;
-  late SyncStatus _st;
-  List<FolderPair> _pairs = [];
+  List<SyncProfile> _profiles = [];
   List<Point> _points = [];
+  final Map<String, SyncRunStatus> _status = {};
+  final Map<String, SyncPlan> _plans = {};
   Timer? _poll;
-  Timer? _folderPoll;
-  final _remote = TextEditingController();
+  CancelToken? _cancel;
 
   @override
   void initState() {
     super.initState();
-    final prefs = ref.read(prefsProvider);
-    _s = SyncSettings.load(prefs);
-    _st = SyncStatus.load(prefs);
-    _pairs = FolderPair.loadAll(prefs);
-    _remote.text = _s.remoteDir;
-    loadAllPoints(ref).then((p) {
-      if (mounted) setState(() => _points = p);
-    }).catchError((_) {});
-    _poll = Timer.periodic(const Duration(seconds: 2), (_) async {
-      await prefs.reload();
-      if (mounted) setState(() => _st = SyncStatus.load(prefs));
-    });
-    _folderPoll = Timer.periodic(const Duration(seconds: 30), (_) => _runDuePairs());
+    _load();
+    _poll = Timer.periodic(const Duration(seconds: 2), (_) => _refreshStatus());
   }
 
   @override
   void dispose() {
     _poll?.cancel();
-    _folderPoll?.cancel();
-    _remote.dispose();
+    _cancel?.cancel();
     super.dispose();
   }
 
-  Future<void> _save() async {
-    await _s.save(ref.read(prefsProvider));
-    await configurePhotoSync(_s);
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _setEnabled(bool v) async {
-    if (v) {
-      if (_s.pointId == null) {
-        toast(context, 'Choose a destination data folder first', error: true);
-        return;
-      }
-      if (!await requestPhotoPermission()) {
-        if (mounted) toast(context, 'Photo access is required for backup. Allow it in system settings.', error: true);
-        return;
-      }
+  Future<void> _load() async {
+    final prefs = ref.read(prefsProvider);
+    final profiles = SyncProfile.loadAll(prefs);
+    try {
+      final points = await loadAllPoints(ref);
+      if (!mounted) return;
+      setState(() {
+        _profiles = profiles;
+        _points = points;
+        for (final p in profiles) _status[p.id] = SyncRunStatus.load(prefs, p.id);
+      });
+    } catch (_) {
+      if (mounted) setState(() => _profiles = profiles);
     }
-    _s.enabled = v;
-    await _save();
-    if (v) await triggerPhotoSyncNow();
   }
 
-  Future<void> _pickAlbums() async {
-    final albums = await guarded(context, listAlbums);
-    if (albums == null || !mounted) return;
-    final chosen = {..._s.albumIds};
-    final r = await showDialog<Set<String>>(
+  Future<void> _refreshStatus() async {
+    final prefs = ref.read(prefsProvider);
+    await prefs.reload();
+    if (!mounted) return;
+    setState(() {
+      _profiles = SyncProfile.loadAll(prefs);
+      for (final p in _profiles) _status[p.id] = SyncRunStatus.load(prefs, p.id);
+    });
+  }
+
+  Future<void> _add() async {
+    if (_points.isEmpty) {
+      toast(context, 'No data folders are available.', error: true);
+      return;
+    }
+    final source = await pickSyncSource();
+    if (source == null || !mounted) return;
+    final cfg = await _configure(null, source);
+    if (cfg == null) return;
+    final prefs = ref.read(prefsProvider);
+    _profiles = [..._profiles, cfg];
+    await SyncProfile.saveAll(prefs, _profiles);
+    await configureSyncSchedules(_profiles);
+    await _load();
+    await _preview(cfg);
+  }
+
+  Future<SyncProfile?> _configure(SyncProfile? existing, SyncSourceInfo source) async {
+    var name = existing?.name ?? source.label;
+    var pointId = existing?.pointId ?? _points.first.id;
+    var remoteDir = existing?.remoteDir ?? '/' + source.label;
+    var interval = existing?.intervalMinutes ?? 60;
+    var enabled = existing?.enabled ?? true;
+    var deleteExtras = existing?.deleteExtras ?? true;
+    var wifiOnly = existing?.wifiOnly ?? true;
+    var chargingOnly = existing?.chargingOnly ?? false;
+    final nameCtl = TextEditingController(text: name);
+    final remoteCtl = TextEditingController(text: remoteDir);
+
+    final result = await showDialog<SyncProfile>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: const Text('Albums to Backup'),
+          title: Text(existing == null ? 'New Sync' : 'Sync Settings'),
           content: SizedBox(
-            width: 400,
+            width: 520,
             child: ListView(shrinkWrap: true, children: [
-              const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Select none to back up everything.')),
-              for (final a in albums)
-                CheckboxListTile(
-                  title: Text(a.name),
-                  subtitle: Text('${a.count} items'),
-                  value: chosen.contains(a.id),
-                  onChanged: (v) => set(() => v! ? chosen.add(a.id) : chosen.remove(a.id)),
+              TextField(
+                controller: nameCtl,
+                decoration: const InputDecoration(labelText: 'Sync Name'),
+                onChanged: (v) => name = v,
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.folder_outlined),
+                title: const Text('Source'),
+                subtitle: Text(source.label, maxLines: 2, overflow: TextOverflow.ellipsis),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: pointId,
+                decoration: const InputDecoration(labelText: 'Destination Data Folder'),
+                items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
+                onChanged: (v) => set(() => pointId = v!),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: remoteCtl,
+                decoration: const InputDecoration(labelText: 'Destination Folder'),
+                onChanged: (v) => remoteDir = v.startsWith('/') ? v : '/' + v,
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Mirror Exactly'),
+                subtitle: const Text('Remove destination files and folders that are not in the source.'),
+                value: deleteExtras,
+                onChanged: (v) => set(() => deleteExtras = v),
+              ),
+              DropdownButtonFormField<int>(
+                initialValue: interval,
+                decoration: const InputDecoration(labelText: 'Sync Frequency'),
+                items: const [
+                  DropdownMenuItem(value: 15, child: Text('Every 15 Minutes')),
+                  DropdownMenuItem(value: 30, child: Text('Every 30 Minutes')),
+                  DropdownMenuItem(value: 60, child: Text('Every Hour')),
+                  DropdownMenuItem(value: 180, child: Text('Every 3 Hours')),
+                  DropdownMenuItem(value: 360, child: Text('Every 6 Hours')),
+                  DropdownMenuItem(value: 720, child: Text('Every 12 Hours')),
+                  DropdownMenuItem(value: 1440, child: Text('Daily')),
+                ],
+                onChanged: (v) => set(() => interval = v!),
+              ),
+              if (backgroundSupported) ...[
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Wi-Fi / Unmetered Only'),
+                  value: wifiOnly,
+                  onChanged: (v) => set(() => wifiOnly = v),
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Only While Charging'),
+                  value: chargingOnly,
+                  onChanged: (v) => set(() => chargingOnly = v),
+                ),
+              ],
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enabled'),
+                value: enabled,
+                onChanged: (v) => set(() => enabled = v),
+              ),
             ]),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, chosen), child: const Text('Save')),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, SyncProfile(
+                id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+                name: name.trim().isEmpty ? source.label : name.trim(),
+                sourceKind: source.kind,
+                sourceLocation: source.location,
+                sourceLabel: source.label,
+                pointId: pointId,
+                remoteDir: remoteDir.trim().isEmpty ? '/' : remoteDir.trim(),
+                enabled: enabled,
+                deleteExtras: deleteExtras,
+                intervalMinutes: interval,
+                wifiOnly: wifiOnly,
+                chargingOnly: chargingOnly,
+                lastRun: existing?.lastRun ?? 0,
+                nextRun: existing?.nextRun ?? 0,
+              )),
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
     );
-    if (r != null) {
-      _s.albumIds = r.toList();
-      await _save();
+    nameCtl.dispose();
+    remoteCtl.dispose();
+    return result;
+  }
+
+  Future<void> _preview(SyncProfile p) async {
+    try {
+      final plan = await buildSyncPlan(
+        ref.read(apiClientProvider),
+        p,
+        ref.read(prefsProvider),
+        onProgress: (s) {
+          if (mounted) setState(() => _status[p.id] = s);
+        },
+      );
+      if (!mounted) return;
+      setState(() => _plans[p.id] = plan);
+      await _showPlan(p, plan);
+    } catch (e) {
+      if (mounted) toast(context, e.toString(), error: true);
     }
   }
 
-  Future<void> _addPair() async {
-    final dir = await FilePicker.getDirectoryPath(dialogTitle: 'Folder to sync');
-    if (dir == null || !mounted) return;
-    final dest = await pickFolder(context, title: 'Upload into…');
-    if (dest == null) return;
-    _pairs.add(FolderPair(id: '${DateTime.now().millisecondsSinceEpoch}', localDir: dir, pointId: dest.point.id, remoteDir: dest.path));
-    await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
-    setState(() {});
-    await _runPair(_pairs.last);
-  }
-
-  Future<void> _runDuePairs() async {
-    if (!isDesktop || !mounted) return;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    for (final p in [..._pairs]) {
-      if (!p.enabled) continue;
-      if (p.lastRun == 0 || now - p.lastRun >= p.intervalMinutes * 60000) await _runPair(p, quiet: true);
+  Future<void> _apply(SyncProfile p, SyncPlan plan) async {
+    _cancel = CancelToken();
+    try {
+      await applySyncPlan(
+        ref.read(apiClientProvider),
+        p,
+        plan,
+        ref.read(prefsProvider),
+        onProgress: (s) {
+          if (mounted) setState(() => _status[p.id] = s);
+        },
+        cancel: _cancel,
+      );
+      p.lastRun = DateTime.now().millisecondsSinceEpoch;
+      p.nextRun = p.lastRun + p.intervalMinutes * 60000;
+      await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+      await configureSyncSchedules(_profiles);
+      if (mounted) toast(context, 'Sync complete');
+      await _refreshStatus();
+    } catch (e) {
+      if (mounted) toast(context, CancelToken.isCancel(e) ? 'Sync cancelled' : e.toString(), error: true);
+    } finally {
+      _cancel = null;
     }
   }
 
-  Future<void> _runPair(FolderPair p, {bool quiet = false}) async {
-    final prefs = ref.read(prefsProvider);
-    final n = await guarded(context, () => runFolderPair(p, prefs, ref.read(transferProvider.notifier)));
-    await FolderPair.saveAll(prefs, _pairs);
-    if (mounted && !quiet && n != null) toast(context, n == 0 ? 'Folder is up to date' : 'Queued $n upload${n == 1 ? '' : 's'}');
+  Future<void> _showPlan(SyncProfile p, SyncPlan plan) async {
+    if (!mounted) return;
+    final s = _status[p.id] ?? SyncRunStatus();
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        Widget tile(IconData icon, String title, int count, String bytes, {bool danger = false}) {
+          return Card(
+            child: ListTile(
+              leading: Icon(icon, color: danger ? cs.error : null),
+              title: Text(title),
+              trailing: Text(count.toString() + (bytes == '0 B' ? '' : ' · ' + bytes)),
+            ),
+          );
+        }
+        return AlertDialog(
+          title: const Text('Review Sync'),
+          content: SizedBox(
+            width: 560,
+            child: ListView(shrinkWrap: true, children: [
+              Text(
+                p.sourceLabel + ' → ' + _pointName(p.pointId) + p.remoteDir,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              tile(Icons.add_circle_outline, 'New Files', plan.newFiles,
+                  fmtBytes(plan.uploads.where((x) => x.kind == SyncChangeKind.add).fold(0, (a, x) => a + x.bytes))),
+              tile(Icons.sync, 'Updated Files', plan.updatedFiles,
+                  fmtBytes(plan.uploads.where((x) => x.kind != SyncChangeKind.add).fold(0, (a, x) => a + x.bytes))),
+              tile(Icons.delete_outline, 'Destination Extras', plan.deletedFiles,
+                  fmtBytes(plan.deleteBytes), danger: plan.deletedFiles > 0),
+              tile(Icons.check_circle_outline, 'Already In Sync', s.unchangedFiles, '0 B'),
+              if (plan.changes.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Everything already matches.'),
+                ),
+              if (plan.deletedFiles > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Mirror Exactly is enabled. Destination extras will be permanently removed.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.error),
+                  ),
+                ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+            if (plan.changes.isNotEmpty)
+              FilledButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  if (plan.deletedFiles > 0) {
+                    final ok = await confirm(
+                      context,
+                      'Remove Destination Extras?',
+                      'This will permanently delete ' +
+                          plan.deletedFiles.toString() +
+                          ' destination item' +
+                          (plan.deletedFiles == 1 ? '' : 's') +
+                          ' so the destination exactly matches the source.',
+                    );
+                    if (!ok) return;
+                  }
+                  await _apply(p, plan);
+                },
+                child: Text(plan.deletedFiles > 0 ? 'Sync & Delete Extras' : 'Start Sync'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _pointName(String id) => _points.where((p) => p.id == id).firstOrNull?.name ?? 'Data Folder';
+
+  Future<void> _run(SyncProfile p) async {
+    await _preview(p);
+  }
+
+  Future<void> _delete(SyncProfile p) async {
+    if (!await confirm(context, 'Remove Sync?', 'This removes the sync configuration. Destination files are left untouched.')) return;
+    _profiles.remove(p);
+    await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+    await configureSyncSchedules(_profiles);
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final mobile = backgroundSupported;
     final desktop = isDesktop;
+    final cs = Theme.of(context).colorScheme;
+    final active = _profiles.where((p) => _status[p.id]?.running == true).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sync & Backup')),
-      body: ListView(children: [
-        if (!mobile && !desktop)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: EmptyView('Automatic sync needs the Android or desktop app.\nThe browser cannot read your files in the background.', icon: Icons.cloud_off_outlined),
-          ),
-        if (mobile) ...[
-          Section('Photo & video backup', children: [
-            Card(
-              child: SwitchListTile(
-                title: const Text('Back up photos and videos'),
-                subtitle: Text(_s.enabled ? 'Runs in the background, even when the app is closed' : 'Off'),
-                value: _s.enabled,
-                onChanged: _setEnabled,
-              ),
-            ),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _points.any((p) => p.id == _s.pointId) ? _s.pointId : null,
-                    decoration: const InputDecoration(labelText: 'Destination data folder'),
-                    items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
-                    onChanged: (v) {
-                      _s.pointId = v;
-                      _save();
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _remote,
-                    decoration: const InputDecoration(labelText: 'Destination folder'),
-                    onChanged: (v) {
-                      _s.remoteDir = v.startsWith('/') ? v : '/$v';
-                    },
-                    onEditingComplete: _save,
-                    onTapOutside: (_) => _save(),
-                  ),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Organise into year/month folders'), value: _s.organizeByDate, onChanged: (v) { _s.organizeByDate = v; _save(); }),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Include videos'), value: _s.includeVideos, onChanged: (v) { _s.includeVideos = v; _save(); }),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Wi‑Fi / unmetered only'), value: _s.wifiOnly, onChanged: (v) { _s.wifiOnly = v; _save(); }),
-                  SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Only while charging'), value: _s.chargingOnly, onChanged: (v) { _s.chargingOnly = v; _save(); }),
-                  DropdownButtonFormField<int>(
-                    initialValue: const [15, 30, 60, 180, 360, 720, 1440].contains(_s.intervalMinutes) ? _s.intervalMinutes : 60,
-                    decoration: const InputDecoration(labelText: 'Check for new photos every'),
-                    items: const [
-                      DropdownMenuItem(value: 15, child: Text('15 minutes')),
-                      DropdownMenuItem(value: 30, child: Text('30 minutes')),
-                      DropdownMenuItem(value: 60, child: Text('1 hour')),
-                      DropdownMenuItem(value: 180, child: Text('3 hours')),
-                      DropdownMenuItem(value: 360, child: Text('6 hours')),
-                      DropdownMenuItem(value: 720, child: Text('12 hours')),
-                      DropdownMenuItem(value: 1440, child: Text('Daily')),
-                    ],
-                    onChanged: (v) {
-                      _s.intervalMinutes = v!;
-                      _save();
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Albums'),
-                    subtitle: Text(_s.albumIds.isEmpty ? 'Everything' : '${_s.albumIds.length} selected'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: _pickAlbums,
-                  ),
-                ]),
-              ),
-            ),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Icon(_st.isLive ? Icons.sync : Icons.check_circle_outline, color: cs.primary),
-                    const SizedBox(width: 8),
-                    Text(_st.isLive ? 'Backing up…' : 'Idle', style: Theme.of(context).textTheme.titleSmall),
-                  ]),
-                  const SizedBox(height: 8),
-                  if (_st.isLive) const LinearProgressIndicator(),
-                  if (_st.current != null && _st.isLive) Text(_st.current!, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text('${_st.totalSynced} items backed up in total'),
-                  if (_st.uploaded > 0 || _st.skipped > 0 || _st.failed > 0)
-                    Text('Last run: ${_st.uploaded} uploaded, ${_st.skipped} already there, ${_st.failed} failed'),
-                  if (_st.lastRun > 0) Text('Last finished: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(_st.lastRun))}'),
-                  if (_st.error != null) Text(_st.error!, style: TextStyle(color: cs.error)),
-                  const SizedBox(height: 8),
-                  Wrap(spacing: 8, children: [
-                    FilledButton.tonalIcon(
-                      icon: const Icon(Icons.backup),
-                      label: const Text('Backup now'),
-                      onPressed: _s.pointId == null ? null : () async {
-                        if (!await requestPhotoPermission()) {
-                          if (context.mounted) toast(context, 'Photo access not granted', error: true);
-                          return;
-                        }
-                        await triggerPhotoSyncNow();
-                        if (context.mounted) toast(context, 'Backup started');
-                      },
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        if (await confirm(context, 'Reset sync history?', 'Everything will be re-checked on the next run. Files already on the server are skipped, not duplicated.')) {
-                          await resetSyncHistory(ref.read(prefsProvider));
-                          setState(() => _st = SyncStatus.load(ref.read(prefsProvider)));
-                        }
-                      },
-                      child: const Text('Reset history'),
-                    ),
-                  ]),
-                ]),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                'Tip: for the most reliable background runs, exclude Vaulton from battery optimisation in Android settings. Backups resume where they left off.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
-          ]),
+      appBar: AppBar(
+        title: const Text('Sync & Backup'),
+        actions: [
+          if (desktop) IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _load),
         ],
-        if (desktop)
-          Section('Folder Sync', children: [
-            if (_pairs.isEmpty)
-              const Padding(padding: EdgeInsets.all(16), child: Text('Mirror local folders into a data folder. New and changed files are uploaded automatically while Vaulton is open or minimised.')),
-            for (final p in _pairs)
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: desktop ? 1180 : 720),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(desktop ? 28 : 16, 16, desktop ? 28 : 16, 32),
+            children: [
               Card(
-                clipBehavior: Clip.antiAlias,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      const Icon(Icons.folder_special_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p.localDir, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
-                          Text('→ ${_points.where((x) => x.id == p.pointId).firstOrNull?.name ?? 'Data Folder'}${p.remoteDir}',
-                              maxLines: 2, overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.outline)),
-                        ]),
-                      ),
-                      Switch(value: p.enabled, onChanged: (v) async {
-                        p.enabled = v;
-                        await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
-                        setState(() {});
-                      }),
-                    ]),
-                    const SizedBox(height: 12),
-                    LayoutBuilder(builder: (ctx, c) {
-                      final frequency = DropdownButton<int>(
-                        value: const [5, 15, 30, 60, 180, 360].contains(p.intervalMinutes) ? p.intervalMinutes : 15,
-                        onChanged: (v) async {
-                          if (v == null) return;
-                          p.intervalMinutes = v;
-                          await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
-                          setState(() {});
-                        },
-                        items: const [
-                          DropdownMenuItem(value: 5, child: Text('Every 5 Minutes')),
-                          DropdownMenuItem(value: 15, child: Text('Every 15 Minutes')),
-                          DropdownMenuItem(value: 30, child: Text('Every 30 Minutes')),
-                          DropdownMenuItem(value: 60, child: Text('Every Hour')),
-                          DropdownMenuItem(value: 180, child: Text('Every 3 Hours')),
-                          DropdownMenuItem(value: 360, child: Text('Every 6 Hours')),
-                        ],
-                      );
-                      final last = p.lastRun == 0 ? 'Never' : fmtDate(DateTime.fromMillisecondsSinceEpoch(p.lastRun));
-                      final controls = Wrap(spacing: 8, runSpacing: 8, children: [
-                        frequency,
-                        OutlinedButton.icon(onPressed: () => _runPair(p), icon: const Icon(Icons.sync, size: 18), label: const Text('Sync Now')),
-                        IconButton(tooltip: 'Remove', icon: const Icon(Icons.delete_outline), onPressed: () async {
-                          _pairs.remove(p);
-                          await resetFolderState(ref.read(prefsProvider), p);
-                          await FolderPair.saveAll(ref.read(prefsProvider), _pairs);
-                          setState(() {});
-                        }),
-                      ]);
-                      final meta = Text('Last Run: $last', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.outline));
-                      return c.maxWidth < 620
-                          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [controls, const SizedBox(height: 6), meta])
-                          : Row(children: [Expanded(child: meta), controls]);
-                    }),
+                  padding: const EdgeInsets.all(22),
+                  child: Row(children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(16)),
+                      child: Icon(Icons.sync, color: cs.onPrimaryContainer, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Keep Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
+                        const SizedBox(height: 4),
+                        const Text('Mirror a source into a Vaulton Data Folder, track every change, and review destination cleanup before it happens.'),
+                      ]),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Sync')),
                   ]),
                 ),
               ),
-            Padding(padding: const EdgeInsets.all(12), child: Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: _addPair, icon: const Icon(Icons.add), label: const Text('Add Folder')))),
-          ]),
-      ]),
+              const SizedBox(height: 16),
+              if (active > 0)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(children: [
+                      const SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(width: 12),
+                      Text(active.toString() + ' Sync' + (active == 1 ? '' : 's') + ' Running'),
+                    ]),
+                  ),
+                ),
+              if (_profiles.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(28),
+                    child: EmptyView('No syncs yet. Add a source folder to get started.', icon: Icons.sync),
+                  ),
+                ),
+              for (final p in _profiles) _profileCard(p),
+            ],
+          ),
+        ),
+      ),
     );
   }
+
+  Widget _profileCard(SyncProfile p) {
+    final cs = Theme.of(context).colorScheme;
+    final st = _status[p.id] ?? SyncRunStatus();
+    final point = _points.where((x) => x.id == p.pointId).firstOrNull;
+    final plan = _plans[p.id];
+    final running = st.running;
+    final progress = st.bytesTotal > 0 ? (st.bytesDone / st.bytesTotal).clamp(0, 1).toDouble() : null;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.sync, color: p.enabled ? cs.primary : cs.outline),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(p.name, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  p.sourceLabel + ' → ' + (point?.name ?? 'Data Folder') + p.remoteDir,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.outline),
+                ),
+              ]),
+            ),
+            Switch(
+              value: p.enabled,
+              onChanged: (v) async {
+                p.enabled = v;
+                await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+                await configureSyncSchedules(_profiles);
+                setState(() {});
+              },
+            ),
+          ]),
+          const SizedBox(height: 12),
+          if (running) ...[
+            Text(st.phase, style: Theme.of(context).textTheme.labelLarge),
+            if (st.current != null) Text(st.current!, maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 8),
+            Text(fmtBytes(st.bytesDone) + ' of ' + fmtBytes(st.bytesTotal) + ' · ' + st.completed.toString() + ' completed · ' + st.failed.toString() + ' failed'),
+          ] else ...[
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              _chip(_frequencyLabel(p.intervalMinutes)),
+              _chip(p.deleteExtras ? 'Mirror Exactly' : 'Keep Destination Extras'),
+              if (p.nextRun > 0) _chip('Next Run ' + fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))),
+            ]),
+            const SizedBox(height: 8),
+            if (st.finishedAt > 0)
+              Text(
+                st.error ?? st.message ?? 'Last sync completed.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: st.error == null ? cs.onSurfaceVariant : cs.error),
+              ),
+            if (plan != null && plan.changes.isNotEmpty)
+              Text(
+                plan.newFiles.toString() + ' new · ' + plan.updatedFiles.toString() + ' updated · ' + plan.deletedFiles.toString() + ' destination extras',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.tonalIcon(
+              onPressed: running ? null : () => _run(p),
+              icon: const Icon(Icons.sync),
+              label: const Text('Sync Now'),
+            ),
+            if (plan != null && plan.changes.isNotEmpty && !running)
+              OutlinedButton.icon(
+                onPressed: () => _showPlan(p, plan),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Review Changes'),
+              ),
+            OutlinedButton(
+              onPressed: () async {
+                final source = SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel);
+                final updated = await _configure(p, source);
+                if (updated == null) return;
+                final i = _profiles.indexWhere((x) => x.id == p.id);
+                if (i < 0) return;
+                _profiles[i] = updated;
+                await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+                await configureSyncSchedules(_profiles);
+                if (mounted) setState(() {});
+              },
+              child: const Text('Settings'),
+            ),
+            IconButton(
+              tooltip: 'Remove Sync',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _delete(p),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  String _frequencyLabel(int minutes) {
+    if (minutes < 60) return 'Every ' + minutes.toString() + ' Minutes';
+    if (minutes % 60 == 0) return 'Every ' + (minutes ~/ 60).toString() + ' Hours';
+    return 'Every ' + minutes.toString() + ' Minutes';
+  }
+
+  Widget _chip(String text) => Chip(label: Text(text), visualDensity: VisualDensity.compact);
 }

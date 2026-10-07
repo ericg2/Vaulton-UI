@@ -11,10 +11,8 @@ import '../features/transfers/transfer_engine.dart';
 import '../features/transfers/transfer_manager.dart';
 import '../features/transfers/transfer_models.dart';
 
-const _kPeriodic = 'vaulton.photo.periodic';
-const _kSyncNow = 'vaulton.photo.now';
+const _kSync = 'vaulton.sync.periodic';
 const _kDrain = 'vaulton.drain';
-
 bool get backgroundSupported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 @pragma('vm:entry-point')
@@ -29,11 +27,10 @@ void backgroundDispatcher() {
       if (!session.isSignedIn) return true;
       final api = ApiClient(session);
       switch (task) {
-        case _kPeriodic:
-        case _kSyncNow:
-          if (!SyncSettings.load(prefs).enabled && task == _kPeriodic) return true;
-          final more = await PhotoSyncService(api, prefs).run();
-          if (more) await _enqueueSyncContinuation();
+        case _kSync:
+          for (final p in SyncProfile.loadAll(prefs)) {
+            await runScheduledSync(api, prefs, p);
+          }
           return true;
         case _kDrain:
           final more = await _drain(api, prefs);
@@ -42,34 +39,22 @@ void backgroundDispatcher() {
       }
       return true;
     } catch (_) {
-      return false; // WorkManager retries with back-off
+      return false;
     }
   });
 }
 
-Future<void> _enqueueSyncContinuation() => Workmanager().registerOneOffTask(
-      'photo-sync-continue', _kSyncNow,
-      existingWorkPolicy: ExistingWorkPolicy.replace,
-      constraints: Constraints(networkType: NetworkType.connected),
-      initialDelay: const Duration(seconds: 15),
-    );
+Future<void> _drainProgress(SharedPreferences prefs, List<TransferTask> tasks) async {
+  await prefs.setString(kQueueKey, encodeQueue(tasks));
+  await prefs.setInt(kBgHeartbeat, DateTime.now().millisecondsSinceEpoch);
+}
 
-/// Drains the persisted transfer queue while the UI is not running.
 Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
   final ui = prefs.getInt(kUiHeartbeat) ?? 0;
-  if (DateTime.now().millisecondsSinceEpoch - ui < 15000) return false; // UI is alive and handling it
+  if (DateTime.now().millisecondsSinceEpoch - ui < 15000) return false;
   final tasks = decodeQueue(prefs.getString(kQueueKey));
   final engine = TransferEngine(api);
   final started = DateTime.now();
-  var lastWrite = DateTime.fromMillisecondsSinceEpoch(0);
-
-  Future<void> write({bool force = false}) async {
-    final now = DateTime.now();
-    if (!force && now.difference(lastWrite) < const Duration(seconds: 2)) return;
-    lastWrite = now;
-    await prefs.setString(kQueueKey, encodeQueue(tasks));
-    await prefs.setInt(kBgHeartbeat, now.millisecondsSinceEpoch);
-  }
 
   Future<void> runOne(TransferTask t) async {
     t.state = TState.running;
@@ -77,7 +62,7 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
       void prog(int a, int b) {
         t.done = a;
         if (b > 0) t.total = b;
-        write();
+        _drainProgress(prefs, tasks);
       }
       if (t.kind == TKind.upload) {
         await engine.upload(t, onProgress: prog);
@@ -93,62 +78,58 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
       t.error = e.message;
     } catch (e) {
       t.state = TState.failed;
-      t.error = '$e';
+      t.error = e.toString();
     }
-    await write(force: true);
+    await _drainProgress(prefs, tasks);
   }
 
-  await write(force: true);
   const budget = Duration(minutes: 9);
   while (DateTime.now().difference(started) < budget) {
     final batch = tasks.where((t) => t.state == TState.queued).take(2).toList();
     if (batch.isEmpty) break;
     await Future.wait(batch.map(runOne));
   }
-  await write(force: true);
-  final remaining = tasks.any((t) => t.state == TState.queued);
+  await _drainProgress(prefs, tasks);
+  final more = tasks.any((t) => t.state == TState.queued);
   await prefs.setInt(kBgHeartbeat, 0);
-  return remaining;
+  return more;
 }
 
 Future<void> initBackground() async {
-  if (!backgroundSupported) return;
-  await Workmanager().initialize(backgroundDispatcher);
+  if (backgroundSupported) await Workmanager().initialize(backgroundDispatcher);
 }
 
-Future<void> scheduleDrain() async {
+Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
+  if (!backgroundSupported) return;
+  if (profiles.every((p) => !p.enabled)) {
+    await Workmanager().cancelByUniqueName('vaulton-sync');
+    return;
+  }
+  await Workmanager().registerPeriodicTask(
+    'vaulton-sync',
+    _kSync,
+    frequency: const Duration(minutes: 15),
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+    constraints: Constraints(networkType: NetworkType.connected),
+  );
+}
+
+Future<void> triggerSyncNow() async {
   if (!backgroundSupported) return;
   await Workmanager().registerOneOffTask(
-    'transfer-drain', _kDrain,
+    'vaulton-sync-now',
+    _kSync,
     existingWorkPolicy: ExistingWorkPolicy.replace,
     constraints: Constraints(networkType: NetworkType.connected),
     outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
   );
 }
 
-Future<void> configurePhotoSync(SyncSettings s) async {
-  if (!backgroundSupported) return;
-  if (!s.enabled) {
-    await Workmanager().cancelByUniqueName('photo-sync');
-    return;
-  }
-  await Workmanager().registerPeriodicTask(
-    'photo-sync', _kPeriodic,
-    frequency: Duration(minutes: s.intervalMinutes < 15 ? 15 : s.intervalMinutes),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    constraints: Constraints(
-      networkType: s.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
-      requiresCharging: s.chargingOnly,
-      requiresBatteryNotLow: true,
-    ),
-    backoffPolicy: BackoffPolicy.exponential,
-  );
-}
-
-Future<void> triggerPhotoSyncNow() async {
+Future<void> scheduleDrain() async {
   if (!backgroundSupported) return;
   await Workmanager().registerOneOffTask(
-    'photo-sync-now', _kSyncNow,
+    'transfer-drain',
+    _kDrain,
     existingWorkPolicy: ExistingWorkPolicy.replace,
     constraints: Constraints(networkType: NetworkType.connected),
     outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
