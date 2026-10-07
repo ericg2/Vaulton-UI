@@ -52,6 +52,8 @@ class Vaulton {
 
   Future<void> logoutAll() => _req('POST', '/auth/logout-all');
 
+  Future<Json> wakeConfig() async => toJson(await _req('GET', '/wake/config'));
+
   Future<AuthTokens> changePassword(String current, String next) async {
     final d = await _req('POST', '/auth/change-password', body: {'currentPassword': current, 'newPassword': next});
     return AuthTokens.fromJson(toJson(d));
