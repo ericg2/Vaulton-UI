@@ -8,6 +8,7 @@ import 'api_client.dart';
 import 'models.dart';
 import 'session.dart';
 import 'vaulton.dart';
+import 'wake.dart';
 
 final prefsProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError());
 final sessionProvider = Provider<SessionStore>((ref) => throw UnimplementedError());
@@ -143,6 +144,7 @@ class AuthController extends Notifier<AuthState> {
     await _s.setUser(user);
     ref.read(accountsProvider.notifier).remember(url, user);
     final u = await _v.me();
+    await WakeService.refreshConfig(_v, _s);
     state = AuthState(AuthStatus.signedIn, user: u);
   }
 
