@@ -349,13 +349,33 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           Expanded(child: SelectableText(v, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))),
           IconButton(visualDensity: VisualDensity.compact, tooltip: 'Copy', icon: const Icon(Icons.copy, size: 16), onPressed: () => copyText(context, v)),
         ]);
-    Widget namedId(String? name, String id) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium),
-            copyable(id),
-          ],
-        );
+    Widget namedId(String? name, String id) {
+      final cs = Theme.of(context).colorScheme;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium),
+          Row(children: [
+            Expanded(
+              child: SelectableText(
+                id,
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Copy',
+              icon: Icon(Icons.copy, size: 16, color: cs.onSurfaceVariant),
+              onPressed: () => copyText(context, id),
+            ),
+          ]),
+        ],
+      );
+    }
     return _card('Details', [
       _kv('Job ID', copyable(j.id)),
       _kv('Job Type', Text(kindLabel(j.kind))),
