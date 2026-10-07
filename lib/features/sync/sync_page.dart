@@ -556,9 +556,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Keep Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
+                        Text('Keep Your Folders in Sync', style: Theme.of(context).textTheme.headlineSmall),
                         const SizedBox(height: 4),
-                        const Text('Mirror a source into a Vaulton Data Folder, track every change, and review destination cleanup before it happens.'),
+                        const Text('Automatically sync folders and keep your data up to date.'),
                       ]),
                     ),
                     const SizedBox(width: 12),
