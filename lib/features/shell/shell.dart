@@ -76,11 +76,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   /// Switches tab. On phones the page slides, so taps and swipes feel the same.
-  void _select(int i) {
+  void _select(int i, {bool isMore = false}) {
     final from = _index;
     setState(() {
       _index = i;
-      _selectedLabel = i < dests.length ? dests[i].label : null;
+      _selectedLabel = isMore ? null : (i < dests.length ? dests[i].label : null);
       _visited.add(i);
     });
     if (_pages.hasClients && from != i) {
@@ -225,7 +225,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: _select,
+        onDestinationSelected: (i) => _select(i, isMore: i == 4),
         destinations: [
           for (final d in primary)
             NavigationDestination(icon: _icon(d, false, unread, active), selectedIcon: _icon(d, true, unread, active), label: d.label),
