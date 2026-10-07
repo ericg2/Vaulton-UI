@@ -531,7 +531,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               if (plan.changes.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Everything already matches.'),
+                  child: Text('No files need syncing. The destination folder will still be created.'),
                 ),
               if (plan.deletedFiles > 0)
                 Padding(
@@ -545,11 +545,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-            if (plan.changes.isNotEmpty)
-              FilledButton(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  if (plan.deletedFiles > 0) {
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                if (plan.deletedFiles > 0) {
                     final ok = await confirm(
                       context,
                       'Remove Destination Extras?',
