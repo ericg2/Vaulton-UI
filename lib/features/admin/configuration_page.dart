@@ -316,6 +316,16 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               subtitle: Text(_hasWakeToken ? 'Configured securely.' : 'Not configured.'),
             ),
           ]),
+          if (_powerEnabled)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Scheduled Jobs'),
+                subtitle: Text(_enabled
+                    ? 'Wake-on-LAN is configured for scheduled work.'
+                    : 'If you use scheduled jobs, configure Wake-on-LAN so the server can wake before they run.'),
+              ),
+            ),
           Section('Automatic Power Management', children: [
             ListTile(
               leading: const Icon(Icons.schedule),
