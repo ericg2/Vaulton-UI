@@ -16,20 +16,38 @@ import '../transfers/transfer_manager.dart';
 import 'root_shares_page.dart';
 import 'share_logic.dart';
 
-class StoragePage extends StatelessWidget {
-  const StoragePage({super.key, this.initialTab = 0});
+class StoragePage extends StatefulWidget {
+  const StoragePage({super.key, this.initialTab = 0, this.onBoundarySwipe});
   final int initialTab;
+  final VoidCallback? onBoundarySwipe;
+  @override
+  State<StoragePage> createState() => _StoragePageState();
+}
+
+class _StoragePageState extends State<StoragePage> {
+  int _lastBoundaryDirection = 0;
+  DateTime _lastBoundaryAt = DateTime.fromMillisecondsSinceEpoch(0);
   @override
   Widget build(BuildContext context) => DefaultTabController(
         length: 3,
-        initialIndex: initialTab.clamp(0, 2).toInt(),
+        initialIndex: widget.initialTab.clamp(0, 2).toInt(),
         child: Scaffold(
-          appBar: AppBar(title: const Text('Storage'), bottom: const TabBar(tabs: [
+          appBar: AppBar(title: const Text('Storage'), bottom: const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [
             Tab(text: 'Locations'),
             Tab(text: 'Data Folders'),
             Tab(text: 'Backup Vaults'),
           ])),
-          body: const TabBarView(physics: NeverScrollableScrollPhysics(), children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)]),
+          body: NotificationListener<OverscrollNotification>(onNotification: (n) {
+          if (n.metrics.axis != Axis.horizontal || !n.metrics.atEdge || n.overscroll == 0) return false;
+          final direction = n.overscroll > 0 ? 1 : -1;
+          final now = DateTime.now();
+          if (direction != _lastBoundaryDirection || now.difference(_lastBoundaryAt) > const Duration(milliseconds: 500)) {
+            _lastBoundaryDirection = direction;
+            _lastBoundaryAt = now;
+            widget.onBoundarySwipe?.call();
+          }
+          return false;
+        }, child: const TabBarView(children: [_RootsTab(), PointsTab(repo: false), PointsTab(repo: true)])),
         ),
       );
 }
