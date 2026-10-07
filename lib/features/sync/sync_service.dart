@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api_client.dart';
 import '../../core/util.dart';
 import '../../core/vaulton.dart';
+import '../../core/wake.dart';
 import '../transfers/transfer_engine.dart';
 import 'sync_models.dart';
 import 'sync_source.dart';
@@ -267,6 +268,10 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
   if (profile.nextRun > 0 && now < profile.nextRun) return;
 
   try {
+    final ready = await WakeService.ensureReady(api);
+    if (!ready) {
+      throw ApiException('Vaulton server could not be reached or woken.');
+    }
     final plan = await buildSyncPlan(api, profile, prefs);
     await applySyncPlan(api, profile, plan, prefs);
     profile.lastRun = DateTime.now().millisecondsSinceEpoch;
