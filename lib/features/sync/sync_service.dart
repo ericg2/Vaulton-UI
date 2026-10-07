@@ -82,6 +82,7 @@ Future<SyncPlan> buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefere
   final localBy = {for (final e in local.where((e) => e.relative.isNotEmpty)) e.relative: e};
   final remoteBy = {for (final e in remote.where((e) => e.relative.isNotEmpty)) e.relative: e};
   final changes = <SyncChange>[];
+  final manifest = loadSyncManifest(prefs, profile.id);
 
   for (final e in localBy.values) {
     final r = remoteBy[e.relative];
@@ -98,8 +99,13 @@ Future<SyncPlan> buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefere
     } else if (r.isDir) {
       changes.add(SyncChange(kind: SyncChangeKind.replace, path: e.relative, bytes: e.size, source: e));
     } else {
-      final sameTime = (e.modified.millisecondsSinceEpoch - r.modified.millisecondsSinceEpoch).abs() <= 2000;
-      if (e.size != r.size || !sameTime) {
+      // Vaulton stores its own destination modified time, which is not
+      // necessarily the source file's modified time.
+      final previous = manifest[e.relative];
+      final sourceUnchanged = previous != null &&
+          previous.size == e.size &&
+          previous.modified == e.modified.millisecondsSinceEpoch;
+      if (!sourceUnchanged) {
         changes.add(SyncChange(kind: SyncChangeKind.update, path: e.relative, bytes: e.size, source: e));
       }
     }
@@ -227,6 +233,18 @@ Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, Sh
     await status.save(prefs, profile.id);
     onProgress?.call(status);
   }
+
+  final manifest = <String, SyncManifestEntry>{
+    for (final entry in plan.changes
+        .map((x) => x.source)
+        .whereType<SyncSourceEntry>()
+        .where((x) => !x.isDir))
+      entry.relative: SyncManifestEntry(
+        size: entry.size,
+        modified: entry.modified.millisecondsSinceEpoch,
+      ),
+  };
+  await saveSyncManifest(prefs, profile.id, manifest);
 
   status
     ..running = false
