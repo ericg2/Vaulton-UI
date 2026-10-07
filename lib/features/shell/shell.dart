@@ -93,19 +93,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
   }
 
-  void _swipeStorageBoundary() {
+  void _swipeStorageBoundary(int direction) {
     if (!_pages.hasClients) return;
-    final next = (_index + 1).clamp(0, 3);
-    final previous = (_index - 1).clamp(0, 3);
-    // Storage is the last primary tab when swiping right, and the first when swiping left.
-    // The nested TabBarView handles movement between Storage's own tabs; this callback
-    // advances the main PageView when that nested view reaches an edge.
-    final page = _pages.page ?? _index.toDouble();
-    if (page > _index) {
-      _pages.animateToPage(next, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
-    } else {
-      _pages.animateToPage(previous, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
-    }
+    final target = (_index + direction).clamp(0, 3);
+    if (target == _index) return;
+    _select(target, label: ['Dashboard', 'Files', 'Transfers', 'Storage'][target]);
   }
 
   void _goto(String label, List<_Dest> dests, bool wide) {
