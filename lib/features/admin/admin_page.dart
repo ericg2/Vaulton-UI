@@ -8,6 +8,7 @@ import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import '../backups/jobs_page.dart';
 import '../backups/log_widgets.dart';
+import 'settings_page.dart';
 
 class AdminPage extends ConsumerWidget {
   const AdminPage({super.key});
@@ -20,6 +21,7 @@ class AdminPage extends ConsumerWidget {
       if (u.has(Scopes.jobsManage)) ('All Jobs', const JobsList(admin: true)),
       if (u.has(Scopes.adminVfs)) ('VFS', const _VfsTab()),
       if (u.has(Scopes.adminLogs)) ('Logs', const _LogsTab()),
+      if (u.has(Scopes.systemSettings)) ('Configuration', const _ConfigurationTab()),
     ];
     return DefaultTabController(
       length: tabs.length,
