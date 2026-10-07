@@ -30,7 +30,7 @@ class TransfersPage extends ConsumerWidget {
         ],
       ),
       body: tasks.isEmpty
-          ? const EmptyView('No transfers yet', icon: Icons.swap_vert, hint: 'Uploads and downloads appear here so you can follow, retry or cancel them.')
+          ? const EmptyView('No Transfers Yet', icon: Icons.swap_vert, hint: 'Uploads and downloads appear here so you can follow, retry or cancel them.')
           : ListView.builder(
               itemCount: tasks.length + 1,
               itemBuilder: (c, i) {
@@ -81,7 +81,7 @@ class _TaskTile extends ConsumerWidget {
                 Text(task.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: task.state == TState.failed ? cs.error : cs.onSurfaceVariant)),
-                if (task.origin != 'manual') chip(context, switch (task.origin) { 'photos' => 'Photos', 'snapshot' => 'Backup', _ => 'Folder sync' }),
+                if (task.origin != 'manual') chip(context, switch (task.origin) { 'photos' => 'Photos', 'snapshot' => 'Backup', _ => 'Folder Sync' }),
               ]),
             ),
             if (task.active) IconButton(icon: const Icon(Icons.close), tooltip: 'Cancel', onPressed: () => mgr.cancel(task.id)),
