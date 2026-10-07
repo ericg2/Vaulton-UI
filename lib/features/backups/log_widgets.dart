@@ -115,7 +115,7 @@ class LogFilterBar extends StatelessWidget {
       },
     );
   }
-}}
+}
 
 class LogLine extends StatelessWidget {
   const LogLine({super.key, required this.time, required this.priority, required this.message});
