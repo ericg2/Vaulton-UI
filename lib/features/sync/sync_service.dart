@@ -174,6 +174,11 @@ Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, Sh
   await status.save(prefs, profile.id);
   onProgress?.call(status);
 
+  // Always create the configured destination root, even when the source is empty.
+  if (profile.remoteDir != '/') {
+    await v.mkdir(profile.pointId, profile.remoteDir);
+  }
+
   final dirs = plan.directories.toList()
     ..sort((a, b) => a.path.split('/').length.compareTo(b.path.split('/').length));
 
