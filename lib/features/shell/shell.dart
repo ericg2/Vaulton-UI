@@ -39,6 +39,7 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
   String? _selectedLabel = 'Dashboard';
+  bool _syncingLayout = false;
   int _storageTab = 0;
   final _visited = <int>{0};
   final PageController _pages = PageController();
@@ -164,7 +165,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     if (!wide && _pages.hasClients && (_pages.page?.round() ?? -1) != effectiveIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _pages.hasClients) _pages.jumpToPage(effectiveIndex);
+        if (mounted && _pages.hasClients) {
+          _syncingLayout = true;
+          _pages.jumpToPage(effectiveIndex);
+        }
       });
     }
 
@@ -215,7 +219,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         controller: _pages,
         onPageChanged: (i) => setState(() {
           _index = i;
-          _selectedLabel = i < primary.length ? primary[i].label : null;
+          if (_syncingLayout) {
+            _syncingLayout = false;
+          } else {
+            _selectedLabel = i < primary.length ? primary[i].label : null;
+          }
           _visited.add(i);
         }),
         children: [
