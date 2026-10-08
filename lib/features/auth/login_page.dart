@@ -52,7 +52,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     final uri = Uri.tryParse(normalized);
     if (uri == null) return;
     _host.text = uri.host.isEmpty ? normalized : uri.host;
-    _port.text = uri.hasPort ? uri.port.toString() : '';
+    _port.text = uri.hasPort ? uri.port.toString() : '5141';
   }
 
   String _serverUrl() {
