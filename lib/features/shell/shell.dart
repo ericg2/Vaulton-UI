@@ -72,6 +72,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   void dispose() {
     _life.dispose();
+    clearCloseGuard();
     _pages.dispose();
     super.dispose();
   }
