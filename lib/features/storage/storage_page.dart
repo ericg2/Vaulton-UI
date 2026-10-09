@@ -166,23 +166,45 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _create() async {
-    final r = await formDialog(context, 'New Location', [
+    final details = await formDialog(context, 'New Location', [
       const FieldSpec('name', 'Name', required: true),
       FieldSpec('scheme', 'Storage Type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
-      const FieldSpec('capacity', 'Capacity', kind: 'capacity', required: true),
       const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
       const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
-    ], ok: 'Next');
-    if (r == null || !mounted) return;
-    final src = await _sourceForm(r['scheme']!, null);
-    if (src == null) return;
+    ], ok: 'Continue', intro: 'A location is a storage area. Data folders and backup vaults each receive a limit from its capacity.');
+    if (details == null || !mounted) return;
+    final src = await _sourceForm(details['scheme']!, null);
+    if (src == null || !mounted) return;
+    Json? detected;
+    if (details['scheme'] == 'fs') {
+      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
+      if (detected == null || !mounted) return;
+    }
+    final available = toInt(detected?['availableBytes']);
+    final total = toInt(detected?['capacityBytes']);
+    final initialCapacity = available > 0 ? bytesToCapacity(available, 'GiB') : '';
+    final capacity = await formDialog(
+      context,
+      'Location Capacity',
+      [
+        FieldSpec('capacity', 'Maximum Allocation', kind: 'capacity', initial: initialCapacity, required: true,
+          initialUnit: 'GiB', maxBytes: available > 0 ? available : null),
+      ],
+      ok: 'Create Location',
+      intro: detected == null
+          ? 'Set the maximum capacity Vaulton may allocate to this location.'
+          : 'Detected ${fmtBytes(total)} total capacity with ${fmtBytes(available)} currently available on the server filesystem. Set the maximum Vaulton may allocate.',
+    );
+    if (capacity == null || !mounted) return;
+    final maxBytes = int.tryParse(capacity['capacity'] ?? '');
+    if (maxBytes == null || maxBytes <= 0) return toast(context, 'Enter a valid capacity.', error: true);
     final created = await guarded(context, () => _v.createRoot({
-          'name': r['name'],
-          'source': src,
-          'maxBytes': int.tryParse(r['capacity'] ?? '') ?? 0,
-          'isDataAllowed': r['data'] == 'true',
-          'isRepoAllowed': r['repo'] == 'true',
-        }));
+      'name': details['name'],
+      'source': src,
+      'maxBytes': maxBytes,
+      'isDataAllowed': details['data'] == 'true',
+      'isRepoAllowed': details['repo'] == 'true',
+    }));
     if (created != null) {
       _key.currentState?.refresh();
       if (mounted) toast(context, 'Location created');
