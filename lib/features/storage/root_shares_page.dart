@@ -30,10 +30,10 @@ class _ShareRow {
   final String initialText;
   final TextEditingController quota;
   final FocusNode focus = FocusNode();
-  String unit = 'GB';
+  String unit = 'GiB';
 
   /// Untouched rows keep their exact stored quota instead of the rounded text.
-  int get bytes => quota.text.trim() == initialText && unit == 'GB' ? originalBytes : (capacityToBytes(quota.text, unit) ?? 0);
+  int get bytes => quota.text.trim() == initialText && unit == 'GiB' ? originalBytes : (capacityToBytes(quota.text, unit) ?? 0);
   bool get overInvalid => quota.text.trim().isNotEmpty && capacityToBytes(quota.text, unit) == null;
   bool overLimit(int maxBytes) => !overInvalid && capacityToBytes(quota.text, unit) != null && capacityToBytes(quota.text, unit)! > maxBytes;
 
