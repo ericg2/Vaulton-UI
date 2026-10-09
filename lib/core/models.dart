@@ -160,6 +160,19 @@ class RepoJob {
   int get liveDone => live == null ? 0 : toInt(live!['doneBytes']);
   int get liveTotal => live == null ? 0 : toInt(live!['totalBytes']);
   double? get liveFraction => liveTotal > 0 ? (liveDone / liveTotal).clamp(0, 1).toDouble() : null;
+
+  /// The most recently reported unfinished stage, falling back to the last
+  /// completed stage when the job is no longer emitting progress.
+  JobStage? get currentStage {
+    for (final stage in stages.reversed) {
+      if (!stage.finished) return stage;
+    }
+    return stages.isEmpty ? null : stages.last;
+  }
+
+  int get progressDone => liveTotal > 0 ? liveDone : (currentStage?.progress ?? 0);
+  int get progressTotal => liveTotal > 0 ? liveTotal : (currentStage?.length ?? 0);
+  double? get progressFraction => liveTotal > 0 ? liveFraction : currentStage?.fraction;
   Duration? get duration => startDate == null ? null : (endDate ?? DateTime.now()).difference(startDate!);
 
   JobPhase get phase {
