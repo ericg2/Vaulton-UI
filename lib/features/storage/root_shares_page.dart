@@ -395,7 +395,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
             Row(children: [
               Expanded(
                 child: Tooltip(
-                  message: 'Exact limit: ${r.bytes} bytes\\nMaximum for this user: $maxForRow bytes',
+                  message: 'Exact limit: ${r.bytes} bytes\nMaximum for this user: $maxForRow bytes',
                   child: Text(
                     '${amountText(r.bytes)} of ${amountText(maxForRow)}',
                     maxLines: 1,
