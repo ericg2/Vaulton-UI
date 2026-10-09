@@ -136,6 +136,9 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
   final bools = {for (final f in fields.where((f) => f.kind == 'bool')) f.key: f.initial == 'true'};
   final choices = {for (final f in fields.where((f) => f.kind == 'choice')) f.key: f.initial.isEmpty ? f.options.first : f.initial};
   final capUnits = {for (final f in fields.where((f) => f.kind == 'capacity')) f.key: f.initialUnit};
+  final capExactBytes = <String, int?>{for (final f in fields.where((f) => f.kind == 'capacity')) f.key: null};
+  final capExactText = <String, String?>{};
+  final capExactUnit = <String, String?>{};
   final formKey = GlobalKey<FormState>();
   return showDialog<Map<String, String>>(
     context: context,
@@ -166,10 +169,25 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
                       'capacity' => _CapacityField(
                           controller: ctrls[f.key]!,
                           unit: capUnits[f.key]!,
+                          exactBytes: capExactBytes[f.key] != null &&
+                                  capExactText[f.key] == ctrls[f.key]!.text.trim() &&
+                                  capExactUnit[f.key] == capUnits[f.key]
+                              ? capExactBytes[f.key]
+                              : null,
                           maxBytes: f.maxBytes,
                           required: f.required,
                           label: f.label,
-                          onUnitChanged: (u) => set(() => capUnits[f.key] = u),
+                          onUnitChanged: (u, bytes) => set(() {
+                            capUnits[f.key] = u;
+                            capExactBytes[f.key] = bytes;
+                            capExactText[f.key] = bytes == null ? null : ctrls[f.key]!.text.trim();
+                            capExactUnit[f.key] = bytes == null ? null : u;
+                          }),
+                          onExactBytesChanged: (bytes) => set(() {
+                            capExactBytes[f.key] = bytes;
+                            capExactText[f.key] = bytes == null ? null : ctrls[f.key]!.text.trim();
+                            capExactUnit[f.key] = bytes == null ? null : capUnits[f.key];
+                          }),
                           onValueChanged: () => set(() {}),
                         ),
                       'cron' => CronField(controller: ctrls[f.key]!),
@@ -221,9 +239,16 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
               for (final f in fields.where((f) => f.kind == 'capacity')) {
                 final raw = ctrls[f.key]!.text.trim();
                 final n = double.tryParse(raw.replaceAll(',', '.'));
-                final bytes = raw.isEmpty ? 0 : (n != null && n.isFinite && n >= 0
-                    ? (n * (_capacityFactors[capUnits[f.key]!] ?? _capacityFactors['GiB']!)).round()
-                    : -1);
+                final hasExact = capExactBytes[f.key] != null &&
+                    capExactText[f.key] == raw &&
+                    capExactUnit[f.key] == capUnits[f.key];
+                final bytes = raw.isEmpty
+                    ? 0
+                    : hasExact
+                        ? capExactBytes[f.key]!
+                        : (n != null && n.isFinite && n >= 0
+                            ? (n * (_capacityFactors[capUnits[f.key]!] ?? _capacityFactors['GiB']!)).round()
+                            : -1);
                 if ((f.required && raw.isEmpty) || bytes < 0 || (f.maxBytes != null && bytes > f.maxBytes!)) return;
               }
               Navigator.pop(ctx, {
@@ -231,7 +256,11 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
                   f.key: switch (f.kind) {
                     'bool' => '${bools[f.key]}',
                     'choice' => choices[f.key]!,
-                    'capacity' => _capacityBytesText(ctrls[f.key]!.text, capUnits[f.key]!),
+                    'capacity' => capExactBytes[f.key] != null &&
+                            capExactText[f.key] == ctrls[f.key]!.text.trim() &&
+                            capExactUnit[f.key] == capUnits[f.key]
+                        ? capExactBytes[f.key]!.toString()
+                        : _capacityBytesText(ctrls[f.key]!.text, capUnits[f.key]!),
                     _ => ctrls[f.key]!.text.trim(),
                   }
               });
@@ -258,14 +287,16 @@ String _capacityBytesText(String text, String unit) {
 }
 
 class _CapacityField extends StatefulWidget {
-  const _CapacityField({required this.controller, required this.unit, required this.maxBytes, required this.required,
-      required this.label, required this.onUnitChanged, required this.onValueChanged});
+  const _CapacityField({required this.controller, required this.unit, required this.exactBytes,
+      required this.maxBytes, required this.required, required this.label,
+      required this.onUnitChanged, required this.onExactBytesChanged, required this.onValueChanged});
   final TextEditingController controller;
   final String unit;
-  final int? maxBytes;
+  final int? exactBytes, maxBytes;
   final bool required;
   final String label;
-  final ValueChanged<String> onUnitChanged;
+  final void Function(String unit, int? exactBytes) onUnitChanged;
+  final ValueChanged<int?> onExactBytesChanged;
   final VoidCallback onValueChanged;
 
   @override
@@ -279,7 +310,7 @@ class _CapacityFieldState extends State<_CapacityField> {
     final n = double.tryParse(text.replaceAll(',', '.'));
     if (n == null || !n.isFinite || n < 0) return 'Enter a valid capacity';
     if (widget.maxBytes != null) {
-      final bytes = (n * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!)).round();
+      final bytes = widget.exactBytes ?? (n * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!)).round();
       if (bytes > widget.maxBytes!) return 'Over maximum (${_formatCapacity(widget.maxBytes!)})';
     }
     return null;
@@ -291,15 +322,19 @@ class _CapacityFieldState extends State<_CapacityField> {
     final over = error?.startsWith('Over maximum') == true;
     final cs = Theme.of(context).colorScheme;
     final raw = double.tryParse(widget.controller.text.trim().replaceAll(',', '.'));
-    final exactBytes = raw != null && raw.isFinite && raw >= 0
+    final exactBytes = widget.exactBytes ?? (raw != null && raw.isFinite && raw >= 0
         ? (raw * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!)).round()
-        : null;
+        : null);
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: TextField(
           controller: widget.controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          onChanged: (_) { widget.onValueChanged(); setState(() {}); },
+          onChanged: (_) {
+            widget.onExactBytesChanged(null);
+            widget.onValueChanged();
+            setState(() {});
+          },
           decoration: InputDecoration(
             labelText: '${widget.label}${widget.required ? ' *' : ''}',
             errorText: error,
@@ -318,16 +353,16 @@ class _CapacityFieldState extends State<_CapacityField> {
           items: [for (final u in _capacityFactors.keys) DropdownMenuItem(value: u, child: Text(u))],
           onChanged: (u) {
             if (u == null || u == widget.unit) return;
-            final current = double.tryParse(widget.controller.text.trim().replaceAll(',', '.'));
+            final text = widget.controller.text.trim();
+            final current = double.tryParse(text.replaceAll(',', '.'));
+            int? bytes;
             if (current != null && current.isFinite && current >= 0) {
               final oldFactor = _capacityFactors[widget.unit] ?? _capacityFactors['GiB']!;
               final newFactor = _capacityFactors[u] ?? _capacityFactors['GiB']!;
-              final bytes = (current * oldFactor).round();
-              widget.controller.text = (bytes / newFactor)
-                  .toStringAsFixed(12)
-                  .replaceFirst(RegExp(r'\.?0+$'), '');
+              bytes = widget.exactBytes ?? (current * oldFactor).round();
+              widget.controller.text = text.isEmpty ? '' : (bytes / newFactor).toStringAsFixed(2);
             }
-            widget.onUnitChanged(u);
+            widget.onUnitChanged(u, bytes);
             widget.onValueChanged();
             setState(() {});
           },
