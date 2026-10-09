@@ -352,6 +352,27 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
   TransferManager get _mgr => ref.read(transferProvider.notifier);
   String? get _cur => _trail.isEmpty ? null : _trail.last.path;
 
+  final Set<String> _seenBrowserEntries = {};
+
+  Future<Paged<Node>> _browsePage(String? cursor) async {
+    if (cursor == null) _seenBrowserEntries.clear();
+    final page = await _v.browseSnapshot(
+      widget.repo.id,
+      _snap!.id,
+      path: _cur,
+      search: _search,
+      cursor: cursor,
+      order: _desc ? 'Desc' : 'Asc',
+    );
+    final unique = <Node>[];
+    for (final node in page.items) {
+      final path = node.pathIn(_cur).replaceAll(RegExp(r'/+'), '/');
+      final key = '${node.isDir ? 'd' : 'f'}:$path';
+      if (_seenBrowserEntries.add(key)) unique.add(node);
+    }
+    return Paged<Node>(unique, page.nextCursor, page.hasMore);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -539,7 +560,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           SelectableText('Path: ${n.pathIn(_cur)}'),
           if (!n.isDir) Text('Size: ${fmtBytes(n.bytes)}'),
-          Text('Modified: ${fmtDate(n.modified)}'),
+          Text('Modified: ${n.modified == null ? 'Not available' : fmtDate(n.modified)}'),
           Text('Snapshot: ${_snapLabel(_snap!)}'),
         ]),
         actions: [
@@ -684,7 +705,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
               key: ValueKey('${snap.id}|${_cur ?? ''}|$_search|$_desc|$_reload'),
               empty: _search.isEmpty ? 'This folder is empty' : 'No matches',
               emptyIcon: Icons.folder_open,
-              fetch: (c) => _v.browseSnapshot(widget.repo.id, snap.id, path: _cur, search: _search, cursor: c, order: _desc ? 'Desc' : 'Asc'),
+              fetch: _browsePage,
               onChanged: (l) => _loaded = l,
               itemBuilder: (c, n, i) {
                 final sel = _sel.contains(n.name);
@@ -695,7 +716,9 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                       ? Checkbox(value: sel, onChanged: (_) => _toggle(n))
                       : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
                   title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(n.isDir ? fmtShort(n.modified) : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}'),
+                  subtitle: Text(n.isDir
+                      ? (n.modified == null ? 'Folder · Snapshot ${fmtShort(snap.time)}' : 'Folder · ${fmtShort(n.modified)}')
+                      : '${fmtBytes(n.bytes)} · ${n.modified == null ? 'Snapshot ${fmtShort(snap.time)}' : fmtShort(n.modified)}'),
                   trailing: selecting
                       ? null
                       : PopupMenuButton<String>(
