@@ -112,6 +112,8 @@ class JobStage {
   final int progress;
   final bool finished;
   final double? percent;
+  bool get isByteProgress => title.toLowerCase().contains('bytes');
+
   double? get fraction {
     if (finished) return 1;
     if (percent != null) return percent!.clamp(0, 1).toDouble();
@@ -172,6 +174,7 @@ class RepoJob {
 
   int get progressDone => liveTotal > 0 ? liveDone : (currentStage?.progress ?? 0);
   int get progressTotal => liveTotal > 0 ? liveTotal : (currentStage?.length ?? 0);
+  bool get progressIsBytes => liveTotal > 0 || (currentStage?.isByteProgress ?? false);
   double? get progressFraction => liveTotal > 0 ? liveFraction : currentStage?.fraction;
   Duration? get duration => startDate == null ? null : (endDate ?? DateTime.now()).difference(startDate!);
 
