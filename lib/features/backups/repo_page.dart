@@ -120,7 +120,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
 
     final repo = _repo;
     final hasQuota = repo != null && repo.maxBytes > 0;
-    final freeBytes = hasQuota ? (repo.maxBytes - repo.usedBytes).clamp(0, repo.maxBytes) : null;
+    final freeBytes = hasQuota ? (repo.maxBytes - repo.usedBytes).clamp(0, repo.maxBytes).toInt() : null;
     final likelyTight = estimatedBytes != null && freeBytes != null && estimatedBytes > freeBytes;
     final result = await showDialog<bool>(
       context: context,
@@ -168,7 +168,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
               Text(
                 estimatedBytes == null
                     ? 'Could not estimate the folder size. You can still start the backup.'
-                    : 'This is the uncompressed source size, not the space the snapshot will use. Compression and deduplication can reduce repository growth, so the estimate is advisory.',
+                    : 'This is a rough uncompressed source-size estimate. Include/exclude rules are not applied to the estimate, and compression or deduplication can reduce repository growth, so the estimate is advisory.',
                 style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
             ],
