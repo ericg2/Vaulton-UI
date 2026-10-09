@@ -583,8 +583,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         SizedBox(
-                                          width: 24,
-                                          height: 24,
+                                          width: 18,
+                                          height: 18,
                                           child: Checkbox(
                                             value: sel,
                                             onChanged: (_) => _toggle(n),
@@ -597,14 +597,14 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                           size: 24,
                                           color: sync != null
                                               ? syncColor
-                                              : (n.isDir ? Theme.of(context).colorScheme.primary : null),
+                                              : (n.isDir ? Colors.orange : null),
                                         ),
                                       ],
                                     ),
                                   )
                                 : sync != null
                                     ? Icon(Icons.sync, color: syncColor)
-                                    : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
+                                    : Icon(iconFor(n), color: n.isDir ? Colors.orange : null),
                             title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(sync != null
                                 ? (syncError != null ? 'Sync Error' : 'Sync Folder')
