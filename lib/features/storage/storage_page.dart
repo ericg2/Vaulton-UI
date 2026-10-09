@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
@@ -699,6 +700,9 @@ class _NewPointSheetState extends State<_NewPointSheet> {
               labelText: 'Amount',
               border: const OutlineInputBorder(),
               errorText: (!_capacityTouched || _capacityError.isEmpty) ? null : _capacityError,
+              helperText: _capacityBytesValue > 0
+                  ? 'Exact: ${NumberFormat.decimalPattern().format(_capacityBytesValue)} bytes'
+                  : null,
             ),
           ),
         ),
