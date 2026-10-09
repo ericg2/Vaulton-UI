@@ -88,7 +88,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     try {
       final results = await Future.wait([
         _v.repo(j.repoId),
-        if (j.dataId != null) _v.datas(search: j.dataId, limit: 100),
+        if (j.dataId != null) _v.data(j.dataId!),
         if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty)
           _v.snapshots(j.repoId, idPrefix: j.snapshotId, limit: 2),
       ]);
@@ -97,8 +97,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       Point? data;
       var resultIndex = 1;
       if (j.dataId != null) {
-        final pg = results[resultIndex++] as Paged<Point>;
-        data = pg.items.where((p) => p.id == j.dataId).firstOrNull;
+        data = results[resultIndex++] as Point;
       }
       Json? summary;
       if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty && resultIndex < results.length) {
