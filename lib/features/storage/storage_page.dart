@@ -634,7 +634,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
       DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
-      const SizedBox(height:6),Text('\${fmtBytes(used)} used · \${fmtBytes(_root.freeBytes)} free of \${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
+      const SizedBox(height:6),Text('${fmtBytes(used)} used · ${fmtBytes(_root.freeBytes)} free of ${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
       Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -652,7 +652,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
             setState((){
               if(raw!=null&&raw.isFinite&&raw>=0){
                 final bytes=(raw*oldFactor).round();
-                _capacity.text=(bytes/newFactor).toStringAsFixed(6).replaceFirst(RegExp(r'\\.?0+$'),'');
+                _capacity.text=(bytes/newFactor).toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'),'');
               }
               _unit=v;
             });
@@ -673,7 +673,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
           onChanged:_saving?null:(v){
             final bytes=(v*_root.freeBytes).round();
             final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
-            setState(()=>_capacity.text=(bytes/factor).toStringAsFixed(6).replaceFirst(RegExp(r'\\.?0+$'),''));
+            setState(()=>_capacity.text=(bytes/factor).toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'),''));
           },
         ),
         Text('Available to allocate: ${fmtBytes(_root.freeBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
