@@ -22,20 +22,51 @@ class RootSharesPage extends ConsumerStatefulWidget {
 
 class _ShareRow {
   _ShareRow(this.userName, this.originalBytes)
-      : initialText = bytesToGb(originalBytes),
-        quota = TextEditingController(text: bytesToGb(originalBytes));
+      : quota = TextEditingController(text: bytesToGb(originalBytes)) {
+    _rememberExact(originalBytes);
+  }
 
   final String userName;
   final int originalBytes;
-  final String initialText;
   final TextEditingController quota;
   final FocusNode focus = FocusNode();
   String unit = 'GiB';
+  int? _exactBytes;
+  String? _exactText, _exactUnit;
 
-  /// Untouched rows keep their exact stored quota instead of the rounded text.
-  int get bytes => quota.text.trim() == initialText && unit == 'GiB' ? originalBytes : (capacityToBytes(quota.text, unit) ?? 0);
+  int get bytes {
+    if (_exactBytes != null && quota.text.trim() == _exactText && unit == _exactUnit) {
+      return _exactBytes!;
+    }
+    return capacityToBytes(quota.text, unit) ?? 0;
+  }
+
   bool get overInvalid => quota.text.trim().isNotEmpty && capacityToBytes(quota.text, unit) == null;
-  bool overLimit(int maxBytes) => !overInvalid && capacityToBytes(quota.text, unit) != null && capacityToBytes(quota.text, unit)! > maxBytes;
+  bool overLimit(int maxBytes) => !overInvalid && bytes > maxBytes;
+
+  void textChanged() {
+    _exactBytes = null;
+    _exactText = null;
+    _exactUnit = null;
+  }
+
+  void setUnit(String nextUnit) {
+    final exact = bytes;
+    unit = nextUnit;
+    setExactBytes(exact);
+  }
+
+  void setExactBytes(int value) {
+    _exactBytes = value.clamp(0, 1 << 62).toInt();
+    quota.text = bytesToCapacity(_exactBytes!, unit);
+    _rememberExact(_exactBytes!);
+  }
+
+  void _rememberExact(int bytes) {
+    _exactBytes = bytes;
+    _exactText = quota.text.trim();
+    _exactUnit = unit;
+  }
 
   void dispose() {
     quota.dispose();
@@ -186,6 +217,9 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     if (_rows.any((r) => r.overInvalid || r.overLimit(_shareCapacity))) {
       return toast(context, 'Fix the highlighted limits first', error: true);
     }
+    if (_allocated > _shareCapacity) {
+      return toast(context, 'Share limits exceed the available location capacity.', error: true);
+    }
     final payload = buildSharePayload([for (final r in _rows) (userName: r.userName, maxBytes: r.bytes)]);
     setState(() => _saving = true);
     final res = await guarded(context, () => _v.setShares(_root.id, payload));
@@ -305,6 +339,11 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     final u = dir == null ? null : findUser(dir, r.userName);
     final unknown = dir != null && u == null;
     final sub = unknown ? 'Not in the user list' : (u?.subtitle ?? '');
+    final otherAllocated = _rows
+        .where((other) => !identical(other, r))
+        .fold<int>(0, (sum, other) => sum + other.bytes);
+    final maxForRow = (_shareCapacity - otherAllocated).clamp(0, _shareCapacity).toInt();
+    String amountText(int bytes) => '${bytes == 0 ? '0.00' : bytesToCapacity(bytes, r.unit)} ${r.unit}';
     return Card(
       key: ObjectKey(r),
       child: Padding(
@@ -327,26 +366,58 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
             ),
           ]);
           final remove = IconButton(tooltip: 'Remove', icon: const Icon(Icons.remove_circle_outline), onPressed: () => _remove(r));
-          final quota = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          final quotaInput = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: TextField(
                 controller: r.quota,
                 focusNode: r.focus,
+                enabled: !_saving,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(labelText: 'Space Limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) {
+                  r.textChanged();
+                  setState(() {});
+                },
               )),
               const SizedBox(width: 6),
               SizedBox(width: 78, child: DropdownButtonFormField<String>(
                 initialValue: r.unit,
                 decoration: const InputDecoration(labelText: 'Unit', isDense: true),
                 items: [for (final u in capacityFactors.keys) DropdownMenuItem(value: u, child: Text(u))],
-                onChanged: (u) {
+                onChanged: _saving ? null : (u) {
                   if (u == null) return;
-                  final current = r.bytes;
-                  setState(() { r.unit = u; r.quota.text = bytesToCapacity(current, u); });
+                  setState(() => r.setUnit(u));
                 },
               )),
+          ]);
+          final quota = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            quotaInput,
+            Row(children: [
+              Expanded(
+                child: Text(
+                  '${amountText(r.bytes)} of ${amountText(maxForRow)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
+                ),
+              ),
+              TextButton(
+                onPressed: _saving || r.bytes == maxForRow ? null : () => setState(() => r.setExactBytes(maxForRow)),
+                child: const Text('Use Remaining'),
+              ),
+            ]),
+            Slider(
+              value: r.bytes.clamp(0, maxForRow).toDouble(),
+              min: 0,
+              max: maxForRow > 0 ? maxForRow.toDouble() : 1,
+              divisions: maxForRow > 0 ? (maxForRow < 1000 ? maxForRow : 1000) : null,
+              label: maxForRow > 0
+                  ? '${((r.bytes.clamp(0, maxForRow) / maxForRow) * 100).round()}%'
+                  : '0%',
+              onChanged: _saving || maxForRow <= 0
+                  ? null
+                  : (value) => setState(() => r.setExactBytes(value.round())),
+            ),
           ]);
           if (narrow) {
             return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -358,7 +429,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
           return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(child: who),
             const SizedBox(width: 8),
-            SizedBox(width: 220, child: quota),
+            SizedBox(width: 280, child: quota),
             remove,
           ]);
         }),
