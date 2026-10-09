@@ -28,19 +28,19 @@ class StoragePage extends StatelessWidget {
           appBar: AppBar(
             title: const Text('Storage'),
             bottom: const TabBar(tabs: [
-              Tab(text: 'Locations'),
               Tab(text: 'Data Folders'),
               Tab(text: 'Backup Vaults'),
+              Tab(text: 'Locations'),
             ]),
           ),
-          body: const TabBarView(children: [RootsTab(), PointsTab(repo: false), PointsTab(repo: true)]),
+          body: const TabBarView(children: [PointsTab(repo: false), PointsTab(repo: true), RootsTab()]),
         ),
       );
 }
 
 /// Phone layout: each storage tab is its own page in the shell's PageView, so one
-/// continuous swipe moves Dashboard > Files > Transfers > Locations > Data Folders >
-/// Backup Vaults > More with no nested scrolling to fight.
+/// continuous swipe moves Dashboard > Files > Transfers > Data Folders > Backup Vaults >
+/// Locations > More with no nested scrolling to fight.
 class StorageSection extends StatelessWidget {
   const StorageSection({super.key, required this.index, required this.pages, required this.basePage, required this.onSelect});
   final int index, basePage;
@@ -56,9 +56,9 @@ class StorageSection extends StatelessWidget {
           ),
         ),
         body: switch (index) {
-          0 => const RootsTab(),
-          1 => const PointsTab(repo: false),
-          _ => const PointsTab(repo: true),
+          0 => const PointsTab(repo: false),
+          1 => const PointsTab(repo: true),
+          _ => const RootsTab(),
         },
       );
 }
@@ -69,7 +69,7 @@ class StorageTabStrip extends StatelessWidget {
   final PageController pages;
   final int basePage;
   final ValueChanged<int> onSelect;
-  static const _labels = ['Locations', 'Data Folders', 'Backup Vaults'];
+  static const _labels = ['Data Folders', 'Backup Vaults', 'Locations'];
 
   double _position() {
     if (!pages.hasClients || !pages.position.haveDimensions) return pages.initialPage.toDouble();
@@ -171,12 +171,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           final available = toInt(current?['availableBytes']);
           final total = toInt(current?['capacityBytes']);
           return AlertDialog(
-            title: const Text('Choose Server Directory'),
+            title: const Text('Choose Directory'),
             content: SizedBox(
               width: 520,
               height: 420,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(path.isEmpty ? 'Server Filesystems' : path, maxLines: 2, overflow: TextOverflow.ellipsis,
+                Text(path.isEmpty ? 'Drives' : path, maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: Theme.of(ctx).textTheme.titleSmall),
                 if (available > 0) Padding(
                   padding: const EdgeInsets.only(top: 6, bottom: 8),
@@ -205,7 +205,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                 if (!loading && error == null) TextButton.icon(
                   onPressed: parent == null || parent.isEmpty ? null : () => load(parent, update),
                   icon: const Icon(Icons.arrow_upward),
-                  label: const Text('Parent Directory'),
+                  label: const Text('Parent Folder'),
                 ),
               ]),
             ),
@@ -214,7 +214,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
               FilledButton.icon(
                 onPressed: path.isEmpty ? null : () => Navigator.pop(dialogContext, path),
                 icon: const Icon(Icons.check),
-                label: const Text('Select This Directory'),
+                label: const Text('Select Folder'),
               ),
             ],
           );
@@ -274,13 +274,13 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       context,
       'Location Capacity',
       [
-        FieldSpec('capacity', 'Maximum Allocation', kind: 'capacity', initial: initialCapacity, required: true,
-          initialUnit: 'GiB', maxBytes: available > 0 ? available : null),
+        FieldSpec('capacity', 'Location Capacity', kind: 'capacity', initial: initialCapacity, required: true,
+          initialUnit: 'GiB'),
       ],
       ok: 'Create Location',
       intro: detected == null
           ? 'Set the maximum capacity Vaulton may allocate to this location.'
-          : 'Detected ${fmtBytes(total)} total capacity with ${fmtBytes(available)} currently available on the server filesystem. Set the maximum Vaulton may allocate.',
+          : 'Drive: ${fmtBytes(total)} total, ${fmtBytes(available)} free. Set Vaulton’s location capacity; it can exceed the detected free space.',
     );
     if (capacity == null || !mounted) return;
     final maxBytes = int.tryParse(capacity['capacity'] ?? '');
