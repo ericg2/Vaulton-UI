@@ -728,7 +728,7 @@ class _PendingUploads extends ConsumerWidget {
         groups.clear();
       }
     }
-    if (batchTasks == null && groups.isEmpty || batchTasks != null && batchTasks.isEmpty) {
+    if ((batchTasks == null && groups.isEmpty) || (batchTasks != null && batchTasks.isEmpty)) {
       return const SizedBox(width: double.infinity);
     }
 
