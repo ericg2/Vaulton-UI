@@ -708,17 +708,38 @@ class _PendingUploads extends ConsumerWidget {
     final all = ref.watch(transferProvider);
     final prefix = dir == '/' ? '/' : '$dir/';
     final groups = <String, List<TransferTask>>{};
+    List<TransferTask>? batchTasks;
     for (final t in all) {
       if (t.kind != TKind.upload || t.pointId != pointId || !t.remotePath.startsWith(prefix)) continue;
       final show = t.active || (t.state == TState.failed && t.createdAt.isAfter(since));
       if (!show) continue;
+
+      if (batchTasks != null) {
+        batchTasks.add(t);
+        continue;
+      }
+
       final rel = t.remotePath.substring(prefix.length);
       final slash = rel.indexOf('/');
       groups.putIfAbsent(slash < 0 ? rel : rel.substring(0, slash), () => []).add(t);
+      // A large selection should never create thousands of widgets in this header.
+      if (groups.length > 40) {
+        batchTasks = groups.values.expand((tasks) => tasks).toList();
+        groups.clear();
+      }
     }
-    if (groups.isEmpty) return const SizedBox(width: double.infinity);
+    if (batchTasks == null && groups.isEmpty || batchTasks != null && batchTasks.isEmpty) {
+      return const SizedBox(width: double.infinity);
+    }
+
     final mgr = ref.read(transferProvider.notifier);
-    final entries = groups.entries.toList();
+    final entries = <MapEntry<String, List<TransferTask>>>[];
+    if (batchTasks != null) {
+      entries.add(MapEntry('Bulk upload (${batchTasks.length} files)', batchTasks));
+    } else {
+      entries.addAll(groups.entries);
+    }
+
     return Column(children: [
       for (final e in entries)
         _PendingRow(
@@ -726,6 +747,7 @@ class _PendingUploads extends ConsumerWidget {
           name: e.key,
           tasks: e.value,
           isFolder: e.value.any((t) => t.remotePath.substring(prefix.length).contains('/')),
+          isBatch: batchTasks != null,
           onCancel: () {
             for (final t in e.value.where((t) => t.active)) {
               mgr.cancel(t.id);
@@ -749,10 +771,10 @@ class _PendingUploads extends ConsumerWidget {
 }
 
 class _PendingRow extends StatelessWidget {
-  const _PendingRow({super.key, required this.name, required this.tasks, required this.isFolder, required this.onCancel, required this.onRetry, required this.onDismiss});
+  const _PendingRow({super.key, required this.name, required this.tasks, required this.isFolder, this.isBatch = false, required this.onCancel, required this.onRetry, required this.onDismiss});
   final String name;
   final List<TransferTask> tasks;
-  final bool isFolder;
+  final bool isFolder, isBatch;
   final VoidCallback onCancel, onDismiss;
   final void Function({bool overwrite}) onRetry;
 
@@ -772,7 +794,7 @@ class _PendingRow extends StatelessWidget {
 
     final String subtitle;
     if (busy) {
-      if (isFolder) {
+      if (isFolder || isBatch) {
         subtitle = '${active.length} file${active.length == 1 ? '' : 's'} uploading${fraction != null && running ? ' · ${(fraction * 100).round()}%' : ''}';
       } else if (!running) {
         subtitle = active.first.error ?? 'Waiting…';
@@ -781,7 +803,7 @@ class _PendingRow extends StatelessWidget {
       }
     } else {
       final err = failed.isEmpty ? null : failed.first.error;
-      subtitle = isFolder ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload failed');
+      subtitle = isFolder || isBatch ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload failed');
     }
     final exists = failed.any((x) => x.error?.toLowerCase().contains('exist') ?? false);
 
@@ -812,7 +834,8 @@ class _PendingRow extends StatelessWidget {
         trailing: busy
             ? IconButton(tooltip: 'Cancel Upload', icon: const Icon(Icons.close), onPressed: onCancel)
             : Row(mainAxisSize: MainAxisSize.min, children: [
-                if (exists && !isFolder) TextButton(onPressed: () => onRetry(overwrite: true), child: const Text('Overwrite')),
+                if (exists && (!isFolder || isBatch))
+                  TextButton(onPressed: () => onRetry(overwrite: true), child: Text(isBatch ? 'Overwrite All' : 'Overwrite')),
                 IconButton(tooltip: 'Retry', icon: const Icon(Icons.refresh), onPressed: () => onRetry()),
                 IconButton(tooltip: 'Dismiss', icon: const Icon(Icons.close), onPressed: onDismiss),
               ]),
