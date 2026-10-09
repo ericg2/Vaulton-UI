@@ -341,7 +341,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(child: Text(
-                  s.title == 'Working' ? '${kindLabel(j.kind)} progress' : s.title,
+                  s.title == 'Working' ? (j.kind == 'backup' ? 'Backing up files...' : kindLabel(j.kind)) : s.title,
                 )),
                 if (s.finished)
                   Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
@@ -369,8 +369,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       return Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium),
-            SelectableText(id, style: TextStyle(color: cs.onSurfaceVariant, fontFamily: 'monospace', fontSize: 13)),
+            if (name != null && name.isNotEmpty) Text(name, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            SelectableText(id, style: TextStyle(color: cs.onSurfaceVariant, fontFamily: 'monospace', fontSize: 12)),
           ]),
         ),
         _copyBtn(id, color: cs.onSurfaceVariant),
