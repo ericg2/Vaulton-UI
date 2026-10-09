@@ -301,7 +301,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   Future<void> _edit(Root root) async {
     final r = await formDialog(context, 'Edit ${root.name}', [
       FieldSpec('name', 'Name', initial: root.name, required: true),
-      FieldSpec('capacity', 'Capacity', kind: 'capacity', initial: bytesToGb(root.maxBytes), required: true),
+      FieldSpec('capacity', 'Capacity', kind: 'capacity', initial: bytesToGb(root.maxBytes), required: true, initialBytes: root.maxBytes),
       FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: '${root.isDataAllowed}'),
       FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
     ]);
@@ -464,7 +464,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (root == null || !mounted) return;
     final f = await formDialog(context, 'Edit ${p.name}', [
       FieldSpec('name', 'Name', initial: p.name, required: true),
-      FieldSpec('capacity', 'Space Limit', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null),
+      FieldSpec('capacity', 'Space Limit', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null, initialBytes: p.maxBytes),
     ]);
     if (f == null) return;
     final body = {'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0};
