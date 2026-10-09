@@ -319,35 +319,8 @@ class _CapacityFieldState extends State<_CapacityField> {
               final newFactor = _capacityFactors[u] ?? _capacityFactors['GiB']!;
               final bytes = (current * oldFactor).round();
               widget.controller.text = (bytes / newFactor)
-                  .toStringAsFixed(6)
-                  .replaceFirst(RegExp(r'\.?0+
-        ),
-      ),
-    ]);
-  }
-}
-
-String _formatCapacity(int bytes) {
-  for (final e in const [('TiB', 1099511627776), ('GiB', 1073741824), ('MiB', 1048576)]) {
-    if (bytes.abs() >= e.$2) return '${(bytes / e.$2).toStringAsFixed(bytes % e.$2 == 0 ? 0 : 2)} ${e.$1}';
-  }
-  return '$bytes B';
-}
-
-Future<String?> promptText(BuildContext c, String title, String label,
-    {String initial = '', String ok = 'OK'}) async {
-  final r = await formDialog(c, title, [FieldSpec('v', label, initial: initial, required: true)], ok: ok);
-  return r?['v'];
-}
-
-List<String> splitList(String s) =>
-    s.split(RegExp(r'[,\n]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-
-int? parseMegabytes(String s) {
-  final v = double.tryParse(s.trim());
-  return v == null ? null : (v * 1024 * 1024).round();
-}
-), '');
+                  .toStringAsFixed(12)
+                  .replaceFirst(RegExp(r'\.?0+$'), '');
             }
             widget.onUnitChanged(u);
             widget.onValueChanged();
