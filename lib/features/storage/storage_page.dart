@@ -139,6 +139,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   Future<String?> _pickLocalPath(String? initialPath) async {
     Json? current;
     var loading = true;
+    var started = false;
     String? error;
     final startPath = initialPath?.trim() ?? '';
 
@@ -156,7 +157,8 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (ctx, update) {
-          if (current == null && loading) {
+          if (current == null && loading && !started) {
+            started = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (ctx.mounted && current == null && loading) {
                 load(startPath.isEmpty ? null : startPath, update);
@@ -229,7 +231,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       [
         for (final f in fields)
           FieldSpec(f.key, pretty(f.key),
-              kind: f.kind == 'b' ? 'bool' : (f.kind == 'k' ? 'secret' : 'text'),
+              kind: scheme == 'fs' && f.key == 'root' ? 'path' : (f.kind == 'b' ? 'bool' : (f.kind == 'k' ? 'secret' : 'text')),
               required: f.required && f.kind != 'k' || (f.required && existing == null),
               initial: existing?[f.key] == null || f.kind == 'k' ? '' : '${existing![f.key]}'),
       ],
@@ -612,8 +614,9 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   String get _capacityError {
     final raw=_capacity.text.trim(); if(raw.isEmpty)return 'Enter a space limit.';
     final n=double.tryParse(raw.replaceAll(',','.')); if(n==null||!n.isFinite||n<=0)return 'Enter a valid space limit.';
+    if(_root.freeBytes<=0)return 'This location has no unallocated space remaining.';
     final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
-    if(_root.freeBytes>0&&n*factor>_root.freeBytes)return 'The limit cannot exceed the location capacity.';
+    if(n*factor>_root.freeBytes)return 'The limit cannot exceed the remaining location capacity.';
     return '';
   }
   String get _passwordError=>widget.repo&&_password.text.length<8?'Use at least 8 characters.':'';
