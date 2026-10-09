@@ -85,104 +85,6 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     Navigator.push(context, MaterialPageRoute(builder: (_) => SnapshotBrowserPage(repo: r)));
   }
 
-  Future<int> _estimateSourceBytes(String pointId, String rootPath) async {
-    var total = 0;
-    final pending = <String>[rootPath.isEmpty ? '/' : rootPath];
-    final seen = <String>{};
-    while (pending.isNotEmpty) {
-      final dir = pending.removeLast();
-      String? cursor;
-      do {
-        final page = await _v.list(pointId, dir, cursor: cursor, limit: 200);
-        for (final node in page.items) {
-          final path = node.pathIn(dir).replaceAll(RegExp(r'/+'), '/');
-          if (!seen.add(path)) continue;
-          if (node.isDir) {
-            pending.add(path);
-          } else if (node.bytes > 0) {
-            total += node.bytes;
-          }
-        }
-        cursor = page.hasMore ? page.nextCursor : null;
-      } while (cursor != null);
-    }
-    return total;
-  }
-
-  Future<bool> _confirmBackupCapacity(BackupRequest request) async {
-    int? estimatedBytes;
-    try {
-      estimatedBytes = await _estimateSourceBytes(request.data.id, request.path);
-    } catch (_) {
-      // An estimate is advisory; a transient listing error must not prevent a backup.
-    }
-    if (!mounted) return false;
-
-    final repo = _repo;
-    final hasQuota = repo != null && repo.maxBytes > 0;
-    final freeBytes = hasQuota ? (repo.maxBytes - repo.usedBytes).clamp(0, repo.maxBytes).toInt() : null;
-    final likelyTight = estimatedBytes != null && freeBytes != null && estimatedBytes > freeBytes;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          title: const Text('Review Backup Size'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Source: ${request.data.name}${request.path == '/' ? '' : request.path}'),
-              const SizedBox(height: 12),
-              Row(children: [
-                const Expanded(child: Text('Estimated source data')),
-                Text(estimatedBytes == null ? 'Unavailable' : fmtBytes(estimatedBytes)),
-              ]),
-              if (freeBytes != null) ...[
-                const SizedBox(height: 6),
-                Row(children: [
-                  const Expanded(child: Text('Vault space available')),
-                  Text(fmtBytes(freeBytes)),
-                ]),
-              ] else
-                const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text('Vault capacity is not reported as a fixed quota.'),
-                ),
-              if (likelyTight) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: cs.errorContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'The source size exceeds the reported free space. This backup may run out of room.',
-                    style: TextStyle(color: cs.onErrorContainer, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Text(
-                estimatedBytes == null
-                    ? 'Could not estimate the folder size. You can still start the backup.'
-                    : 'This is a rough uncompressed source-size estimate. Include/exclude rules are not applied to the estimate, and compression or deduplication can reduce repository growth, so the estimate is advisory.',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Start Backup')),
-          ],
-        );
-      },
-    );
-    return result == true;
-  }
-
   Future<void> _backup() async {
     final repo = _repo;
     if (repo == null) return;
@@ -191,8 +93,9 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (datas.items.isEmpty) return toast(context, 'Create a data folder first', error: true);
     final req = await showBackupSheet(context, datas: datas.items, repos: [repo], repo: repo);
     if (req == null || !mounted) return;
-    final proceed = await _confirmBackupCapacity(req);
-    if (!proceed || !mounted) return;
+    // Let Rustic report its own live byte total during the backup. A separate
+    // source-tree walk here is slow and can disagree with backup filters,
+    // deduplication, compression, and the actual repository space consumed.
     final j = await guarded(context, () => _v.backup(widget.repoId, req.toBody()));
     if (j != null) _queued(j);
   }
