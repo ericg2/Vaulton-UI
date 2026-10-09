@@ -5,7 +5,7 @@ import 'api_client.dart';
 import 'cron_picker.dart';
 
 String fmtBytes(int b) {
-  if (b < 1024) return '$b B';
+  if (b < 1024) return '${b.toStringAsFixed(2)} B';
   const u = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
   double v = b / 1024;
   var i = 0;
