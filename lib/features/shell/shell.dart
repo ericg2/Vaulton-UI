@@ -109,7 +109,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   void _goto(String label, List<_Dest> dests, bool wide) {
     if (label == 'Data Folders' || label == 'Backup Vaults') {
-      _storageTab = label == 'Data Folders' ? 1 : 2;
+      _storageTab = label == 'Data Folders' ? 0 : 1;
       final storage = dests.indexWhere((d) => d.label == 'Storage');
       if (storage >= 0) {
         if (wide) {
