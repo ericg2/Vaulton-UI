@@ -105,10 +105,9 @@ class _TaskTile extends ConsumerWidget {
                     padding: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(4),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: task.fraction ?? 0),
-                        duration: const Duration(milliseconds: 250),
-                        builder: (_, v, _) => LinearProgressIndicator(value: task.fraction == null ? null : v, minHeight: 5),
+                      child: LinearProgressIndicator(
+                        value: task.fraction,
+                        minHeight: 5,
                       ),
                     ),
                   )
