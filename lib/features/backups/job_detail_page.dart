@@ -100,7 +100,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         data = results[resultIndex++] as Point;
       }
       Json? summary;
-      if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty && resultIndex < resultj.stages[i].length) {
+      if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty && resultIndex < results.length) {
         final pg = results[resultIndex] as Paged<Snapshot>;
         final snap = pg.items.where((s) => s.id == j.snapshotId || s.id.startsWith(j.snapshotId!)).firstOrNull;
         summary = snap?.summary;
@@ -469,9 +469,9 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                   child: ListView.builder(
                     reverse: true, // newest line at the bottom, scroll up for history
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: linej.stages[i].length + (_hasOlder ? 1 : 0),
+                    itemCount: lines.length + (_hasOlder ? 1 : 0),
                     itemBuilder: (c, i) {
-                      if (i == linej.stages[i].length) {
+                      if (i == lines.length) {
                         return Padding(
                           padding: const EdgeInsets.all(8),
                           child: Center(
