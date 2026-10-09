@@ -275,7 +275,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               j.phase == JobPhase.waiting
                   ? (j.scheduleDate != null && j.scheduleDate!.isAfter(DateTime.now()) ? 'Starts ${fmtDate(j.scheduleDate)}' : 'Waiting…')
                   : j.progressTotal > 0
-                      ? '${j.currentStage?.title == 'Working' ? kindLabel(j.kind) : (j.currentStage?.title ?? kindLabel(j.kind))} · ${fmtBytes(j.progressDone)} of ${fmtBytes(j.progressTotal)}  ·  ${((j.progressFraction ?? 0) * 100).toStringAsFixed(0)}%'
+                      ? '${j.currentStage?.title == 'Working' ? kindLabel(j.kind) : (j.currentStage?.title ?? kindLabel(j.kind))} · ${j.progressIsBytes ? fmtBytes(j.progressDone) : j.progressDone} of ${j.progressIsBytes ? fmtBytes(j.progressTotal) : j.progressTotal}  ·  ${((j.progressFraction ?? 0) * 100).toStringAsFixed(0)}%'
                       : 'Working…',
               style: t.bodySmall,
             ),
@@ -346,7 +346,10 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                 if (s.finished)
                   Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
                 else if (s.length != null && s.length! > 0)
-                  Text('${fmtBytes(s.progress)} / ${fmtBytes(s.length!)}', style: Theme.of(context).textTheme.labelSmall)
+                  Text(
+                    s.isByteProgress ? '${fmtBytes(s.progress)} / ${fmtBytes(s.length!)}' : '${s.progress} / ${s.length}',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  )
                 else if (s.fraction != null)
                   Text('${(s.fraction! * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.labelMedium),
               ]),
