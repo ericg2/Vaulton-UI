@@ -150,6 +150,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       ],
       ok: 'Continue',
       intro: existing != null ? 'Re-enter secret fields unless the server keeps existing values.' : null,
+      pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
     final src = <String, dynamic>{'scheme': scheme};
