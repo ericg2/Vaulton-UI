@@ -199,6 +199,14 @@ class JobCard extends ConsumerWidget {
                 if (job.phase == JobPhase.running) ...[
                   const SizedBox(height: 10),
                   ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: job.liveFraction, minHeight: 6)),
+                  if (job.liveTotal > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${fmtBytes(job.liveDone)} of ${fmtBytes(job.liveTotal)}',
+                        style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ),
                 ],
                 if (cleanJobError(job.error).isNotEmpty)
                   Padding(
