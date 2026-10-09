@@ -182,10 +182,7 @@ class RepoJob {
 
   int get progressDone => liveTotal > 0 ? liveDone : (currentStage?.progress ?? 0);
   int get progressTotal => liveTotal > 0 ? liveTotal : (currentStage?.length ?? 0);
-  bool get progressIsBytes =>
-      liveTotal > 0 ||
-      (currentStage?.isByteProgress ?? false) ||
-      (kind == 'restore' && (currentStage?.length ?? 0) > 0);
+  bool get progressIsBytes => liveTotal > 0 || (currentStage?.isByteProgress ?? false);
   bool get progressTotalFinalized => kind != 'backup' || (currentStage?.totalFinalized ?? false);
   double? get progressFraction => liveTotal > 0 ? liveFraction : currentStage?.fraction;
   Duration? get duration => startDate == null ? null : (endDate ?? DateTime.now()).difference(startDate!);
