@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+### Fixed
+* Large multi-file uploads no longer rebuild and persist the entire transfer queue for every file.
+* Browser uploads load file bytes only when a transfer starts, limiting memory use to concurrent uploads.
+* Large uploads show a combined progress row instead of building thousands of file rows at once.
+
 ## 1.3.0
 
 ### Fixed
