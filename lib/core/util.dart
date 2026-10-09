@@ -120,12 +120,12 @@ Future<T?> guarded<T>(BuildContext c, Future<T> Function() fn) async {
 class FieldSpec {
   const FieldSpec(this.key, this.label,
       {this.initial = '', this.kind = 'text', this.required = false, this.hint, this.options = const [], this.number = false,
-       this.maxBytes, this.initialUnit = 'GiB'});
+       this.maxBytes, this.initialUnit = 'GiB', this.initialBytes});
   final String key, label, initial, kind; // text | secret | multiline | bool | choice | path | cron | capacity
   final bool required, number;
   final String? hint;
   final List<String> options;
-  final int? maxBytes;
+  final int? maxBytes, initialBytes;
   final String initialUnit;
 }
 
@@ -136,9 +136,13 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
   final bools = {for (final f in fields.where((f) => f.kind == 'bool')) f.key: f.initial == 'true'};
   final choices = {for (final f in fields.where((f) => f.kind == 'choice')) f.key: f.initial.isEmpty ? f.options.first : f.initial};
   final capUnits = {for (final f in fields.where((f) => f.kind == 'capacity')) f.key: f.initialUnit};
-  final capExactBytes = <String, int?>{for (final f in fields.where((f) => f.kind == 'capacity')) f.key: null};
-  final capExactText = <String, String?>{};
-  final capExactUnit = <String, String?>{};
+  final capExactBytes = <String, int?>{for (final f in fields.where((f) => f.kind == 'capacity')) f.key: f.initialBytes};
+  final capExactText = <String, String?>{
+    for (final f in fields.where((f) => f.kind == 'capacity' && f.initialBytes != null)) f.key: f.initial.trim(),
+  };
+  final capExactUnit = <String, String?>{
+    for (final f in fields.where((f) => f.kind == 'capacity' && f.initialBytes != null)) f.key: f.initialUnit,
+  };
   final formKey = GlobalKey<FormState>();
   return showDialog<Map<String, String>>(
     context: context,
