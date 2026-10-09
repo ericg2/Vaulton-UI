@@ -609,7 +609,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                               }
                             },
                             child: ListTile(
-                            key: ValueKey('${pt.id}:${_path}:${n.isDir ? 'd' : 'f'}:${n.name}'),
+                            key: ValueKey('${pt.id}:${_path}:${n.isDir ? "d" : "f"}:${n.name}'),
                             selected: sel,
                             leading: selecting
                                 ? SizedBox(
