@@ -3,20 +3,20 @@
 const int kGiB = 1024 * 1024 * 1024;
 
 const Map<String, double> capacityFactors = {
-  'MB': 1024 * 1024,
-  'GB': 1024 * 1024 * 1024,
-  'TB': 1024 * 1024 * 1024 * 1024,
+  'MiB': 1024 * 1024,
+  'GiB': 1024 * 1024 * 1024,
+  'TiB': 1024 * 1024 * 1024 * 1024,
 };
 
 int? capacityToBytes(String text, String unit) {
   final v = double.tryParse(text.trim().replaceAll(',', '.'));
   if (v == null || v.isNaN || v.isInfinite || v < 0) return null;
-  return (v * (capacityFactors[unit] ?? capacityFactors['GB']!)).round();
+  return (v * (capacityFactors[unit] ?? capacityFactors['GiB']!)).round();
 }
 
 String bytesToCapacity(int bytes, String unit) {
-  final f = capacityFactors[unit] ?? capacityFactors['GB']!;
-  return bytes == 0 ? '' : (bytes / f).toStringAsFixed(bytes % f == 0 ? 0 : 2);
+  final f = capacityFactors[unit] ?? capacityFactors['GiB']!;
+  return bytes == 0 ? '' : (bytes / f).toStringAsFixed(12).replaceFirst(RegExp(r'\.?0+$'), '');
 }
 
 
@@ -27,12 +27,12 @@ int? gbToBytes(String s) {
 }
 
 /// Bytes -> text for a GB field. 0 is shown as an empty field.
-String bytesToGb(int b) => b == 0 ? '' : (b / kGiB).toStringAsFixed(b % kGiB == 0 ? 0 : 2);
+String bytesToGb(int b) => b == 0 ? '' : (b / kGiB).toStringAsFixed(12).replaceFirst(RegExp(r'\.?0+$'), '');
 
 /// Result of reading a quota text field.
 typedef QuotaResult = ({int bytes, String? error});
 
-/// Empty means 0 (no explicit quota). Anything else must be a non-negative number of GB.
+/// Empty means 0 (no explicit quota). Anything else must be a non-negative number of GiB.
 QuotaResult parseQuota(String text) {
   final t = text.trim().replaceAll(',', '.');
   if (t.isEmpty) return (bytes: 0, error: null);

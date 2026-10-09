@@ -136,6 +136,93 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   final _key = GlobalKey<CursorListState<Root>>();
   Vaulton get _v => ref.read(vaultonProvider);
 
+  Future<String?> _pickLocalPath(String? initialPath) async {
+    Json? current;
+    var loading = true;
+    var started = false;
+    String? error;
+    final startPath = initialPath?.trim() ?? '';
+
+    Future<void> load(String? path, void Function(void Function()) update) async {
+      update(() { loading = true; error = null; });
+      try {
+        final result = await _v.browseLocal(path);
+        update(() { current = result; loading = false; });
+      } catch (e) {
+        update(() { error = e.toString(); loading = false; });
+      }
+    }
+
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, update) {
+          if (current == null && loading && !started) {
+            started = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (ctx.mounted && current == null && loading) {
+                load(startPath.isEmpty ? null : startPath, update);
+              }
+            });
+          }
+          final dirs = (current?['directories'] as List? ?? const []).map(toJson).toList();
+          final path = '${current?['currentPath'] ?? ''}';
+          final parent = toStr(current?['parentPath']);
+          final available = toInt(current?['availableBytes']);
+          final total = toInt(current?['capacityBytes']);
+          return AlertDialog(
+            title: const Text('Choose Server Directory'),
+            content: SizedBox(
+              width: 520,
+              height: 420,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(path.isEmpty ? 'Server Filesystems' : path, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: Theme.of(ctx).textTheme.titleSmall),
+                if (available > 0) Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 8),
+                  child: Text('${fmtBytes(available)} available of ${fmtBytes(total)}',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
+                ),
+                const Divider(),
+                Expanded(child: loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                        ? Center(child: Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)))
+                        : dirs.isEmpty
+                            ? const Center(child: Text('No subdirectories found.'))
+                            : ListView.builder(
+                                itemCount: dirs.length,
+                                itemBuilder: (_, i) {
+                                  final d = dirs[i];
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.folder_outlined),
+                                    title: Text('${d['name']}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    onTap: () => load('${d['path']}', update),
+                                  );
+                                },
+                              )),
+                if (!loading && error == null) TextButton.icon(
+                  onPressed: parent == null || parent.isEmpty ? null : () => load(parent, update),
+                  icon: const Icon(Icons.arrow_upward),
+                  label: const Text('Parent Directory'),
+                ),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              FilledButton.icon(
+                onPressed: path.isEmpty ? null : () => Navigator.pop(dialogContext, path),
+                icon: const Icon(Icons.check),
+                label: const Text('Select This Directory'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>?> _sourceForm(String scheme, Map<String, dynamic>? existing) async {
     final fields = kSourceSchemas[scheme]!;
     final r = await formDialog(
@@ -144,12 +231,13 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       [
         for (final f in fields)
           FieldSpec(f.key, pretty(f.key),
-              kind: f.kind == 'b' ? 'bool' : (f.kind == 'k' ? 'secret' : 'text'),
+              kind: scheme == 'fs' && f.key == 'root' ? 'path' : (f.kind == 'b' ? 'bool' : (f.kind == 'k' ? 'secret' : 'text')),
               required: f.required && f.kind != 'k' || (f.required && existing == null),
               initial: existing?[f.key] == null || f.kind == 'k' ? '' : '${existing![f.key]}'),
       ],
       ok: 'Continue',
       intro: existing != null ? 'Re-enter secret fields unless the server keeps existing values.' : null,
+      pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
     final src = <String, dynamic>{'scheme': scheme};
@@ -165,23 +253,45 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _create() async {
-    final r = await formDialog(context, 'New Location', [
+    final details = await formDialog(context, 'New Location', [
       const FieldSpec('name', 'Name', required: true),
       FieldSpec('scheme', 'Storage Type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
-      const FieldSpec('capacity', 'Capacity', kind: 'capacity', required: true),
       const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
       const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
-    ], ok: 'Next');
-    if (r == null || !mounted) return;
-    final src = await _sourceForm(r['scheme']!, null);
-    if (src == null) return;
+    ], ok: 'Continue', intro: 'A location is a storage area. Data folders and backup vaults each receive a limit from its capacity.');
+    if (details == null || !mounted) return;
+    final src = await _sourceForm(details['scheme']!, null);
+    if (src == null || !mounted) return;
+    Json? detected;
+    if (details['scheme'] == 'fs') {
+      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
+      if (detected == null || !mounted) return;
+    }
+    final available = toInt(detected?['availableBytes']);
+    final total = toInt(detected?['capacityBytes']);
+    final initialCapacity = available > 0 ? bytesToCapacity(available, 'GiB') : '';
+    final capacity = await formDialog(
+      context,
+      'Location Capacity',
+      [
+        FieldSpec('capacity', 'Maximum Allocation', kind: 'capacity', initial: initialCapacity, required: true,
+          initialUnit: 'GiB', maxBytes: available > 0 ? available : null),
+      ],
+      ok: 'Create Location',
+      intro: detected == null
+          ? 'Set the maximum capacity Vaulton may allocate to this location.'
+          : 'Detected ${fmtBytes(total)} total capacity with ${fmtBytes(available)} currently available on the server filesystem. Set the maximum Vaulton may allocate.',
+    );
+    if (capacity == null || !mounted) return;
+    final maxBytes = int.tryParse(capacity['capacity'] ?? '');
+    if (maxBytes == null || maxBytes <= 0) return toast(context, 'Enter a valid capacity.', error: true);
     final created = await guarded(context, () => _v.createRoot({
-          'name': r['name'],
-          'source': src,
-          'maxBytes': int.tryParse(r['capacity'] ?? '') ?? 0,
-          'isDataAllowed': r['data'] == 'true',
-          'isRepoAllowed': r['repo'] == 'true',
-        }));
+      'name': details['name'],
+      'source': src,
+      'maxBytes': maxBytes,
+      'isDataAllowed': details['data'] == 'true',
+      'isRepoAllowed': details['repo'] == 'true',
+    }));
     if (created != null) {
       _key.currentState?.refresh();
       if (mounted) toast(context, 'Location created');
@@ -497,20 +607,22 @@ class _NewPointSheet extends StatefulWidget {
 }
 class _NewPointSheetState extends State<_NewPointSheet> {
   late Root _root; final _name=TextEditingController(), _capacity=TextEditingController(), _password=TextEditingController();
-  String _unit='GB'; bool _showPassword=false, _saving=false, _capacityTouched=false, _passwordTouched=false;
+  String _unit='GiB'; bool _showPassword=false, _saving=false, _capacityTouched=false, _passwordTouched=false;
   @override void initState(){super.initState();_root=widget.roots.first;}
   @override void dispose(){_name.dispose();_capacity.dispose();_password.dispose();super.dispose();}
+  int get _capacityBytesValue { final n=double.tryParse(_capacity.text.trim().replaceAll(',','.')); if(n==null||!n.isFinite||n<0)return 0; return (n*(_unit=='TiB'?1099511627776.0:1073741824.0)).round(); }
   String get _capacityError {
     final raw=_capacity.text.trim(); if(raw.isEmpty)return 'Enter a space limit.';
     final n=double.tryParse(raw.replaceAll(',','.')); if(n==null||!n.isFinite||n<=0)return 'Enter a valid space limit.';
-    final factor=_unit=='TB'?1099511627776.0:1073741824.0;
-    if(_root.maxBytes>0&&n*factor>_root.maxBytes)return 'The limit cannot exceed the location capacity.';
+    if(_root.freeBytes<=0)return 'This location has no unallocated space remaining.';
+    final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
+    if(n*factor>_root.freeBytes)return 'The limit cannot exceed the remaining location capacity.';
     return '';
   }
   String get _passwordError=>widget.repo&&_password.text.length<8?'Use at least 8 characters.':'';
   Future<void> _save() async {
     final name=_name.text.trim(); setState(() { _capacityTouched=true; _passwordTouched=true; }); if(name.isEmpty||_capacityError.isNotEmpty||_passwordError.isNotEmpty)return;
-    final factor=_unit=='TB'?1099511627776.0:1073741824.0;
+    final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
     final maxBytes=(double.parse(_capacity.text.trim().replaceAll(',','.'))*factor).round(); setState(()=>_saving=true);
     try { await (widget.repo?widget.vaulton.createRepo({'rootId':_root.id,'name':name,'maxBytes':maxBytes,'password':_password.text}):widget.vaulton.createData({'rootId':_root.id,'name':name,'maxBytes':maxBytes})); if(mounted)Navigator.pop(context,true); }
     catch(e){if(mounted){setState(()=>_saving=false);toast(context,e.toString(),error:true);}}
@@ -522,10 +634,50 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
       DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
-      const SizedBox(height:6),Text('\${fmtBytes(used)} used · \${fmtBytes(_root.freeBytes)} free of \${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
+      const SizedBox(height:6),Text('${fmtBytes(used)} used · ${fmtBytes(_root.freeBytes)} free of ${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:TextField(controller:_capacity,enabled:!_saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){_capacityTouched=true;}),decoration:InputDecoration(labelText:'Amount',border:const OutlineInputBorder(),errorText:(!_capacityTouched||_capacityError.isEmpty)?null:_capacityError))),const SizedBox(width:10),SizedBox(width:105,child:DropdownButtonFormField<String>(initialValue:_unit,decoration:const InputDecoration(border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'GB',child:Text('GB')),DropdownMenuItem(value:'TB',child:Text('TB'))],onChanged:_saving?null:(v)=>setState(()=>_unit=v!)))]),
+      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Expanded(child:TextField(controller:_capacity,enabled:!_saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState(()=>_capacityTouched=true),decoration:InputDecoration(labelText:'Amount',border:const OutlineInputBorder(),errorText:(!_capacityTouched||_capacityError.isEmpty)?null:_capacityError))),
+        const SizedBox(width:10),
+        SizedBox(width:105,child:DropdownButtonFormField<String>(
+          initialValue:_unit,
+          decoration:const InputDecoration(border:OutlineInputBorder(),labelText:'Unit'),
+          items:const[DropdownMenuItem(value:'GiB',child:Text('GiB')),DropdownMenuItem(value:'TiB',child:Text('TiB'))],
+          onChanged:_saving?null:(v){
+            if(v==null)return;
+            final oldFactor=_unit=='TiB'?1099511627776.0:1073741824.0;
+            final newFactor=v=='TiB'?1099511627776.0:1073741824.0;
+            final raw=double.tryParse(_capacity.text.trim().replaceAll(',','.'));
+            setState((){
+              if(raw!=null&&raw.isFinite&&raw>=0){
+                final bytes=(raw*oldFactor).round();
+                _capacity.text=(bytes/newFactor).toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'),'');
+              }
+              _unit=v;
+            });
+          },
+        )),
+      ]),
+      if(_root.freeBytes>0)...[
+        const SizedBox(height:8),
+        Row(children:[
+          Text('Allocation',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
+          const Spacer(),
+          Text('${((_capacityBytesValue/_root.freeBytes)*100).clamp(0,100).round()}%',style:t.titleSmall),
+        ]),
+        Slider(
+          value:(_capacityBytesValue/_root.freeBytes).clamp(0,1).toDouble(),
+          min:0,max:1,divisions:100,
+          label:'${((_capacityBytesValue/_root.freeBytes)*100).clamp(0,100).round()}%',
+          onChanged:_saving?null:(v){
+            final bytes=(v*_root.freeBytes).round();
+            final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
+            setState(()=>_capacity.text=(bytes/factor).toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'),''));
+          },
+        ),
+        Text('Available to allocate: ${fmtBytes(_root.freeBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
+      ],
       if(widget.repo)...[const SizedBox(height:18),TextField(controller:_password,enabled:!_saving,obscureText:!_showPassword,onChanged:(_)=>setState((){_passwordTouched=true;}),decoration:InputDecoration(labelText:'Vault Password',hintText:'At least 8 characters',border:const OutlineInputBorder(),errorText:(!_passwordTouched||_passwordError.isEmpty)?null:_passwordError,suffixIcon:IconButton(tooltip:_showPassword?'Hide Password':'Show Password',icon:Icon(_showPassword?Icons.visibility_off_outlined:Icons.visibility_outlined),onPressed:_saving?null:()=>setState(()=>_showPassword=!_showPassword)))),const SizedBox(height:6),Text('This password is required to open the backup vault.',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant))],
       const SizedBox(height:20),Row(children:[Expanded(child:OutlinedButton(onPressed:_saving?null:()=>Navigator.pop(context),child:const Text('Cancel'))),const SizedBox(width:10),Expanded(child:FilledButton.icon(onPressed:_saving?null:_save,icon:_saving?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.check),label:Text(_saving?'Creating…':'Create')))])
     ])));

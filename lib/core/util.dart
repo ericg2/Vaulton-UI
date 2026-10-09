@@ -6,7 +6,7 @@ import 'cron_picker.dart';
 
 String fmtBytes(int b) {
   if (b < 1024) return '$b B';
-  const u = ['KB', 'MB', 'GB', 'TB', 'PB'];
+  const u = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
   double v = b / 1024;
   var i = 0;
   while (v >= 1024 && i < u.length - 1) {
@@ -120,7 +120,7 @@ Future<T?> guarded<T>(BuildContext c, Future<T> Function() fn) async {
 class FieldSpec {
   const FieldSpec(this.key, this.label,
       {this.initial = '', this.kind = 'text', this.required = false, this.hint, this.options = const [], this.number = false,
-       this.maxBytes, this.initialUnit = 'GB'});
+       this.maxBytes, this.initialUnit = 'GiB'});
   final String key, label, initial, kind; // text | secret | multiline | bool | choice | path | cron | capacity
   final bool required, number;
   final String? hint;
@@ -222,7 +222,7 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
                 final raw = ctrls[f.key]!.text.trim();
                 final n = double.tryParse(raw.replaceAll(',', '.'));
                 final bytes = raw.isEmpty ? 0 : (n != null && n.isFinite && n >= 0
-                    ? (n * (_capacityFactors[capUnits[f.key]!] ?? _capacityFactors['GB']!)).round()
+                    ? (n * (_capacityFactors[capUnits[f.key]!] ?? _capacityFactors['GiB']!)).round()
                     : -1);
                 if ((f.required && raw.isEmpty) || bytes < 0 || (f.maxBytes != null && bytes > f.maxBytes!)) return;
               }
@@ -246,15 +246,15 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
 
 
 const _capacityFactors = <String, double>{
-  'MB': 1024 * 1024,
-  'GB': 1024 * 1024 * 1024,
-  'TB': 1024 * 1024 * 1024 * 1024,
+  'MiB': 1024 * 1024,
+  'GiB': 1024 * 1024 * 1024,
+  'TiB': 1024 * 1024 * 1024 * 1024,
 };
 
 String _capacityBytesText(String text, String unit) {
   final n = double.tryParse(text.trim().replaceAll(',', '.'));
   if (n == null || n < 0 || !n.isFinite) return '';
-  return (n * (_capacityFactors[unit] ?? _capacityFactors['GB']!)).round().toString();
+  return (n * (_capacityFactors[unit] ?? _capacityFactors['GiB']!)).round().toString();
 }
 
 class _CapacityField extends StatefulWidget {
@@ -279,7 +279,7 @@ class _CapacityFieldState extends State<_CapacityField> {
     final n = double.tryParse(text.replaceAll(',', '.'));
     if (n == null || !n.isFinite || n < 0) return 'Enter a valid capacity';
     if (widget.maxBytes != null) {
-      final bytes = (n * (_capacityFactors[widget.unit] ?? _capacityFactors['GB']!)).round();
+      final bytes = (n * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!)).round();
       if (bytes > widget.maxBytes!) return 'Over maximum (${_formatCapacity(widget.maxBytes!)})';
     }
     return null;
@@ -290,6 +290,10 @@ class _CapacityFieldState extends State<_CapacityField> {
     final error = _error;
     final over = error?.startsWith('Over maximum') == true;
     final cs = Theme.of(context).colorScheme;
+    final raw = double.tryParse(widget.controller.text.trim().replaceAll(',', '.'));
+    final exactBytes = raw != null && raw.isFinite && raw >= 0
+        ? (raw * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!)).round()
+        : null;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: TextField(
@@ -300,6 +304,7 @@ class _CapacityFieldState extends State<_CapacityField> {
             labelText: '${widget.label}${widget.required ? ' *' : ''}',
             errorText: error,
             errorMaxLines: 2,
+            helperText: exactBytes == null ? null : 'Exact: ${NumberFormat.decimalPattern().format(exactBytes)} bytes',
             prefixIcon: over ? Icon(Icons.warning_amber_rounded, color: cs.error) : null,
           ),
         ),
@@ -311,7 +316,21 @@ class _CapacityFieldState extends State<_CapacityField> {
           initialValue: widget.unit,
           decoration: const InputDecoration(labelText: 'Unit'),
           items: [for (final u in _capacityFactors.keys) DropdownMenuItem(value: u, child: Text(u))],
-          onChanged: (u) { if (u == null) return; widget.onUnitChanged(u); widget.onValueChanged(); setState(() {}); },
+          onChanged: (u) {
+            if (u == null || u == widget.unit) return;
+            final current = double.tryParse(widget.controller.text.trim().replaceAll(',', '.'));
+            if (current != null && current.isFinite && current >= 0) {
+              final oldFactor = _capacityFactors[widget.unit] ?? _capacityFactors['GiB']!;
+              final newFactor = _capacityFactors[u] ?? _capacityFactors['GiB']!;
+              final bytes = (current * oldFactor).round();
+              widget.controller.text = (bytes / newFactor)
+                  .toStringAsFixed(12)
+                  .replaceFirst(RegExp(r'\.?0+$'), '');
+            }
+            widget.onUnitChanged(u);
+            widget.onValueChanged();
+            setState(() {});
+          },
         ),
       ),
     ]);
@@ -319,7 +338,7 @@ class _CapacityFieldState extends State<_CapacityField> {
 }
 
 String _formatCapacity(int bytes) {
-  for (final e in const [('TB', 1099511627776), ('GB', 1073741824), ('MB', 1048576)]) {
+  for (final e in const [('TiB', 1099511627776), ('GiB', 1073741824), ('MiB', 1048576)]) {
     if (bytes.abs() >= e.$2) return '${(bytes / e.$2).toStringAsFixed(bytes % e.$2 == 0 ? 0 : 2)} ${e.$1}';
   }
   return '$bytes B';
