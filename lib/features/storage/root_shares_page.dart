@@ -394,16 +394,22 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
             quotaInput,
             Row(children: [
               Expanded(
-                child: Text(
-                  '${amountText(r.bytes)} of ${amountText(maxForRow)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
+                child: Tooltip(
+                  message: 'Exact limit: ${r.bytes} bytes\\nMaximum for this user: $maxForRow bytes',
+                  child: Text(
+                    '${amountText(r.bytes)} of ${amountText(maxForRow)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
+                  ),
                 ),
               ),
-              TextButton(
-                onPressed: _saving || r.bytes == maxForRow ? null : () => setState(() => r.setExactBytes(maxForRow)),
-                child: const Text('Use Remaining'),
+              Tooltip(
+                message: 'Assigns the exact remaining capacity; the field is rounded to two decimals.',
+                child: TextButton(
+                  onPressed: _saving || r.bytes == maxForRow ? null : () => setState(() => r.setExactBytes(maxForRow)),
+                  child: const Text('Use Remaining'),
+                ),
               ),
             ]),
             Slider(
