@@ -198,12 +198,12 @@ class JobCard extends ConsumerWidget {
                 Text(meta, style: t.bodySmall?.copyWith(color: cs.outline)),
                 if (job.phase == JobPhase.running) ...[
                   const SizedBox(height: 10),
-                  ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: job.liveFraction, minHeight: 6)),
-                  if (job.liveTotal > 0)
+                  ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: job.progressFraction, minHeight: 6)),
+                  if (job.progressTotal > 0)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        '${fmtBytes(job.liveDone)} of ${fmtBytes(job.liveTotal)}',
+                        '${job.currentStage?.title == 'Working' ? kindLabel(job.kind) : (job.currentStage?.title ?? kindLabel(job.kind))} · ${fmtBytes(job.progressDone)} of ${fmtBytes(job.progressTotal)}',
                         style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       ),
                     ),
