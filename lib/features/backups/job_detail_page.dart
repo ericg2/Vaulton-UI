@@ -269,13 +269,13 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           ]),
           if (j.active) ...[
             const SizedBox(height: 16),
-            ClipRRect(borderRadius: BorderRadius.circular(6), child: LinearProgressIndicator(value: j.phase == JobPhase.waiting ? null : j.liveFraction, minHeight: 8)),
+            ClipRRect(borderRadius: BorderRadius.circular(6), child: LinearProgressIndicator(value: j.phase == JobPhase.waiting ? null : j.progressFraction, minHeight: 8)),
             const SizedBox(height: 6),
             Text(
               j.phase == JobPhase.waiting
                   ? (j.scheduleDate != null && j.scheduleDate!.isAfter(DateTime.now()) ? 'Starts ${fmtDate(j.scheduleDate)}' : 'Waiting…')
-                  : j.liveTotal > 0
-                      ? '${fmtBytes(j.liveDone)} of ${fmtBytes(j.liveTotal)}  ·  ${((j.liveFraction ?? 0) * 100).toStringAsFixed(0)}%'
+                  : j.progressTotal > 0
+                      ? '${j.currentStage?.title == 'Working' ? kindLabel(j.kind) : (j.currentStage?.title ?? kindLabel(j.kind))} · ${fmtBytes(j.progressDone)} of ${fmtBytes(j.progressTotal)}  ·  ${((j.progressFraction ?? 0) * 100).toStringAsFixed(0)}%'
                       : 'Working…',
               style: t.bodySmall,
             ),
