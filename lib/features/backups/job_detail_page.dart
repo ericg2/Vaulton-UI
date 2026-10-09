@@ -357,7 +357,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                   Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
                 else if (j.stages[i].length != null && j.stages[i].length! > 0)
                   Text(
-                    j.stages[i].isByteProgress ? '${fmtBytes(j.stages[i].progress)} / ${fmtBytes(j.stages[i].length!)}' : '${j.stages[i].progress} / ${j.stages[i].length}',
+                    (j.stages[i].isByteProgress || (j.kind == 'restore' && j.currentStage == j.stages[i])) ? '${fmtBytes(j.stages[i].progress)} / ${fmtBytes(j.stages[i].length!)}' : '${j.stages[i].progress} / ${j.stages[i].length}',
                     style: Theme.of(context).textTheme.labelSmall,
                   )
                 else if (j.stages[i].fraction != null)
