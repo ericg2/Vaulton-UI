@@ -203,11 +203,40 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                   );
                                 },
                               )),
-                if (!loading && error == null) TextButton.icon(
-                  onPressed: parent == null || parent.isEmpty ? null : () => load(parent, update),
-                  icon: const Icon(Icons.arrow_upward),
-                  label: const Text('Parent Folder'),
-                ),
+                if (!loading && error == null)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      TextButton.icon(
+                        onPressed: parent == null || parent.isEmpty ? null : () => load(parent, update),
+                        icon: const Icon(Icons.arrow_upward),
+                        label: const Text('Parent Folder'),
+                      ),
+                      TextButton.icon(
+                        onPressed: path.isEmpty
+                            ? null
+                            : () async {
+                                final name = await promptText(
+                                  ctx,
+                                  'New Folder',
+                                  'Folder Name',
+                                  ok: 'Create Folder',
+                                );
+                                if (name == null || name.trim().isEmpty || !ctx.mounted) return;
+                                try {
+                                  await _v.createLocalDirectory(path, name.trim());
+                                  await load(path, update);
+                                } catch (_) {
+                                  if (ctx.mounted) {
+                                    toast(ctx, 'Could not create folder. Check the path and permissions.', error: true);
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.create_new_folder_outlined),
+                        label: const Text('New Folder'),
+                      ),
+                    ],
+                  ),
               ]),
             ),
             actions: [
