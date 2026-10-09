@@ -374,7 +374,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         fetch: (c) => _v.roots(cursor: c),
         itemBuilder: (ctx, r, i) {
           final allocated = r.allocatedBytes;
-          final availableLabel = r.isOwner ? 'free' : 'available to you';
           final scheme = '${r.source?['scheme'] ?? ''}';
           return Card(
             child: InkWell(
@@ -678,7 +677,6 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   }
   @override Widget build(BuildContext context){
     final cs=Theme.of(context).colorScheme,t=Theme.of(context).textTheme;
-    final availableLabel = _root.isOwner ? 'free' : 'available to you';
     return Padding(padding:EdgeInsets.fromLTRB(20,4,20,MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
