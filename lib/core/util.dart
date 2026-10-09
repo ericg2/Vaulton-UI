@@ -5,15 +5,16 @@ import 'api_client.dart';
 import 'cron_picker.dart';
 
 String fmtBytes(int b) {
-  if (b < 1024) return '${b.toStringAsFixed(2)} B';
-  const u = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
-  double v = b / 1024;
-  var i = 0;
-  while (v >= 1024 && i < u.length - 1) {
-    v /= 1024;
-    i++;
+  if (b.abs() < 1024) return '$b B';
+  const units = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+  var value = b.abs().toDouble();
+  var unit = -1;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
   }
-  return '${v.toStringAsFixed(2)} ${u[i]}';
+  final formatted = value >= 100 ? value.toStringAsFixed(0) : value >= 10 ? value.toStringAsFixed(1) : value.toStringAsFixed(2);
+  return '${b < 0 ? '-' : ''}$formatted ${units[unit]}';
 }
 
 String fmtDate(DateTime? d) => d == null ? '—' : DateFormat.yMMMd().add_jm().format(d);
