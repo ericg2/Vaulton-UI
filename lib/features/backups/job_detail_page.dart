@@ -100,7 +100,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
         data = results[resultIndex++] as Point;
       }
       Json? summary;
-      if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty && resultIndex < results.length) {
+      if (j.kind == 'backup' && j.snapshotId != null && j.snapshotId!.isNotEmpty && resultIndex < resultj.stages[i].length) {
         final pg = results[resultIndex] as Paged<Snapshot>;
         final snap = pg.items.where((s) => s.id == j.snapshotId || s.id.startsWith(j.snapshotId!)).firstOrNull;
         summary = snap?.summary;
@@ -237,6 +237,14 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     ]));
   }
 
+  String _stageLabel(RepoJob j, JobStage stage) {
+    final title = stage.title
+        .replaceAll(RegExp(r'\\s*\\[total finalized\\]', caseSensitive: false), '')
+        .trim();
+    if (title.isEmpty || title == 'Working') return kindLabel(j.kind);
+    return title;
+  }
+
   Widget _hero(RepoJob j) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
@@ -274,7 +282,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               j.phase == JobPhase.waiting
                   ? (j.scheduleDate != null && j.scheduleDate!.isAfter(DateTime.now()) ? 'Starts ${fmtDate(j.scheduleDate)}' : 'Waiting…')
                   : j.progressTotal > 0
-                      ? '${j.currentStage?.title == 'Working' ? kindLabel(j.kind) : (j.currentStage?.title ?? kindLabel(j.kind))} · ${j.progressIsBytes ? fmtBytes(j.progressDone) : j.progressDone} of ${j.progressIsBytes ? fmtBytes(j.progressTotal) : j.progressTotal}  ·  ${((j.progressFraction ?? 0) * 100).toStringAsFixed(0)}%'
+                      ? '${j.currentStage == null ? kindLabel(j.kind) : _stageLabel(j, j.currentStage!)} · ${j.progressIsBytes ? fmtBytes(j.progressDone) : j.progressDone} of ${j.progressIsBytes ? fmtBytes(j.progressTotal) : j.progressTotal}${j.progressTotalFinalized && j.progressFraction != null ? ' · ${(j.progressFraction! * 100).toStringAsFixed(0)}%' : ''}'
                       : 'Working…',
               style: t.bodySmall,
             ),
@@ -334,26 +342,29 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       );
 
   Widget _stagesCard(RepoJob j) => _card('Progress', [
-        for (final s in j.stages)
+        for (var i = 0; i < j.stagej.stages[i].length; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(child: Text(
-                  s.title == 'Working' ? (j.kind == 'backup' ? 'Backing up files...' : kindLabel(j.kind)) : s.title,
+                  _stageLabel(j, j.stages[i]) +
+                      (j.stages.where((stage) => stage.title == j.stages[i].title).length > 1
+                          ? ' (${j.stages.take(i + 1).where((stage) => stage.title == j.stages[i].title).length} of ${j.stages.where((stage) => stage.title == j.stages[i].title).length})'
+                          : ''),
                 )),
-                if (s.finished)
+                if (j.stages[i].finished)
                   Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
-                else if (s.length != null && s.length! > 0)
+                else if (j.stages[i].length != null && j.stages[i].length! > 0)
                   Text(
-                    s.isByteProgress ? '${fmtBytes(s.progress)} / ${fmtBytes(s.length!)}' : '${s.progress} / ${s.length}',
+                    j.stages[i].isByteProgress ? '${fmtBytes(j.stages[i].progress)} / ${fmtBytes(j.stages[i].length!)}' : '${j.stages[i].progress} / ${j.stages[i].length}',
                     style: Theme.of(context).textTheme.labelSmall,
                   )
-                else if (s.fraction != null)
-                  Text('${(s.fraction! * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.labelMedium),
+                else if (j.stages[i].fraction != null)
+                  Text('${(j.stages[i].fraction! * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.labelMedium),
               ]),
               const SizedBox(height: 6),
-              ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: s.finished ? 1 : (j.active ? s.fraction : s.fraction ?? 0), minHeight: 6)),
+              ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: j.stages[i].finished ? 1 : (j.active ? j.stages[i].fraction : j.stages[i].fraction ?? 0), minHeight: 6)),
             ]),
           ),
       ]);
@@ -457,9 +468,9 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                   child: ListView.builder(
                     reverse: true, // newest line at the bottom, scroll up for history
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: lines.length + (_hasOlder ? 1 : 0),
+                    itemCount: linej.stages[i].length + (_hasOlder ? 1 : 0),
                     itemBuilder: (c, i) {
-                      if (i == lines.length) {
+                      if (i == linej.stages[i].length) {
                         return Padding(
                           padding: const EdgeInsets.all(8),
                           child: Center(
