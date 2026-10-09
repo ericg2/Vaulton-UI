@@ -240,6 +240,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   String _stageLabel(RepoJob j, JobStage stage) {
     final title = stage.title
         .replaceAll(RegExp(r'\s*\[total finalized\]', caseSensitive: false), '')
+        .replaceFirst(RegExp(r'^\[[^\]]+\]\s*'), '')
         .trim();
     if (title.isEmpty || title == 'Working') return kindLabel(j.kind);
     return title;
