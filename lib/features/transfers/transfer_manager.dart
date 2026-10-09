@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -13,6 +15,29 @@ import 'transfer_models.dart';
 const kQueueKey = 'transfers_v1';
 const kUiHeartbeat = 'ui_hb';
 const kBgHeartbeat = 'bg_drain_hb';
+
+typedef _TransferKey = ({TKind kind, String pointId, String remotePath, String? snapshotId});
+
+class UploadRequest {
+  const UploadRequest({
+    required this.pointId,
+    required this.remotePath,
+    required this.size,
+    this.localPath,
+    this.bytes,
+    this.loadBytes,
+    this.origin = 'manual',
+    this.overwrite = false,
+  });
+
+  final String pointId, remotePath;
+  final String? localPath;
+  final Uint8List? bytes;
+  final Future<Uint8List> Function()? loadBytes;
+  final int size;
+  final String origin;
+  final bool overwrite;
+}
 
 String encodeQueue(List<TransferTask> tasks) {
   final cutoff = DateTime.now().subtract(const Duration(days: 7));
@@ -35,11 +60,14 @@ List<TransferTask> decodeQueue(String? raw) {
 /// handed to a WorkManager worker so it keeps going with the app closed.
 class TransferManager extends Notifier<List<TransferTask>> {
   final List<TransferTask> _tasks = [];
+  final Map<String, TransferTask> _taskById = {};
+  final Queue<String> _pending = Queue<String>();
   final Map<String, CancelToken> _tokens = {};
   final Map<String, Uint8List> _webBytes = {};
+  final Map<String, Future<Uint8List> Function()> _webLoaders = {};
   late final TransferEngine _engine;
   int _running = 0, _seq = 0;
-  Timer? _flush, _handoffTimer, _watch, _hb;
+  Timer? _flush, _persistTimer, _handoffTimer, _watch, _hb;
   bool _handedOff = false, _dirty = false;
 
   bool get hasActive => _tasks.any((t) => t.active);
@@ -51,15 +79,19 @@ class TransferManager extends Notifier<List<TransferTask>> {
       for (final t in decodeQueue(ref.read(prefsProvider).getString(kQueueKey))) {
         if (t.state == TState.running) t.state = TState.queued;
         _tasks.add(t);
+        _taskById[t.id] = t;
+        if (t.state == TState.queued) _pending.addLast(t.id);
       }
       _hb = Timer.periodic(const Duration(seconds: 5), (_) => ref.read(prefsProvider).setInt(kUiHeartbeat, DateTime.now().millisecondsSinceEpoch));
     }
     ref.onDispose(() {
       _flush?.cancel();
+      _persistTimer?.cancel();
       _hb?.cancel();
       _watch?.cancel();
       _handoffTimer?.cancel();
       _epochTimer?.cancel();
+      _persist();
     });
     Future.microtask(_pump);
     return List.of(_tasks);
@@ -76,19 +108,72 @@ class TransferManager extends Notifier<List<TransferTask>> {
     required String remotePath,
     String? localPath,
     Uint8List? bytes,
+    Future<Uint8List> Function()? loadBytes,
     required int size,
     String origin = 'manual',
     bool overwrite = false,
   }) {
-    if (_duplicate(TKind.upload, pointId, remotePath)) return null;
-    final t = TransferTask(
-      id: _id(), kind: TKind.upload, pointId: pointId, remotePath: remotePath,
-      name: remotePath.split('/').last, localPath: localPath, total: size, origin: origin, overwrite: overwrite);
-    if (bytes != null) _webBytes[t.id] = bytes;
-    _tasks.add(t);
-    _changed(persist: true);
-    _pump();
-    return t;
+    return addUploads([
+      UploadRequest(
+        pointId: pointId,
+        remotePath: remotePath,
+        localPath: localPath,
+        bytes: bytes,
+        loadBytes: loadBytes,
+        size: size,
+        origin: origin,
+        overwrite: overwrite,
+      ),
+    ]).first;
+  }
+
+  /// Adds a large upload batch with one queue update and one persistence write.
+  /// Web file bytes are loaded only when a task starts, bounding memory by transfer concurrency.
+  List<TransferTask?> addUploads(Iterable<UploadRequest> requests) {
+    final seen = <_TransferKey>{
+      for (final t in _tasks.where((t) => t.active))
+        (kind: t.kind, pointId: t.pointId, remotePath: t.remotePath, snapshotId: t.snapshotId),
+    };
+    final results = <TransferTask?>[];
+    var added = false;
+
+    for (final request in requests) {
+      final key = (
+        kind: TKind.upload,
+        pointId: request.pointId,
+        remotePath: request.remotePath,
+        snapshotId: null,
+      );
+      if (!seen.add(key)) {
+        results.add(null);
+        continue;
+      }
+
+      final t = TransferTask(
+        id: _id(),
+        kind: TKind.upload,
+        pointId: request.pointId,
+        remotePath: request.remotePath,
+        name: request.remotePath.split('/').last,
+        localPath: request.localPath,
+        total: request.size,
+        origin: request.origin,
+        overwrite: request.overwrite,
+      );
+      if (request.bytes != null) _webBytes[t.id] = request.bytes!;
+      if (request.loadBytes != null) _webLoaders[t.id] = request.loadBytes!;
+      _tasks.add(t);
+      _taskById[t.id] = t;
+      _pending.addLast(t.id);
+      results.add(t);
+      added = true;
+    }
+
+    if (added) {
+      _changed(persist: true);
+      _pump();
+    }
+    return results;
   }
 
   TransferTask? addDownload({
@@ -104,13 +189,15 @@ class TransferManager extends Notifier<List<TransferTask>> {
       id: _id(), kind: TKind.download, pointId: pointId, remotePath: remotePath, name: name, localPath: localPath,
       total: size, snapshotId: snapshotId, origin: snapshotId != null ? 'snapshot' : 'manual');
     _tasks.add(t);
+    _taskById[t.id] = t;
+    _pending.addLast(t.id);
     _changed(persist: true);
     _pump();
     return t;
   }
 
   void cancel(String id) {
-    final t = _tasks.where((t) => t.id == id).firstOrNull;
+    final t = _taskById[id];
     if (t == null) return;
     if (t.state == TState.running) {
       _tokens[id]?.cancel();
@@ -121,13 +208,20 @@ class TransferManager extends Notifier<List<TransferTask>> {
   }
 
   void cancelAll() {
-    for (final t in _tasks.where((t) => t.active).toList()) {
-      cancel(t.id);
+    var changed = false;
+    for (final t in _tasks.where((t) => t.active)) {
+      if (t.state == TState.running) {
+        _tokens[t.id]?.cancel();
+      } else {
+        t.state = TState.canceled;
+        changed = true;
+      }
     }
+    if (changed) _changed(persist: true);
   }
 
   void retry(String id, {bool overwrite = false}) {
-    final t = _tasks.where((t) => t.id == id).firstOrNull;
+    final t = _taskById[id];
     if (t == null || t.active) return;
     t.state = TState.queued;
     t.error = null;
@@ -135,19 +229,37 @@ class TransferManager extends Notifier<List<TransferTask>> {
     t.attempts = 0;
     if (overwrite) t.overwrite = true;
     if (t.kind == TKind.upload) t.done = 0;
+    _pending.addLast(t.id);
     _changed(persist: true);
     _pump();
   }
 
   void remove(String id) {
-    cancel(id);
-    _tasks.removeWhere((t) => t.id == id && !t.active);
-    _webBytes.remove(id);
+    final t = _taskById[id];
+    if (t == null) return;
+    if (t.state == TState.running) {
+      _tokens[id]?.cancel();
+    } else if (t.active) {
+      t.state = TState.canceled;
+    }
+    if (!t.active) {
+      _tasks.remove(t);
+      _taskById.remove(id);
+      _webBytes.remove(id);
+      _webLoaders.remove(id);
+    }
     _changed(persist: true);
   }
 
   void clearFinished() {
+    final removed = _tasks.where((t) => !t.active).toList();
+    for (final t in removed) {
+      _taskById.remove(t.id);
+      _webBytes.remove(t.id);
+      _webLoaders.remove(t.id);
+    }
     _tasks.removeWhere((t) => !t.active);
+    _rebuildPendingQueue();
     _changed(persist: true);
   }
 
@@ -158,24 +270,50 @@ class TransferManager extends Notifier<List<TransferTask>> {
     }
     _tasks.removeWhere((t) => ids.contains(t.id));
     for (final id in ids) {
+      _taskById.remove(id);
       _webBytes.remove(id);
+      _webLoaders.remove(id);
     }
+    _rebuildPendingQueue();
     _changed(persist: true);
   }
 
   void reset() {
-    cancelAll();
+    for (final t in _tasks.where((t) => t.state == TState.running)) {
+      _tokens[t.id]?.cancel();
+    }
     _tasks.clear();
+    _taskById.clear();
+    _pending.clear();
+    _webBytes.clear();
+    _webLoaders.clear();
     _changed(persist: true);
+  }
+
+  void _rebuildPendingQueue() {
+    _pending.clear();
+    for (final t in _tasks) {
+      if (t.state == TState.queued) _pending.addLast(t.id);
+    }
+  }
+
+  void _rebuildTaskIndex({bool queuePending = false}) {
+    _taskById.clear();
+    _pending.clear();
+    for (final t in _tasks) {
+      _taskById[t.id] = t;
+      if (queuePending && t.state == TState.queued) _pending.addLast(t.id);
+    }
   }
 
   // ------------------------------------------------------------- internals
   void _pump() {
     if (_handedOff) return;
     final max = ref.read(settingsProvider).concurrency;
-    while (_running < max) {
-      final next = _tasks.where((t) => t.state == TState.queued).firstOrNull;
-      if (next == null) break;
+    while (_running < max && _pending.isNotEmpty) {
+      final id = _pending.removeFirst();
+      final next = _taskById[id];
+      if (next == null || next.state != TState.queued) continue;
       _run(next);
     }
   }
@@ -186,7 +324,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
     _running++;
     t.state = TState.running;
     t.error = null;
-    _changed(persist: true);
+    _changed(persistSoon: true);
     final token = CancelToken();
     _tokens[t.id] = token;
     try {
@@ -197,7 +335,9 @@ class TransferManager extends Notifier<List<TransferTask>> {
       }
 
       if (t.kind == TKind.upload) {
-        await _engine.upload(t, bytes: _webBytes[t.id], onProgress: prog, cancel: token);
+        final loader = _webLoaders[t.id];
+        final bytes = _webBytes[t.id] ?? (loader == null ? null : await loader());
+        await _engine.upload(t, bytes: bytes, onProgress: prog, cancel: token);
       } else {
         await _engine.download(t, onProgress: prog, cancel: token);
       }
@@ -205,6 +345,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
       t.completedAt = DateTime.now();
       if (t.total > 0) t.done = t.total;
       _webBytes.remove(t.id);
+      _webLoaders.remove(t.id);
       _scheduleEpochBump();
     } on ApiException catch (e) {
       if (token.isCancelled) {
@@ -213,6 +354,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
         t.state = TState.queued;
         t.error = 'Retrying: ${e.message}';
         await Future.delayed(Duration(seconds: 2 * t.attempts * t.attempts));
+        if (_taskById.containsKey(t.id)) _pending.addLast(t.id);
       } else {
         t.state = TState.failed;
         t.error = e.message;
@@ -223,7 +365,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
     } finally {
       _tokens.remove(t.id);
       _running--;
-      _changed(persist: true);
+      _changed(persistSoon: true);
       _pump();
     }
   }
@@ -240,12 +382,25 @@ class TransferManager extends Notifier<List<TransferTask>> {
     });
   }
 
-  void _changed({bool persist = false}) {
+  void _changed({bool persist = false, bool persistSoon = false}) {
     if (persist) {
+      _persistTimer?.cancel();
+      _persistTimer = null;
       _persist();
+      _flush?.cancel();
+      _flush = null;
+      _dirty = false;
       state = List.of(_tasks);
       return;
     }
+
+    if (persistSoon && !kIsWeb) {
+      _persistTimer ??= Timer(const Duration(milliseconds: 750), () {
+        _persistTimer = null;
+        _persist();
+      });
+    }
+
     _dirty = true;
     _flush ??= Timer(const Duration(milliseconds: 250), () {
       _flush = null;
@@ -285,6 +440,8 @@ class TransferManager extends Notifier<List<TransferTask>> {
     for (final t in _tasks) {
       if (t.state == TState.running) t.state = TState.queued;
     }
+    _persistTimer?.cancel();
+    _persistTimer = null;
     _persist();
     await scheduleDrain();
   }
@@ -301,12 +458,17 @@ class TransferManager extends Notifier<List<TransferTask>> {
         _tasks
           ..clear()
           ..addAll(loaded);
+        _rebuildTaskIndex();
         state = List.of(_tasks);
       } else {
         _watch?.cancel();
         _tasks
           ..clear()
           ..addAll(loaded);
+        for (final t in _tasks) {
+          if (t.state == TState.running) t.state = TState.queued;
+        }
+        _rebuildTaskIndex(queuePending: true);
         _handedOff = false;
         state = List.of(_tasks);
         _pump();
