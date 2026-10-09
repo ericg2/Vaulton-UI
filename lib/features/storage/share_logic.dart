@@ -3,19 +3,19 @@
 const int kGiB = 1024 * 1024 * 1024;
 
 const Map<String, double> capacityFactors = {
-  'MB': 1024 * 1024,
-  'GB': 1024 * 1024 * 1024,
-  'TB': 1024 * 1024 * 1024 * 1024,
+  'MiB': 1024 * 1024,
+  'GiB': 1024 * 1024 * 1024,
+  'TiB': 1024 * 1024 * 1024 * 1024,
 };
 
 int? capacityToBytes(String text, String unit) {
   final v = double.tryParse(text.trim().replaceAll(',', '.'));
   if (v == null || v.isNaN || v.isInfinite || v < 0) return null;
-  return (v * (capacityFactors[unit] ?? capacityFactors['GB']!)).round();
+  return (v * (capacityFactors[unit] ?? capacityFactors['GiB']!)).round();
 }
 
 String bytesToCapacity(int bytes, String unit) {
-  final f = capacityFactors[unit] ?? capacityFactors['GB']!;
+  final f = capacityFactors[unit] ?? capacityFactors['GiB']!;
   return bytes == 0 ? '' : (bytes / f).toStringAsFixed(bytes % f == 0 ? 0 : 2);
 }
 
