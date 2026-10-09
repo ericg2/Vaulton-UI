@@ -22,6 +22,8 @@ void main() {
     expect(bytesToCapacity(kGiB, 'GiB'), '1.00');
     expect(bytesToCapacity(kGiB * 3 ~/ 2, 'GiB'), '1.50');
     expect(bytesToCapacity(kGiB * 3 ~/ 2, 'TiB'), '0.00');
+    expect(capacityToBytes('4096', 'B'), 4096);
+    expect(bytesToCapacity(4096, 'B'), '4096.00');
     expect(gbToBytes('2'), 2 * kGiB);
     expect(gbToBytes('x'), isNull);
   });
