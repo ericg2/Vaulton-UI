@@ -373,7 +373,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 enabled: !_saving,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: 'Space Limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(_shareCapacity) ? 'Over remaining capacity' : null)),
+                decoration: InputDecoration(labelText: 'Space Limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(maxForRow) ? 'Over remaining capacity' : null)),
                 onChanged: (_) {
                   r.textChanged();
                   setState(() {});
