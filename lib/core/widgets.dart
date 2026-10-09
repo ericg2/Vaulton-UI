@@ -150,7 +150,10 @@ class CursorListState<T> extends State<CursorList<T>> {
     if (_loading) return;
     // A first-page refresh resets the cursor. Preserve already-loaded pages
     // in large directories/lists; an explicit pull-to-refresh still resets them.
-    if (items.length > _firstPageSize && _firstPageSize > 0) return;
+    if (items.length > _firstPageSize && _firstPageSize > 0) {
+      if (force) _lastRefresh = DateTime.now();
+      return;
+    }
     final gen = ++_gen;
     _lastRefresh = DateTime.now();
     try {
