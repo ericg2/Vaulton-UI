@@ -16,7 +16,7 @@ int? capacityToBytes(String text, String unit) {
 
 String bytesToCapacity(int bytes, String unit) {
   final f = capacityFactors[unit] ?? capacityFactors['GiB']!;
-  return bytes == 0 ? '' : (bytes / f).toStringAsFixed(2);
+  return (bytes / f).toStringAsFixed(2);
 }
 
 
@@ -26,8 +26,8 @@ int? gbToBytes(String s) {
   return v == null ? null : (v * kGiB).round();
 }
 
-/// Bytes -> text for a GB field. 0 is shown as an empty field.
-String bytesToGb(int b) => b == 0 ? '' : (b / kGiB).toStringAsFixed(2);
+/// Bytes -> text for a GB field, always with two decimal places.
+String bytesToGb(int b) => (b / kGiB).toStringAsFixed(2);
 
 /// Result of reading a quota text field.
 typedef QuotaResult = ({int bytes, String? error});
