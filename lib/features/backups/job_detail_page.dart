@@ -340,7 +340,9 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text(s.title)),
+                Expanded(child: Text(
+                  s.title == 'Working' ? '${kindLabel(j.kind)} progress' : s.title,
+                )),
                 if (s.finished)
                   Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
                 else if (s.fraction != null)
