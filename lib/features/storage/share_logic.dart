@@ -3,6 +3,7 @@
 const int kGiB = 1024 * 1024 * 1024;
 
 const Map<String, double> capacityFactors = {
+  'B': 1,
   'MiB': 1024 * 1024,
   'GiB': 1024 * 1024 * 1024,
   'TiB': 1024 * 1024 * 1024 * 1024,
