@@ -607,24 +607,71 @@ class _NewPointSheet extends StatefulWidget {
   @override State<_NewPointSheet> createState() => _NewPointSheetState();
 }
 class _NewPointSheetState extends State<_NewPointSheet> {
-  late Root _root; final _name=TextEditingController(), _capacity=TextEditingController(), _password=TextEditingController();
-  String _unit='GiB'; bool _showPassword=false, _saving=false, _capacityTouched=false, _passwordTouched=false;
-  @override void initState(){super.initState();_root=widget.roots.first;}
-  @override void dispose(){_name.dispose();_capacity.dispose();_password.dispose();super.dispose();}
-  int get _capacityBytesValue { final n=double.tryParse(_capacity.text.trim().replaceAll(',','.')); if(n==null||!n.isFinite||n<0)return 0; return (n*(_unit=='TiB'?1099511627776.0:1073741824.0)).round(); }
+  late Root _root;
+  final _name = TextEditingController(), _capacity = TextEditingController(), _password = TextEditingController();
+  String _unit = 'GiB';
+  bool _showPassword = false, _saving = false, _capacityTouched = false, _passwordTouched = false;
+  int? _exactCapacityBytes;
+  String? _exactCapacityText, _exactCapacityUnit;
+
+  @override
+  void initState() {
+    super.initState();
+    _root = widget.roots.first;
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _capacity.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  int get _capacityBytesValue {
+    if (_exactCapacityBytes != null &&
+        _capacity.text.trim() == _exactCapacityText &&
+        _unit == _exactCapacityUnit) {
+      return _exactCapacityBytes!;
+    }
+    final n = double.tryParse(_capacity.text.trim().replaceAll(',', '.'));
+    if (n == null || !n.isFinite || n < 0) return 0;
+    return (n * (capacityFactors[_unit] ?? capacityFactors['GiB']!)).round();
+  }
+
+  void _clearExactCapacity() {
+    _exactCapacityBytes = null;
+    _exactCapacityText = null;
+    _exactCapacityUnit = null;
+  }
+
+  void _setExactCapacity(int bytes) {
+    _capacity.text = bytesToCapacity(bytes, _unit);
+    _exactCapacityBytes = bytes;
+    _exactCapacityText = _capacity.text.trim();
+    _exactCapacityUnit = _unit;
+  }
+
   String get _capacityError {
-    final raw=_capacity.text.trim(); if(raw.isEmpty)return 'Enter a space limit.';
-    final n=double.tryParse(raw.replaceAll(',','.')); if(n==null||!n.isFinite||n<=0)return 'Enter a valid space limit.';
-    if(_root.freeBytes<=0)return 'No allocatable capacity remains for you on this location.';
-    final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
-    if(n*factor>_root.freeBytes)return 'The limit exceeds the capacity available to you on this location.';
+    final raw = _capacity.text.trim();
+    if (raw.isEmpty) return 'Enter a space limit.';
+    final n = double.tryParse(raw.replaceAll(',', '.'));
+    if (n == null || !n.isFinite || n < 0 || _capacityBytesValue < 4096) {
+      return 'Enter a valid space limit.';
+    }
+    if (_root.freeBytes <= 0) return 'No allocatable capacity remains for you on this location.';
+    if (_capacityBytesValue > _root.freeBytes) {
+      return 'The limit exceeds the capacity available to you on this location.';
+    }
     return '';
   }
   String get _passwordError=>widget.repo&&_password.text.length<8?'Use at least 8 characters.':'';
   Future<void> _save() async {
-    final name=_name.text.trim(); setState(() { _capacityTouched=true; _passwordTouched=true; }); if(name.isEmpty||_capacityError.isNotEmpty||_passwordError.isNotEmpty)return;
-    final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
-    final maxBytes=(double.parse(_capacity.text.trim().replaceAll(',','.'))*factor).round(); setState(()=>_saving=true);
+    final name = _name.text.trim();
+    setState(() { _capacityTouched = true; _passwordTouched = true; });
+    if (name.isEmpty || _capacityError.isNotEmpty || _passwordError.isNotEmpty) return;
+    final maxBytes = _capacityBytesValue;
+    setState(() => _saving = true);
     try { await (widget.repo?widget.vaulton.createRepo({'rootId':_root.id,'name':name,'maxBytes':maxBytes,'password':_password.text}):widget.vaulton.createData({'rootId':_root.id,'name':name,'maxBytes':maxBytes})); if(mounted)Navigator.pop(context,true); }
     catch(e){if(mounted){setState(()=>_saving=false);toast(context,e.toString(),error:true);}}
   }
@@ -638,27 +685,50 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       const SizedBox(height:6),Text('${fmtBytes(_root.allocatedBytes)} allocated · ${fmtBytes(_root.freeBytes)} ${availableLabel} of ${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Expanded(child:TextField(controller:_capacity,enabled:!_saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState(()=>_capacityTouched=true),decoration:InputDecoration(labelText:'Amount',border:const OutlineInputBorder(),errorText:(!_capacityTouched||_capacityError.isEmpty)?null:_capacityError))),
-        const SizedBox(width:10),
-        SizedBox(width:105,child:DropdownButtonFormField<String>(
-          initialValue:_unit,
-          decoration:const InputDecoration(border:OutlineInputBorder(),labelText:'Unit'),
-          items:const[DropdownMenuItem(value:'GiB',child:Text('GiB')),DropdownMenuItem(value:'TiB',child:Text('TiB'))],
-          onChanged:_saving?null:(v){
-            if(v==null)return;
-            final oldFactor=_unit=='TiB'?1099511627776.0:1073741824.0;
-            final newFactor=v=='TiB'?1099511627776.0:1073741824.0;
-            final raw=double.tryParse(_capacity.text.trim().replaceAll(',','.'));
-            setState((){
-              if(raw!=null&&raw.isFinite&&raw>=0){
-                final bytes=(raw*oldFactor).round();
-                _capacity.text=(bytes/newFactor).toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'),'');
-              }
-              _unit=v;
-            });
-          },
-        )),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: TextField(
+            controller: _capacity,
+            enabled: !_saving,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (_) => setState(() {
+              _clearExactCapacity();
+              _capacityTouched = true;
+            }),
+            decoration: InputDecoration(
+              labelText: 'Amount',
+              border: const OutlineInputBorder(),
+              errorText: (!_capacityTouched || _capacityError.isEmpty) ? null : _capacityError,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 105,
+          child: DropdownButtonFormField<String>(
+            initialValue: _unit,
+            decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Unit'),
+            items: const [
+              DropdownMenuItem(value: 'GiB', child: Text('GiB')),
+              DropdownMenuItem(value: 'TiB', child: Text('TiB')),
+            ],
+            onChanged: _saving ? null : (v) {
+              if (v == null) return;
+              final raw = double.tryParse(_capacity.text.trim().replaceAll(',', '.'));
+              final valid = _capacity.text.trim().isEmpty ||
+                  (raw != null && raw.isFinite && raw >= 0);
+              final bytes = _capacityBytesValue;
+              setState(() {
+                _unit = v;
+                if (valid) {
+                  _setExactCapacity(bytes);
+                } else {
+                  _clearExactCapacity();
+                }
+              });
+            },
+          ),
+        ),
       ]),
       if(_root.freeBytes>0)...[
         const SizedBox(height:8),
@@ -671,10 +741,12 @@ class _NewPointSheetState extends State<_NewPointSheet> {
           value:(_capacityBytesValue/_root.freeBytes).clamp(0,1).toDouble(),
           min:0,max:1,divisions:100,
           label:'${((_capacityBytesValue/_root.freeBytes)*100).clamp(0,100).round()}%',
-          onChanged:_saving?null:(v){
-            final bytes=(v*_root.freeBytes).round();
-            final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
-            setState(()=>_capacity.text=(bytes/factor).toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'),''));
+          onChanged: _saving ? null : (v) {
+            final bytes = (v * _root.freeBytes).round();
+            setState(() {
+              _capacityTouched = true;
+              _setExactCapacity(bytes);
+            });
           },
         ),
         Text('Available to allocate: ${fmtBytes(_root.freeBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
