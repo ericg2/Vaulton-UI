@@ -317,7 +317,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
                             itemBuilder: (_, i) {
                               final n = _items![i];
                               return ListTile(
-                                leading: Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
+                                leading: Icon(n.isDir ? Icons.folder : iconFor(n), color: n.isDir ? Colors.orange : null),
                                 title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                                 subtitle: Text(n.isDir ? 'Folder' : fmtBytes(n.bytes)),
                                 trailing: const Icon(Icons.chevron_right),
@@ -459,11 +459,14 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
         _searchCtl.clear();
       });
 
+  String _entryKey(Node n) => '${n.isDir ? 'd' : 'f'}:${n.pathIn(_cur).replaceAll(RegExp(r'/+'), '/')}';
+
   void _toggle(Node n) => setState(() {
-        if (!_sel.remove(n.name)) _sel.add(n.name);
+        final key = _entryKey(n);
+        if (!_sel.remove(key)) _sel.add(key);
       });
 
-  List<Node> get _selected => _loaded.where((n) => _sel.contains(n.name)).toList();
+  List<Node> get _selected => _loaded.where((n) => _sel.contains(_entryKey(n))).toList();
 
   // --------------------------------------------------------------- actions
   void _open(Node n) {
@@ -607,7 +610,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) _sel.clear(); else _sel.addAll(_loaded.map((n) => n.name)); })),
+              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) _sel.clear(); else _sel.addAll(_loaded.map(_entryKey)); })),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(
                 tooltip: 'Restore…',
@@ -712,13 +715,13 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
               fetch: _browsePage,
               onChanged: (l) => _loaded = l,
               itemBuilder: (c, n, i) {
-                final sel = _sel.contains(n.name);
+                final sel = _sel.contains(_entryKey(n));
                 final explicitSelection = kIsWeb || isDesktop;
                 return ListTile(
                   selected: sel,
                   leading: explicitSelection || selecting
-                      ? Checkbox(value: sel, onChanged: (_) => _toggle(n))
-                      : Icon(iconFor(n), color: n.isDir ? Theme.of(context).colorScheme.primary : null),
+                      ? SizedBox(width: 28, height: 28, child: Checkbox(value: sel, visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: (_) => _toggle(n)))
+                      : Icon(n.isDir ? Icons.folder : iconFor(n), color: n.isDir ? Colors.orange : null),
                   title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(n.isDir
                       ? (n.modified == null ? 'Folder · Snapshot ${fmtShort(snap.time)}' : 'Folder · ${fmtShort(n.modified)}')
