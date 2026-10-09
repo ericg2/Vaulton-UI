@@ -138,7 +138,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
 
   /// Refresh without clearing the list (used after uploads and by the poller).
   void _silent() {
-    _listKey.currentState?.silentRefresh(force: true);
+    _listKey.currentState?.silentRefresh();
     _refreshUsage();
   }
 
@@ -642,7 +642,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                             title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(sync != null
                                 ? (syncError != null ? 'Sync Error' : 'Sync Folder')
-                                : (n.isDir ? fmtShort(n.modified) : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}')),
+                                : (n.isDir ? 'Folder · ${fmtShort(n.modified)}' : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}')),
                             trailing: selecting
                                 ? null
                                 : PopupMenuButton<String>(
