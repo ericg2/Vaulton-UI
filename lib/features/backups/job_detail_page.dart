@@ -239,7 +239,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
   String _stageLabel(RepoJob j, JobStage stage) {
     final title = stage.title
-        .replaceAll(RegExp(r'\\s*\\[total finalized\\]', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s*\[total finalized\]', caseSensitive: false), '')
         .trim();
     if (title.isEmpty || title == 'Working') return kindLabel(j.kind);
     return title;
@@ -342,7 +342,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       );
 
   Widget _stagesCard(RepoJob j) => _card('Progress', [
-        for (var i = 0; i < j.stagej.stages[i].length; i++)
+        for (var i = 0; i < j.stages.length; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
