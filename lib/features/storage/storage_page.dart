@@ -136,6 +136,91 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   final _key = GlobalKey<CursorListState<Root>>();
   Vaulton get _v => ref.read(vaultonProvider);
 
+  Future<String?> _pickLocalPath(String? initialPath) async {
+    Json? current;
+    var loading = true;
+    String? error;
+    final startPath = initialPath?.trim() ?? '';
+
+    Future<void> load(String? path, void Function(void Function()) update) async {
+      update(() { loading = true; error = null; });
+      try {
+        final result = await _v.browseLocal(path);
+        update(() { current = result; loading = false; });
+      } catch (e) {
+        update(() { error = ApiException.from(e).message; loading = false; });
+      }
+    }
+
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, update) {
+          if (current == null && loading) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (ctx.mounted && current == null && loading) {
+                load(startPath.isEmpty ? null : startPath, update);
+              }
+            });
+          }
+          final dirs = (current?['directories'] as List? ?? const []).map(toJson).toList();
+          final path = '${current?['currentPath'] ?? ''}';
+          final parent = toStr(current?['parentPath']);
+          final available = toInt(current?['availableBytes']);
+          final total = toInt(current?['capacityBytes']);
+          return AlertDialog(
+            title: const Text('Choose Server Directory'),
+            content: SizedBox(
+              width: 520,
+              height: 420,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(path.isEmpty ? 'Server Filesystems' : path, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: Theme.of(ctx).textTheme.titleSmall),
+                if (available > 0) Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 8),
+                  child: Text('${fmtBytes(available)} available of ${fmtBytes(total)}',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
+                ),
+                const Divider(),
+                Expanded(child: loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                        ? Center(child: Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)))
+                        : dirs.isEmpty
+                            ? const Center(child: Text('No subdirectories found.'))
+                            : ListView.builder(
+                                itemCount: dirs.length,
+                                itemBuilder: (_, i) {
+                                  final d = dirs[i];
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.folder_outlined),
+                                    title: Text('${d['name']}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    onTap: () => load('${d['path']}', update),
+                                  );
+                                },
+                              )),
+                if (!loading && error == null) TextButton.icon(
+                  onPressed: parent == null || parent.isEmpty ? null : () => load(parent, update),
+                  icon: const Icon(Icons.arrow_upward),
+                  label: const Text('Parent Directory'),
+                ),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              FilledButton.icon(
+                onPressed: path.isEmpty ? null : () => Navigator.pop(dialogContext, path),
+                icon: const Icon(Icons.check),
+                label: const Text('Select This Directory'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>?> _sourceForm(String scheme, Map<String, dynamic>? existing) async {
     final fields = kSourceSchemas[scheme]!;
     final r = await formDialog(
