@@ -148,7 +148,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         final result = await _v.browseLocal(path);
         update(() { current = result; loading = false; });
       } catch (e) {
-        update(() { error = ApiException.from(e).message; loading = false; });
+        update(() { error = e.toString(); loading = false; });
       }
     }
 
