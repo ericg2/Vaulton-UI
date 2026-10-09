@@ -1,12 +1,34 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vaulton/core/api_client.dart';
 import 'package:vaulton/core/models.dart';
 import 'package:vaulton/core/util.dart';
 
 void main() {
   test('fmtBytes', () {
     expect(fmtBytes(512), '512 B');
-    expect(fmtBytes(1024), '1.00 KB');
-    expect(fmtBytes(5 * 1024 * 1024), '5.00 MB');
+    expect(fmtBytes(1024), '1.00 KiB');
+    expect(fmtBytes(5 * 1024 * 1024), '5.00 MiB');
+  });
+
+  test('storage quota errors are concise and use human-readable units', () {
+    const raw = '''
+Writing file failed in the backend.
+Caused by:
+RateLimited (permanent) at , context: { quota_id: point-id, quota_limit: 6979321856, quota_used: 7016140887 } => write quota exceeded for 'point-id': 7016140887 used, 7016140887 would be needed, 6979321856 limit
+Backtrace:
+disabled backtrace
+''';
+    expect(
+      friendlyStorageError(raw),
+      'Storage quota exceeded. Usage: 6.53 GiB of 6.50 GiB. Free up space or increase the configured quota, then retry.',
+    );
+  });
+
+  test('physical storage exhaustion is actionable', () {
+    expect(
+      friendlyStorageError('No space left on device while writing file'),
+      'The storage backend is out of space. Free up storage capacity, then retry.',
+    );
   });
 
   test('remote path helpers', () {
