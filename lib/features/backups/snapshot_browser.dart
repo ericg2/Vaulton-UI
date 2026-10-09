@@ -261,10 +261,14 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
     setState(() { _items = null; _error = null; });
     try {
       final out = <Node>[];
+      final seen = <String>{};
       String? cursor;
       do {
         final page = await ref.read(vaultonProvider).browseSnapshot(widget.repo.id, widget.snapshot.id, path: _path, cursor: cursor, limit: 200);
-        out.addAll(page.items);
+        for (final node in page.items) {
+          final key = '${node.isDir ? 'd' : 'f'}:${node.pathIn(_path).replaceAll(RegExp(r'/+'), '/')}';
+          if (seen.add(key)) out.add(node);
+        }
         cursor = page.hasMore ? page.nextCursor : null;
       } while (cursor != null);
       if (mounted) setState(() => _items = out);
