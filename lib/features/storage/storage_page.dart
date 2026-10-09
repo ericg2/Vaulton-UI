@@ -758,7 +758,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
                 labelText: 'Amount',
                 border: const OutlineInputBorder(),
                 errorText: _capacity.text.isNotEmpty && (_bytes < 4096 || _bytes > max) ? 'Outside available capacity' : null,
-                helperText: _bytes > 0 ? 'Exact: ${NumberFormat.decimalPattern().format(_bytes)} bytes' : null,
+                helperText: null,
               ),
               onChanged: (_) => setState(() { _exactBytes = null; _exactText = null; _exactUnit = null; }),
             )),
@@ -910,9 +910,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
               labelText: 'Amount',
               border: const OutlineInputBorder(),
               errorText: (!_capacityTouched || _capacityError.isEmpty) ? null : _capacityError,
-              helperText: _capacityBytesValue > 0
-                  ? 'Exact: ${NumberFormat.decimalPattern().format(_capacityBytesValue)} bytes'
-                  : null,
+              helperText: null,
             ),
           ),
         ),
