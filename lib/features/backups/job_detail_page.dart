@@ -345,6 +345,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                 )),
                 if (s.finished)
                   Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary)
+                else if (s.length != null && s.length! > 0)
+                  Text('${fmtBytes(s.progress)} / ${fmtBytes(s.length!)}', style: Theme.of(context).textTheme.labelSmall)
                 else if (s.fraction != null)
                   Text('${(s.fraction! * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.labelMedium),
               ]),
