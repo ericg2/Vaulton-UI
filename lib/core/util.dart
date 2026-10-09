@@ -344,7 +344,7 @@ class _CapacityFieldState extends State<_CapacityField> {
             labelText: '${widget.label}${widget.required ? ' *' : ''}',
             errorText: error,
             errorMaxLines: 2,
-            helperText: exactBytes == null ? null : 'Exact: ${NumberFormat.decimalPattern().format(exactBytes)} bytes',
+            helperText: null,
             prefixIcon: over ? Icon(Icons.warning_amber_rounded, color: cs.error) : null,
           ),
         ),
