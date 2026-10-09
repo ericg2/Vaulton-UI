@@ -205,32 +205,35 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Future<void> _pickFiles() async {
     final files = await FilePicker.pickFiles(); // empty list when cancelled
     if (files.isEmpty) return;
-    var n = 0, dup = 0;
+
+    final requests = <UploadRequest>[];
     for (final f in files) {
       final remote = joinPath(_path, f.name);
-      TransferTask? t;
       if (kIsWeb) {
-        final bytes = await f.readAsBytes();
-        t = _mgr.addUpload(pointId: _point!.id, remotePath: remote, bytes: bytes, size: bytes.length);
+        final size = f.lengthSync() ?? await f.length() ?? 0;
+        requests.add(UploadRequest(
+          pointId: _point!.id,
+          remotePath: remote,
+          size: size,
+          loadBytes: () => f.readAsBytes(),
+        ));
       } else if (f.path != null) {
         final size = f.lengthSync() ?? await f.length() ?? 0;
-        t = _mgr.addUpload(pointId: _point!.id, remotePath: remote, localPath: f.path, size: size);
-      } else {
-        continue;
-      }
-      if (t == null) {
-        dup++;
-      } else {
-        n++;
+        requests.add(UploadRequest(pointId: _point!.id, remotePath: remote, localPath: f.path, size: size));
       }
     }
+
+    final results = _mgr.addUploads(requests);
+    final n = results.whereType<TransferTask>().length;
+    final dup = results.length - n;
     if (!mounted) return;
     if (n == 0 && dup > 0) {
       toast(context, 'Already uploading ${dup == 1 ? 'that file' : 'those files'}');
     } else if (dup > 0) {
-      toast(context, 'Uploading $n file${n == 1 ? '' : 's'} ($dup already in progress)');
+      toast(context, 'Queued $n file${n == 1 ? '' : 's'} ($dup already in progress)');
+    } else if (n >= 25) {
+      toast(context, 'Queued $n uploads');
     }
-    // Otherwise no toast: the files appear at the top of the list with their own progress.
   }
 
   Future<void> _pickFolder() async {
@@ -241,10 +244,23 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Future<void> _uploadDir(String dir) async {
     final entries = await localFiles.listRecursive(dir);
     final root = p.basename(dir);
-    for (final e in entries) {
-      _mgr.addUpload(pointId: _point!.id, remotePath: joinPath(joinPath(_path, root), e.relative), localPath: e.path, size: e.size);
+    final requests = <UploadRequest>[
+      for (final e in entries)
+        UploadRequest(
+          pointId: _point!.id,
+          remotePath: joinPath(joinPath(_path, root), e.relative),
+          localPath: e.path,
+          size: e.size,
+        ),
+    ];
+    final results = _mgr.addUploads(requests);
+    final queued = results.whereType<TransferTask>().length;
+    if (!mounted) return;
+    if (entries.isEmpty) {
+      toast(context, '“$root” has no files to upload');
+    } else if (queued >= 25) {
+      toast(context, 'Queued $queued files from “$root”');
     }
-    if (mounted && entries.isEmpty) toast(context, '“$root” has no files to upload');
   }
 
   Future<void> _newFolder() async {
@@ -471,15 +487,29 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           onDragExited: (_) => setState(() => _drag = false),
           onDragDone: (d) async {
             setState(() => _drag = false);
+            final requests = <UploadRequest>[];
             for (final f in d.files) {
               if (kIsWeb) {
-                _mgr.addUpload(pointId: pt.id, remotePath: joinPath(_path, f.name), bytes: await f.readAsBytes(), size: await f.length());
+                requests.add(UploadRequest(
+                  pointId: pt.id,
+                  remotePath: joinPath(_path, f.name),
+                  size: await f.length(),
+                  loadBytes: () => f.readAsBytes(),
+                ));
               } else if (await localFiles.isDirectory(f.path)) {
                 await _uploadDir(f.path);
               } else {
-                _mgr.addUpload(pointId: pt.id, remotePath: joinPath(_path, f.name), localPath: f.path, size: await f.length());
+                requests.add(UploadRequest(
+                  pointId: pt.id,
+                  remotePath: joinPath(_path, f.name),
+                  localPath: f.path,
+                  size: await f.length(),
+                ));
               }
             }
+            final results = _mgr.addUploads(requests);
+            final queued = results.whereType<TransferTask>().length;
+            if (mounted && queued >= 25) toast(context, 'Queued $queued uploads');
           },
           child: Stack(children: [
             Column(children: [
