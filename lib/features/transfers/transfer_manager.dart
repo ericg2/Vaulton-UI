@@ -331,9 +331,16 @@ class TransferManager extends Notifier<List<TransferTask>> {
     final token = CancelToken();
     _tokens[t.id] = token;
     try {
+      // Use the first authoritative total reported by the transport. Some
+      // adapters revise their estimate as headers/resume state settle; letting
+      // every callback replace the denominator makes the bar jump backwards.
+      var totalLocked = false;
       void prog(int a, int b) {
         t.done = a;
-        if (b > 0) t.total = b;
+        if (b > 0 && !totalLocked) {
+          t.total = b;
+          totalLocked = true;
+        }
         _changed();
       }
 
@@ -354,6 +361,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
       if (token.isCancelled) {
         t.state = _handedOff ? TState.queued : TState.canceled;
       } else if (_retryable(e) && ++t.attempts < 4) {
+        if (t.kind == TKind.upload) t.done = 0;
         t.state = TState.queued;
         t.error = 'Retrying: ${e.message}';
         await Future.delayed(Duration(seconds: 2 * t.attempts * t.attempts));
