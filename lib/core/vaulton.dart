@@ -94,6 +94,7 @@ class Vaulton {
   // -------------------------------------------------------- data / repos
   Future<Paged<Point>> datas({String? rootId, String? search, String? cursor, int limit = 100}) async =>
       Paged.from(await _req('GET', '/datas', q: _pg(cursor, limit, null, {'rootId': rootId, 'search': search})), Point.fromJson);
+  Future<Point> data(String id) async => Point.fromJson(toJson(await _req('GET', '/datas/$id')));
   Future<Point> createData(Json body) async => Point.fromJson(toJson(await _req('POST', '/datas', body: body)));
   Future<Point> patchData(String id, Json body) async => Point.fromJson(toJson(await _req('PATCH', '/datas/$id', body: body)));
   Future<void> deleteData(String id) => _req('DELETE', '/datas/$id');
