@@ -497,20 +497,20 @@ class _NewPointSheet extends StatefulWidget {
 }
 class _NewPointSheetState extends State<_NewPointSheet> {
   late Root _root; final _name=TextEditingController(), _capacity=TextEditingController(), _password=TextEditingController();
-  String _unit='GB'; bool _showPassword=false, _saving=false, _capacityTouched=false, _passwordTouched=false;
+  String _unit='GiB'; bool _showPassword=false, _saving=false, _capacityTouched=false, _passwordTouched=false;
   @override void initState(){super.initState();_root=widget.roots.first;}
   @override void dispose(){_name.dispose();_capacity.dispose();_password.dispose();super.dispose();}
   String get _capacityError {
     final raw=_capacity.text.trim(); if(raw.isEmpty)return 'Enter a space limit.';
     final n=double.tryParse(raw.replaceAll(',','.')); if(n==null||!n.isFinite||n<=0)return 'Enter a valid space limit.';
-    final factor=_unit=='TB'?1099511627776.0:1073741824.0;
+    final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
     if(_root.maxBytes>0&&n*factor>_root.maxBytes)return 'The limit cannot exceed the location capacity.';
     return '';
   }
   String get _passwordError=>widget.repo&&_password.text.length<8?'Use at least 8 characters.':'';
   Future<void> _save() async {
     final name=_name.text.trim(); setState(() { _capacityTouched=true; _passwordTouched=true; }); if(name.isEmpty||_capacityError.isNotEmpty||_passwordError.isNotEmpty)return;
-    final factor=_unit=='TB'?1099511627776.0:1073741824.0;
+    final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
     final maxBytes=(double.parse(_capacity.text.trim().replaceAll(',','.'))*factor).round(); setState(()=>_saving=true);
     try { await (widget.repo?widget.vaulton.createRepo({'rootId':_root.id,'name':name,'maxBytes':maxBytes,'password':_password.text}):widget.vaulton.createData({'rootId':_root.id,'name':name,'maxBytes':maxBytes})); if(mounted)Navigator.pop(context,true); }
     catch(e){if(mounted){setState(()=>_saving=false);toast(context,e.toString(),error:true);}}
@@ -525,7 +525,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       const SizedBox(height:6),Text('\${fmtBytes(used)} used · \${fmtBytes(_root.freeBytes)} free of \${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:TextField(controller:_capacity,enabled:!_saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){_capacityTouched=true;}),decoration:InputDecoration(labelText:'Amount',border:const OutlineInputBorder(),errorText:(!_capacityTouched||_capacityError.isEmpty)?null:_capacityError))),const SizedBox(width:10),SizedBox(width:105,child:DropdownButtonFormField<String>(initialValue:_unit,decoration:const InputDecoration(border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'GB',child:Text('GB')),DropdownMenuItem(value:'TB',child:Text('TB'))],onChanged:_saving?null:(v)=>setState(()=>_unit=v!)))]),
+      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:TextField(controller:_capacity,enabled:!_saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){_capacityTouched=true;}),decoration:InputDecoration(labelText:'Amount',border:const OutlineInputBorder(),errorText:(!_capacityTouched||_capacityError.isEmpty)?null:_capacityError))),const SizedBox(width:10),SizedBox(width:105,child:DropdownButtonFormField<String>(initialValue:_unit,decoration:const InputDecoration(border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'GiB',child:Text('GiB')),DropdownMenuItem(value:'TiB',child:Text('TiB'))],onChanged:_saving?null:(v)=>setState(()=>_unit=v!)))]),
       if(widget.repo)...[const SizedBox(height:18),TextField(controller:_password,enabled:!_saving,obscureText:!_showPassword,onChanged:(_)=>setState((){_passwordTouched=true;}),decoration:InputDecoration(labelText:'Vault Password',hintText:'At least 8 characters',border:const OutlineInputBorder(),errorText:(!_passwordTouched||_passwordError.isEmpty)?null:_passwordError,suffixIcon:IconButton(tooltip:_showPassword?'Hide Password':'Show Password',icon:Icon(_showPassword?Icons.visibility_off_outlined:Icons.visibility_outlined),onPressed:_saving?null:()=>setState(()=>_showPassword=!_showPassword)))),const SizedBox(height:6),Text('This password is required to open the backup vault.',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant))],
       const SizedBox(height:20),Row(children:[Expanded(child:OutlinedButton(onPressed:_saving?null:()=>Navigator.pop(context),child:const Text('Cancel'))),const SizedBox(width:10),Expanded(child:FilledButton.icon(onPressed:_saving?null:_save,icon:_saving?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.check),label:Text(_saving?'Creating…':'Create')))])
     ])));
