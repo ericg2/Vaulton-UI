@@ -394,14 +394,11 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
             quotaInput,
             Row(children: [
               Expanded(
-                child: Tooltip(
-                  message: 'Exact limit: ${r.bytes} bytes\nMaximum for this user: $maxForRow bytes',
-                  child: Text(
-                    '${amountText(r.bytes)} of ${amountText(maxForRow)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
-                  ),
+                child: Text(
+                  '${amountText(r.bytes)} of ${amountText(maxForRow)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
                 ),
               ),
               Tooltip(
@@ -412,7 +409,9 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 ),
               ),
             ]),
-            Slider(
+            Transform.translate(
+              offset: const Offset(0, -4),
+              child: Slider(
               value: r.bytes.clamp(0, maxForRow).toDouble(),
               min: 0,
               max: maxForRow > 0 ? maxForRow.toDouble() : 1,
@@ -423,6 +422,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
               onChanged: _saving || maxForRow <= 0
                   ? null
                   : (value) => setState(() => r.setExactBytes(value.round())),
+              ),
             ),
           ]);
           if (narrow) {
