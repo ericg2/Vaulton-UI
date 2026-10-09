@@ -279,6 +279,7 @@ Future<Map<String, String>?> formDialog(BuildContext context, String title, List
 
 
 const _capacityFactors = <String, double>{
+  'B': 1,
   'MiB': 1024 * 1024,
   'GiB': 1024 * 1024 * 1024,
   'TiB': 1024 * 1024 * 1024 * 1024,
