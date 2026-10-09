@@ -717,10 +717,43 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
               itemBuilder: (c, n, i) {
                 final sel = _sel.contains(_entryKey(n));
                 final explicitSelection = kIsWeb || isDesktop;
-                return ListTile(
+                return GestureDetector(
+                  onSecondaryTapUp: (details) async {
+                    final action = await showMenu<String>(
+                      context: context,
+                      position: RelativeRect.fromLTRB(
+                        details.globalPosition.dx,
+                        details.globalPosition.dy,
+                        MediaQuery.sizeOf(context).width - details.globalPosition.dx,
+                        MediaQuery.sizeOf(context).height - details.globalPosition.dy,
+                      ),
+                      items: const [
+                        PopupMenuItem(value: 'open', child: Text('Open')),
+                        PopupMenuItem(value: 'download', child: Text('Download')),
+                        PopupMenuItem(value: 'restore', child: Text('Restore…')),
+                        PopupMenuItem(value: 'select', child: Text('Select')),
+                        PopupMenuItem(value: 'info', child: Text('Details')),
+                        PopupMenuItem(value: 'copy', child: Text('Copy Path')),
+                      ],
+                    );
+                    if (!context.mounted || action == null) return;
+                    switch (action) {
+                      case 'open': _open(n);
+                      case 'download': _download([n]);
+                      case 'restore': _restore([(path: n.pathIn(_cur), isDir: n.isDir, name: n.name)]);
+                      case 'select': _toggle(n);
+                      case 'info': _info(n);
+                      case 'copy': copyText(context, n.pathIn(_cur), 'Path copied');
+                    }
+                  },
+                  child: ListTile(
                   selected: sel,
-                  leading: explicitSelection || selecting
-                      ? SizedBox(width: 28, height: 28, child: Checkbox(value: sel, visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: (_) => _toggle(n)))
+                  leading: selecting
+                      ? Row(mainAxisSize: MainAxisSize.min, children: [
+                          SizedBox(width: 18, height: 18, child: Checkbox(value: sel, visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: (_) => _toggle(n))),
+                          const SizedBox(width: 8),
+                          Icon(n.isDir ? Icons.folder : iconFor(n), color: n.isDir ? Colors.orange : null),
+                        ])
                       : Icon(n.isDir ? Icons.folder : iconFor(n), color: n.isDir ? Colors.orange : null),
                   title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(n.isDir
@@ -750,6 +783,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                         ),
                   onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),
                   onLongPress: () => _toggle(n),
+                  ),
                 );
               },
             ),
