@@ -17,17 +17,6 @@ import '../transfers/transfer_manager.dart';
 import 'root_shares_page.dart';
 import 'share_logic.dart';
 
-void _showSharedCapacityInfo(BuildContext context) {
-  showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Shared Capacity'),
-      content: const Text('This capacity shows only the space available to you on this shared location, not the owner’s entire storage space.'),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-    ),
-  );
-}
-
 /// Desktop / wide layout: a normal tabbed page.
 class StoragePage extends StatelessWidget {
   const StoragePage({super.key, this.initialTab = 0});
@@ -385,7 +374,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         fetch: (c) => _v.roots(cursor: c),
         itemBuilder: (ctx, r, i) {
           final allocated = r.allocatedBytes;
-          final capacity = r.isOwner ? r.maxBytes : allocated + r.freeBytes;
           final scheme = '${r.source?['scheme'] ?? ''}';
           return Card(
             child: InkWell(
@@ -423,12 +411,20 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
                 ])),
                 const SizedBox(height: 10),
-                Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: allocated, max: capacity)),
-                const SizedBox(height: 6),
-                Padding(padding: const EdgeInsets.only(right: 12), child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Flexible(child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(capacity)}${r.isOwner ? '' : '*'}', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant))),
-                  if (!r.isOwner) IconButton(tooltip: 'About shared capacity', visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 28, minHeight: 28), padding: EdgeInsets.zero, icon: const Icon(Icons.info_outline, size: 16), onPressed: () => _showSharedCapacityInfo(ctx)),
-                ])),
+                if (r.isOwner) ...[
+                  Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: allocated, max: r.maxBytes)),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
+                  ),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.only(left: 34, right: 12, top: 10),
+                    child: Text('Available to you: ${fmtBytes(r.freeBytes)}',
+                        style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
+                  ),
               ]),
             ),
             ),
@@ -477,14 +473,22 @@ class _PointsTabState extends ConsumerState<PointsTab> {
   Future<void> _edit(Point p) async {
     final root = await guarded(context, () => _v.root(p.rootId));
     if (root == null || !mounted) return;
-    final f = await formDialog(context, 'Edit ${p.name}', [
-      FieldSpec('name', 'Name', initial: p.name, required: true),
-      FieldSpec('capacity', 'Space Limit', kind: 'capacity', initial: bytesToGb(p.maxBytes), required: true, maxBytes: root.maxBytes > 0 ? root.maxBytes : null, initialBytes: p.maxBytes),
-    ]);
-    if (f == null) return;
-    final body = {'name': f['name'], 'maxBytes': int.tryParse(f['capacity'] ?? '') ?? 0};
-    await guarded(context, () => widget.repo ? _v.patchRepo(p.id, body) : _v.patchData(p.id, body));
-    _key.currentState?.refresh();
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      constraints: const BoxConstraints(maxWidth: 560),
+      builder: (_) => _EditPointSheet(point: p, root: root, repo: widget.repo),
+    );
+    if (result == null || !mounted) return;
+    final saved = await guarded(context, () => widget.repo
+        ? _v.patchRepo(p.id, result)
+        : _v.patchData(p.id, result));
+    if (saved != null && mounted) {
+      _key.currentState?.refresh();
+      toast(context, '${widget.repo ? 'Backup vault' : 'Data folder'} updated');
+    }
   }
 
   Future<void> _delete(Point p) async {
@@ -616,6 +620,158 @@ class _PointsTabState extends ConsumerState<PointsTab> {
 }
 
 
+class _EditPointSheet extends StatefulWidget {
+  const _EditPointSheet({required this.point, required this.root, required this.repo});
+  final Point point;
+  final Root root;
+  final bool repo;
+
+  @override
+  State<_EditPointSheet> createState() => _EditPointSheetState();
+}
+
+class _EditPointSheetState extends State<_EditPointSheet> {
+  late final TextEditingController _name;
+  late final TextEditingController _capacity;
+  late final int _availableBytes;
+  String _unit = 'GiB';
+  bool _saving = false;
+  int? _exactBytes;
+  String? _exactText, _exactUnit;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.point.name);
+    _availableBytes = widget.root.freeBytes + widget.point.maxBytes;
+    _capacity = TextEditingController(text: bytesToCapacity(widget.point.maxBytes, _unit));
+    _rememberExact(widget.point.maxBytes);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _capacity.dispose();
+    super.dispose();
+  }
+
+  int get _bytes {
+    if (_exactBytes != null && _capacity.text.trim() == _exactText && _unit == _exactUnit) {
+      return _exactBytes!;
+    }
+    final n = double.tryParse(_capacity.text.trim().replaceAll(',', '.'));
+    if (n == null || !n.isFinite || n < 0) return 0;
+    return (n * (capacityFactors[_unit] ?? capacityFactors['GiB']!)).round();
+  }
+
+  void _rememberExact(int bytes) {
+    _exactBytes = bytes;
+    _exactText = _capacity.text.trim();
+    _exactUnit = _unit;
+  }
+
+  void _setBytes(int bytes) {
+    _capacity.text = bytesToCapacity(bytes, _unit);
+    _rememberExact(bytes);
+  }
+
+  String get _error {
+    if (_name.text.trim().isEmpty) return 'Enter a name.';
+    if (_capacity.text.trim().isEmpty || _bytes < 4096) return 'Enter a valid space limit.';
+    if (_bytes > _availableBytes) return 'Limit exceeds the capacity available to you.';
+    return '';
+  }
+
+  void _save() {
+    if (_error.isNotEmpty) {
+      toast(context, _error, error: true);
+      return;
+    }
+    Navigator.pop(context, {'name': _name.text.trim(), 'maxBytes': _bytes});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+    final max = _availableBytes > 0 ? _availableBytes : widget.point.maxBytes;
+    final fraction = (_bytes / max).clamp(0.0, 1.0).toDouble();
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 4, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
+      child: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Edit ${widget.repo ? 'Backup Vault' : 'Data Folder'}', style: t.headlineSmall),
+          const SizedBox(height: 4),
+          Text('Change the name or space limit.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _name,
+            enabled: !_saving,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 18),
+          Text('Space Limit', style: t.titleSmall),
+          const SizedBox(height: 8),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: TextField(
+              controller: _capacity,
+              enabled: !_saving,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                border: const OutlineInputBorder(),
+                errorText: _capacity.text.isNotEmpty && (_bytes < 4096 || _bytes > max) ? 'Outside available capacity' : null,
+                helperText: _bytes > 0 ? 'Exact: ${NumberFormat.decimalPattern().format(_bytes)} bytes' : null,
+              ),
+              onChanged: (_) => setState(() { _exactBytes = null; _exactText = null; _exactUnit = null; }),
+            )),
+            const SizedBox(width: 10),
+            SizedBox(width: 105, child: DropdownButtonFormField<String>(
+              initialValue: _unit,
+              decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
+              items: const [
+                DropdownMenuItem(value: 'GiB', child: Text('GiB')),
+                DropdownMenuItem(value: 'TiB', child: Text('TiB')),
+              ],
+              onChanged: _saving ? null : (value) {
+                if (value == null) return;
+                final bytes = _bytes;
+                setState(() { _unit = value; _setBytes(bytes); });
+              },
+            )),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: Text('Allocation', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))),
+            Text('${(fraction * 100).round()}%', style: t.titleSmall),
+          ]),
+          Slider(
+            value: fraction,
+            min: 0,
+            max: 1,
+            divisions: 100,
+            label: '${(fraction * 100).round()}%',
+            onChanged: _saving || max <= 0 ? null : (value) => setState(() => _setBytes((value * max).round())),
+          ),
+          Text('Available to this folder: ${fmtBytes(max)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+          const SizedBox(height: 20),
+          Row(children: [
+            Expanded(child: OutlinedButton(onPressed: _saving ? null : () => Navigator.pop(context), child: const Text('Cancel'))),
+            const SizedBox(width: 10),
+            Expanded(child: FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: const Icon(Icons.check),
+              label: const Text('Save Changes'),
+            )),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
 class _NewPointSheet extends StatefulWidget {
   const _NewPointSheet({required this.repo, required this.roots, required this.vaulton});
   final bool repo; final List<Root> roots; final Vaulton vaulton;
@@ -696,7 +852,13 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
       DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
-      const SizedBox(height:6),Row(mainAxisSize:MainAxisSize.min,children:[Flexible(child:Text('${fmtBytes(_root.allocatedBytes)} allocated · ${fmtBytes(_root.freeBytes)} free of ${fmtBytes(_root.isOwner ? _root.maxBytes : _root.allocatedBytes + _root.freeBytes)}${_root.isOwner ? '' : '*'}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant))),if(!_root.isOwner)IconButton(tooltip:'About shared capacity',visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:28,minHeight:28),padding:EdgeInsets.zero,icon:const Icon(Icons.info_outline,size:16),onPressed:()=>_showSharedCapacityInfo(context))]),
+      const SizedBox(height:6),
+      Text(
+        _root.isOwner
+            ? '${fmtBytes(_root.freeBytes)} available to allocate of ${fmtBytes(_root.maxBytes)}'
+            : '${fmtBytes(_root.freeBytes)} available to you on this shared location',
+        style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+      ),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -834,7 +996,6 @@ class _RootSheetState extends State<_RootSheet> {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
     final allocated = r.allocatedBytes;
-    final capacity = r.isOwner ? r.maxBytes : allocated + r.freeBytes;
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
     final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
     return SingleChildScrollView(
@@ -851,12 +1012,15 @@ class _RootSheetState extends State<_RootSheet> {
           ),
         ]),
         const SizedBox(height: 16),
-        UsageBar(used: allocated, max: capacity),
-        const SizedBox(height: 6),
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(capacity)}${r.isOwner ? '' : '*'}', style: t.bodySmall)),
-          if (!r.isOwner) IconButton(tooltip: 'About shared capacity', visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 28, minHeight: 28), padding: EdgeInsets.zero, icon: const Icon(Icons.info_outline, size: 16), onPressed: () => _showSharedCapacityInfo(context)),
-        ]),
+        if (r.isOwner) ...[
+          UsageBar(used: allocated, max: r.maxBytes),
+          const SizedBox(height: 6),
+          Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text('Available to you: ${fmtBytes(r.freeBytes)}', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+          ),
         const SizedBox(height: 8),
         if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection Type', scheme),
         _row(Icons.inventory_2_outlined, 'Can Hold', holds.isEmpty ? 'Nothing Yet' : holds.join(' and ')),
