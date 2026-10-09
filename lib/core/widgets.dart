@@ -148,7 +148,9 @@ class CursorListState<T> extends State<CursorList<T>> {
   /// Used by background polling so the UI does not flicker.
   Future<void> silentRefresh({bool force = false}) async {
     if (_loading) return;
-    if (!force && items.length > _firstPageSize && _firstPageSize > 0) return;
+    // A first-page refresh resets the cursor. Preserve already-loaded pages
+    // in large directories/lists; an explicit pull-to-refresh still resets them.
+    if (items.length > _firstPageSize && _firstPageSize > 0) return;
     final gen = ++_gen;
     _lastRefresh = DateTime.now();
     try {
