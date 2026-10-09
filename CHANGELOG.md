@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.2
+
+### Fixed
+* Storage limits now display two decimal places across sharing, Data Folders, Backup Vaults, and location capacity forms.
+* Editing existing quotas or changing units preserves exact byte limits when the displayed value is rounded.
+* Sharing includes a per-user allocation slider and a **Use Remaining** action to assign the exact remaining capacity without manually tuning decimals.
+
 ## 1.3.1
 
 ### Fixed
