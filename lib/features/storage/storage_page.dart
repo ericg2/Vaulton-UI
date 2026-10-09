@@ -766,6 +766,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
               initialValue: _unit,
               decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
               items: const [
+                DropdownMenuItem(value: 'B', child: Text('B')),
                 DropdownMenuItem(value: 'GiB', child: Text('GiB')),
                 DropdownMenuItem(value: 'TiB', child: Text('TiB')),
               ],
@@ -920,6 +921,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
             initialValue: _unit,
             decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Unit'),
             items: const [
+              DropdownMenuItem(value: 'B', child: Text('B')),
               DropdownMenuItem(value: 'GiB', child: Text('GiB')),
               DropdownMenuItem(value: 'TiB', child: Text('TiB')),
             ],
