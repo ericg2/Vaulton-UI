@@ -746,6 +746,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                     }
                   },
                   child: ListTile(
+                  key: ValueKey(_entryKey(n)),
                   selected: sel,
                   leading: selecting
                       ? Row(mainAxisSize: MainAxisSize.min, children: [
