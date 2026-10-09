@@ -217,7 +217,10 @@ class TransferManager extends Notifier<List<TransferTask>> {
         changed = true;
       }
     }
-    if (changed) _changed(persist: true);
+    if (changed) {
+      _rebuildPendingQueue();
+      _changed(persist: true);
+    }
   }
 
   void retry(String id, {bool overwrite = false}) {
