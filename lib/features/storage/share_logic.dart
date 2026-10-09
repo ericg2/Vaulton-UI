@@ -32,7 +32,7 @@ String bytesToGb(int b) => b == 0 ? '' : (b / kGiB).toStringAsFixed(b % kGiB == 
 /// Result of reading a quota text field.
 typedef QuotaResult = ({int bytes, String? error});
 
-/// Empty means 0 (no explicit quota). Anything else must be a non-negative number of GB.
+/// Empty means 0 (no explicit quota). Anything else must be a non-negative number of GiB.
 QuotaResult parseQuota(String text) {
   final t = text.trim().replaceAll(',', '.');
   if (t.isEmpty) return (bytes: 0, error: null);
