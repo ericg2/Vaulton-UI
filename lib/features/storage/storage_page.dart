@@ -372,7 +372,8 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         autoRefresh: const Duration(seconds: 8),
         fetch: (c) => _v.roots(cursor: c),
         itemBuilder: (ctx, r, i) {
-          final used = r.maxBytes - r.freeBytes;
+          final allocated = r.allocatedBytes;
+          final availableLabel = r.isOwner ? 'free' : 'available to you';
           final scheme = '${r.source?['scheme'] ?? ''}';
           return Card(
             child: InkWell(
@@ -410,9 +411,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
                 ])),
                 const SizedBox(height: 10),
-                Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: used, max: r.maxBytes)),
+                Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: allocated, max: r.maxBytes)),
                 const SizedBox(height: 6),
-                Padding(padding: const EdgeInsets.only(right: 12), child: Text('${fmtBytes(used < 0 ? 0 : used)} used · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant))),
+                Padding(padding: const EdgeInsets.only(right: 12), child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} ${availableLabel} of ${fmtBytes(r.maxBytes)}', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant))),
               ]),
             ),
             ),
@@ -629,12 +630,12 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   }
   @override Widget build(BuildContext context){
     final cs=Theme.of(context).colorScheme,t=Theme.of(context).textTheme;
-    final used=(_root.maxBytes-_root.freeBytes).clamp(0,_root.maxBytes>0?_root.maxBytes:1<<62).toInt();
+    final availableLabel = _root.isOwner ? 'free' : 'available to you';
     return Padding(padding:EdgeInsets.fromLTRB(20,4,20,MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
       DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
-      const SizedBox(height:6),Text('${fmtBytes(used)} used · ${fmtBytes(_root.freeBytes)} free of ${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
+      const SizedBox(height:6),Text('${fmtBytes(_root.allocatedBytes)} allocated · ${fmtBytes(_root.freeBytes)} ${availableLabel} of ${fmtBytes(_root.maxBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
       Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -743,7 +744,8 @@ class _RootSheetState extends State<_RootSheet> {
     final r = widget.root;
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
-    final used = (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes > 0 ? r.maxBytes : 1 << 62).toInt();
+    final allocated = r.allocatedBytes;
+    final availableLabel = r.isOwner ? 'free' : 'available to you';
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
     final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
     return SingleChildScrollView(
@@ -760,9 +762,9 @@ class _RootSheetState extends State<_RootSheet> {
           ),
         ]),
         const SizedBox(height: 16),
-        UsageBar(used: used, max: r.maxBytes),
+        UsageBar(used: allocated, max: r.maxBytes),
         const SizedBox(height: 6),
-        Text('${fmtBytes(used)} used · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
+        Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} ${availableLabel} of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
         const SizedBox(height: 8),
         if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection Type', scheme),
         _row(Icons.inventory_2_outlined, 'Can Hold', holds.isEmpty ? 'Nothing Yet' : holds.join(' and ')),
