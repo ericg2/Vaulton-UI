@@ -16,8 +16,11 @@ void main() {
     expect(parseQuota('-2').error, isNotNull);
 
     expect(bytesToGb(0), '');
-    expect(bytesToGb(kGiB), '1');
+    expect(bytesToGb(kGiB), '1.00');
     expect(bytesToGb(kGiB * 3 ~/ 2), '1.50');
+    expect(bytesToCapacity(kGiB, 'GiB'), '1.00');
+    expect(bytesToCapacity(kGiB * 3 ~/ 2, 'GiB'), '1.50');
+    expect(bytesToCapacity(kGiB * 3 ~/ 2, 'TiB'), '0.00');
     expect(gbToBytes('2'), 2 * kGiB);
     expect(gbToBytes('x'), isNull);
   });
