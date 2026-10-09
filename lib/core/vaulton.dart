@@ -86,6 +86,8 @@ class Vaulton {
   Future<Root> patchRoot(String id, Json body) async => Root.fromJson(toJson(await _req('PATCH', '/roots/$id', body: body)));
   Future<void> deleteRoot(String id) => _req('DELETE', '/roots/$id');
   Future<Json> browseLocal(String? path) async => toJson(await _req('GET', '/roots/local/browse', q: {'path': path}));
+  Future<Json> createLocalDirectory(String path, String name) async =>
+      toJson(await _req('POST', '/roots/local/directories', body: {'path': path, 'name': name}));
   Future<List<Json>> shares(String id) async => (await _req('GET', '/roots/$id/shares') as List).map(toJson).toList();
   Future<List<Json>> setShares(String id, List<Json> s) async => (await _req('PUT', '/roots/$id/shares', body: s) as List).map(toJson).toList();
 
