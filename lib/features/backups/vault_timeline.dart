@@ -111,6 +111,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   Object? _error;
   int _filter = 0;
   final Set<String> _locking = {};
+  final Set<String> _selectedSnapshots = {};
   Timer? _timer;
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -151,6 +152,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
         }
         for (final j in jp.items) { _jobs[j.id] = j; }
         for (final s in sp.items) { _snaps[s.id] = s; }
+        _selectedSnapshots.removeWhere((id) => !_snaps.containsKey(id) || _snaps[id]!.locked);
         _loading = false;
         _error = null;
       });
@@ -242,6 +244,52 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       final j = await guarded(context, () => _v.forget(widget.repoId, [s.id]));
       if (j != null && mounted) await _openJob(j);
     }
+  }
+
+  Future<void> _deleteSelectedSnapshots() async {
+    final selected = _selectedSnapshots
+        .map((id) => _snaps[id])
+        .whereType<Snapshot>()
+        .where((snapshot) => !snapshot.locked)
+        .toList();
+    if (selected.isEmpty) {
+      toast(context, 'Select one or more unlocked snapshots.');
+      return;
+    }
+    final count = selected.length;
+    if (!await confirm(
+      context,
+      'Delete $count Snapshot${count == 1 ? '' : 's'}?',
+      'The selected snapshots will be forgotten. Space is freed after cleanup.',
+      ok: 'Delete $count',
+      danger: true,
+    )) return;
+    final job = await guarded(context, () => _v.forget(widget.repoId, selected.map((s) => s.id).toList()));
+    if (job != null && mounted) {
+      setState(() => _selectedSnapshots.clear());
+      await _openJob(job);
+      await _load(replace: true);
+    }
+  }
+
+  Widget _selectionBar() {
+    final count = _selectedSnapshots.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Row(children: [
+        Expanded(child: Text('$count snapshot${count == 1 ? '' : 's'} selected')),
+        TextButton(
+          onPressed: () => setState(() => _selectedSnapshots.clear()),
+          child: const Text('Clear'),
+        ),
+        const SizedBox(width: 8),
+        FilledButton.icon(
+          onPressed: count == 0 ? null : _deleteSelectedSnapshots,
+          icon: const Icon(Icons.delete_outline),
+          label: const Text('Delete Selected'),
+        ),
+      ]),
+    );
   }
 
   // --------------------------------------------------------------- build
@@ -337,6 +385,20 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
           padding: const EdgeInsets.fromLTRB(16, 14, 4, 6),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              if (widget.snapshotOnly && s != null)
+                Checkbox(
+                  value: _selectedSnapshots.contains(s.id),
+                  onChanged: s.locked
+                      ? null
+                      : (selected) => setState(() {
+                            if (selected == true) {
+                              _selectedSnapshots.add(s.id);
+                            } else {
+                              _selectedSnapshots.remove(s.id);
+                            }
+                          }),
+                  visualDensity: VisualDensity.compact,
+                ),
               Container(
                 width: 40,
                 height: 40,
@@ -439,6 +501,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                   pinned: true,
                   delegate: _TimelineFilterDelegate(_filterBar()),
                 ),
+                if (widget.snapshotOnly && _selectedSnapshots.isNotEmpty)
+                  SliverToBoxAdapter(child: _selectionBar()),
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (c, i) {
