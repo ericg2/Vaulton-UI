@@ -716,7 +716,6 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
               onChanged: (l) => _loaded = l,
               itemBuilder: (c, n, i) {
                 final sel = _sel.contains(_entryKey(n));
-                final explicitSelection = kIsWeb || isDesktop;
                 return GestureDetector(
                   onSecondaryTapUp: (details) async {
                     final action = await showMenu<String>(
