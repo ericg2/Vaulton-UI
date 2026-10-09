@@ -84,7 +84,12 @@ class ApiException implements Exception {
             }
             detail = [?detail, ...lines].join('\n');
           }
-        } else if (d is String && d.isNotEmpty && d.length < 400) {
+        } else if (d is String && d.isNotEmpty &&
+            (d.length < 400 ||
+                d.toLowerCase().contains('quota exceeded') ||
+                d.toLowerCase().contains('quota_id') ||
+                d.toLowerCase().contains('no space left on device') ||
+                d.toLowerCase().contains('insufficient storage'))) {
           detail = d;
         }
         final fallback = r.statusCode == 403
