@@ -15,9 +15,10 @@ void main() {
     expect(parseQuota('abc').error, isNotNull);
     expect(parseQuota('-2').error, isNotNull);
 
-    expect(bytesToGb(0), '');
+    expect(bytesToGb(0), '0.00');
     expect(bytesToGb(kGiB), '1.00');
     expect(bytesToGb(kGiB * 3 ~/ 2), '1.50');
+    expect(bytesToCapacity(0, 'GiB'), '0.00');
     expect(bytesToCapacity(kGiB, 'GiB'), '1.00');
     expect(bytesToCapacity(kGiB * 3 ~/ 2, 'GiB'), '1.50');
     expect(bytesToCapacity(kGiB * 3 ~/ 2, 'TiB'), '0.00');
