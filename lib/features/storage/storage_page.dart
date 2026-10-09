@@ -419,12 +419,18 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
                         style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
                   ),
-                ] else
+                ] else ...[
                   Padding(
-                    padding: const EdgeInsets.only(left: 34, right: 12, top: 10),
+                    padding: const EdgeInsets.only(right: 12),
+                    child: UsageBar(used: r.freeBytes, max: r.maxBytes),
+                  ),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 34, right: 12),
                     child: Text('Available to you: ${fmtBytes(r.freeBytes)}',
                         style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
                   ),
+                ],
               ]),
             ),
             ),
@@ -1016,11 +1022,11 @@ class _RootSheetState extends State<_RootSheet> {
           UsageBar(used: allocated, max: r.maxBytes),
           const SizedBox(height: 6),
           Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
-        ] else
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text('Available to you: ${fmtBytes(r.freeBytes)}', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-          ),
+        ] else ...[
+          UsageBar(used: r.freeBytes, max: r.maxBytes),
+          const SizedBox(height: 6),
+          Text('Available to you: ${fmtBytes(r.freeBytes)}', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        ],
         const SizedBox(height: 8),
         if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection Type', scheme),
         _row(Icons.inventory_2_outlined, 'Can Hold', holds.isEmpty ? 'Nothing Yet' : holds.join(' and ')),
