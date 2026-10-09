@@ -290,6 +290,10 @@ class _CapacityFieldState extends State<_CapacityField> {
     final error = _error;
     final over = error?.startsWith('Over maximum') == true;
     final cs = Theme.of(context).colorScheme;
+    final raw = double.tryParse(widget.controller.text.trim().replaceAll(',', '.'));
+    final exactBytes = raw != null && raw.isFinite && raw >= 0
+        ? (raw * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!)).round()
+        : null;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: TextField(
@@ -300,6 +304,7 @@ class _CapacityFieldState extends State<_CapacityField> {
             labelText: '${widget.label}${widget.required ? ' *' : ''}',
             errorText: error,
             errorMaxLines: 2,
+            helperText: exactBytes == null ? null : 'Exact: ${NumberFormat.decimalPattern().format(exactBytes)} bytes',
             prefixIcon: over ? Icon(Icons.warning_amber_rounded, color: cs.error) : null,
           ),
         ),
