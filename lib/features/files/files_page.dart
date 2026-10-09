@@ -574,9 +574,43 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                           final sync = n.isDir ? _syncForPath(joinPath(_path, n.name), pt.id) : null;
                           final syncError = sync == null ? null : SyncRunStatus.load(ref.read(prefsProvider), sync.id).error;
                           final syncColor = syncError != null ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary;
-                          return ListTile(
+                          return GestureDetector(
+                            onSecondaryTapUp: (details) async {
+                              final action = await showMenu<String>(
+                                context: context,
+                                position: RelativeRect.fromLTRB(
+                                  details.globalPosition.dx,
+                                  details.globalPosition.dy,
+                                  MediaQuery.sizeOf(context).width - details.globalPosition.dx,
+                                  MediaQuery.sizeOf(context).height - details.globalPosition.dy,
+                                ),
+                                items: const [
+                                  PopupMenuItem(value: 'open', child: Text('Open')),
+                                  PopupMenuItem(value: 'download', child: Text('Download')),
+                                  PopupMenuItem(value: 'rename', child: Text('Rename')),
+                                  PopupMenuItem(value: 'move', child: Text('Move To…')),
+                                  PopupMenuItem(value: 'copy', child: Text('Copy To…')),
+                                  PopupMenuItem(value: 'select', child: Text('Select')),
+                                  PopupMenuItem(value: 'info', child: Text('Details')),
+                                  PopupMenuDivider(),
+                                  PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                ],
+                              );
+                              if (!context.mounted || action == null) return;
+                              switch (action) {
+                                case 'open': _open(n);
+                                case 'download': _download([n]);
+                                case 'rename': _rename(n);
+                                case 'move': _moveCopy([n], false);
+                                case 'copy': _moveCopy([n], true);
+                                case 'select': _toggle(n);
+                                case 'info': _info(n);
+                                case 'delete': _delete([n]);
+                              }
+                            },
+                            child: ListTile(
                             selected: sel,
-                            leading: explicitSelection || selecting
+                            leading: selecting
                                 ? SizedBox(
                                     width: 56,
                                     child: Row(
@@ -638,6 +672,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                   ),
                             onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),
                             onLongPress: () => _toggle(n),
+                          ),
                           );
                         },
                       ),
