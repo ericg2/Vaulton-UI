@@ -17,6 +17,17 @@ import '../transfers/transfer_manager.dart';
 import 'root_shares_page.dart';
 import 'share_logic.dart';
 
+void _showSharedCapacityInfo(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Shared Capacity'),
+      content: const Text('This capacity shows only the space available to you on this shared location, not the owner’s entire storage space.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+    ),
+  );
+}
+
 /// Desktop / wide layout: a normal tabbed page.
 class StoragePage extends StatelessWidget {
   const StoragePage({super.key, this.initialTab = 0});
@@ -374,6 +385,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         fetch: (c) => _v.roots(cursor: c),
         itemBuilder: (ctx, r, i) {
           final allocated = r.allocatedBytes;
+          final capacity = r.isOwner ? r.maxBytes : allocated + r.freeBytes;
           final scheme = '${r.source?['scheme'] ?? ''}';
           return Card(
             child: InkWell(
@@ -411,9 +423,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
                 ])),
                 const SizedBox(height: 10),
-                Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: allocated, max: r.maxBytes)),
+                Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: allocated, max: capacity)),
                 const SizedBox(height: 6),
-                Padding(padding: const EdgeInsets.only(right: 12), child: Text(r.isOwner ? '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}' : '${fmtBytes(allocated)} allocated of ${fmtBytes(r.maxBytes)} total', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant))),
+                Padding(padding: const EdgeInsets.only(right: 12), child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(capacity)}${r.isOwner ? '' : '*'}', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant))),
+                  if (!r.isOwner) IconButton(tooltip: 'About shared capacity', visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 28, minHeight: 28), padding: EdgeInsets.zero, icon: const Icon(Icons.info_outline, size: 16), onPressed: () => _showSharedCapacityInfo(ctx)),
+                ])),
               ]),
             ),
             ),
@@ -681,7 +696,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
       const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
       DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
-      const SizedBox(height:6),Text(_root.isOwner ? '${fmtBytes(_root.allocatedBytes)} allocated · ${fmtBytes(_root.freeBytes)} free of ${fmtBytes(_root.maxBytes)}' : '${fmtBytes(_root.allocatedBytes)} allocated of ${fmtBytes(_root.maxBytes)} total',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
+      const SizedBox(height:6),Row(mainAxisSize:MainAxisSize.min,children:[Flexible(child:Text('${fmtBytes(_root.allocatedBytes)} allocated · ${fmtBytes(_root.freeBytes)} free of ${fmtBytes(_root.isOwner ? _root.maxBytes : _root.allocatedBytes + _root.freeBytes)}${_root.isOwner ? '' : '*'}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant))),if(!_root.isOwner)IconButton(tooltip:'About shared capacity',visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:28,minHeight:28),padding:EdgeInsets.zero,icon:const Icon(Icons.info_outline,size:16),onPressed:()=>_showSharedCapacityInfo(context))]),
       const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
       const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -819,7 +834,7 @@ class _RootSheetState extends State<_RootSheet> {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
     final allocated = r.allocatedBytes;
-    final availableLabel = r.isOwner ? 'free' : 'available to you';
+    final capacity = r.isOwner ? r.maxBytes : allocated + r.freeBytes;
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
     final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
     return SingleChildScrollView(
@@ -836,9 +851,12 @@ class _RootSheetState extends State<_RootSheet> {
           ),
         ]),
         const SizedBox(height: 16),
-        UsageBar(used: allocated, max: r.maxBytes),
+        UsageBar(used: allocated, max: capacity),
         const SizedBox(height: 6),
-        Text(r.isOwner ? '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}' : '${fmtBytes(r.freeBytes)} available to you', style: t.bodySmall),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Flexible(child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(capacity)}${r.isOwner ? '' : '*'}', style: t.bodySmall)),
+          if (!r.isOwner) IconButton(tooltip: 'About shared capacity', visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 28, minHeight: 28), padding: EdgeInsets.zero, icon: const Icon(Icons.info_outline, size: 16), onPressed: () => _showSharedCapacityInfo(context)),
+        ]),
         const SizedBox(height: 8),
         if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection Type', scheme),
         _row(Icons.inventory_2_outlined, 'Can Hold', holds.isEmpty ? 'Nothing Yet' : holds.join(' and ')),
