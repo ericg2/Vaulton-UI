@@ -203,7 +203,7 @@ class JobCard extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        '${job.currentStage?.title == 'Working' ? kindLabel(job.kind) : (job.currentStage?.title ?? kindLabel(job.kind))} · ${fmtBytes(job.progressDone)} of ${fmtBytes(job.progressTotal)}',
+                        '${job.currentStage?.title == 'Working' ? kindLabel(job.kind) : (job.currentStage?.title ?? kindLabel(job.kind))} · ${job.progressIsBytes ? fmtBytes(job.progressDone) : job.progressDone} of ${job.progressIsBytes ? fmtBytes(job.progressTotal) : job.progressTotal}',
                         style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       ),
                     ),
