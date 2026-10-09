@@ -257,7 +257,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    '${fmtBytes(_pointAllocated)} is already allocated to your data folders and backup vaults, leaving ${fmtBytes(_shareCapacity)} available to share.',
+                    'Your data folders and backup vaults reserve ${fmtBytes(_pointAllocated)}. All share quotas together can use up to ${fmtBytes(_shareCapacity)}.',
                     style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
                   ),
                 ),
