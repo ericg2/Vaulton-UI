@@ -110,8 +110,16 @@ String _stageTitle(dynamic title, dynamic barId) {
   final double? percent;
   double? get fraction {
     if (finished) return 1;
-    if (percent != null) return percent!.clamp(0, 1).toDouble();
-    return (length != null && length! > 0) ? (progress / length!).clamp(0, 1).toDouble() : null;
+    // Length/progress are the authoritative counters when available. Percent
+    // values can be stale or reset between phases of a multi-stage operation.
+    if (length != null && length! > 0) {
+      return (progress / length!).clamp(0, 1).toDouble();
+    }
+    if (percent != null) {
+      final normalized = percent! > 1 ? percent! / 100 : percent!;
+      return normalized.clamp(0, 1).toDouble();
+    }
+    return null;
   }
 
   factory JobStage.fromJson(Json j) => JobStage(
