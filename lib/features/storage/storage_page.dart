@@ -615,9 +615,9 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   String get _capacityError {
     final raw=_capacity.text.trim(); if(raw.isEmpty)return 'Enter a space limit.';
     final n=double.tryParse(raw.replaceAll(',','.')); if(n==null||!n.isFinite||n<=0)return 'Enter a valid space limit.';
-    if(_root.freeBytes<=0)return 'This location has no unallocated space remaining.';
+    if(_root.freeBytes<=0)return 'No allocatable capacity remains for you on this location.';
     final factor=_unit=='TiB'?1099511627776.0:1073741824.0;
-    if(n*factor>_root.freeBytes)return 'The limit cannot exceed the remaining location capacity.';
+    if(n*factor>_root.freeBytes)return 'The limit exceeds the capacity available to you on this location.';
     return '';
   }
   String get _passwordError=>widget.repo&&_password.text.length<8?'Use at least 8 characters.':'';
