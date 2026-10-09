@@ -13,7 +13,7 @@ String fmtBytes(int b) {
     v /= 1024;
     i++;
   }
-  return '${v.toStringAsFixed(v < 10 ? 2 : 1)} ${u[i]}';
+  return '${v.toStringAsFixed(2)} ${u[i]}';
 }
 
 String fmtDate(DateTime? d) => d == null ? '—' : DateFormat.yMMMd().add_jm().format(d);
