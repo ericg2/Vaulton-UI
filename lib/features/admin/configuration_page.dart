@@ -229,6 +229,14 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (mounted) toast(context, 'Automatic power settings saved');
   }
 
+  String _lastPowerActionLabel() {
+    final action = toStr(_powerAgentStatus?['lastAction']);
+    if (action == null || action.isEmpty) return 'No power action recorded';
+    final rawTimestamp = toStr(_powerAgentStatus?['lastActionAt']);
+    final timestamp = rawTimestamp == null ? null : DateTime.tryParse(rawTimestamp)?.toLocal();
+    return '${pretty(action)} · ${fmtDate(timestamp)}';
+  }
+
   Future<void> _refreshPowerStatus() async {
     final status = await guarded(context, _v.powerAgentStatus);
     if (!mounted) return;
@@ -373,11 +381,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               ListTile(
                 leading: const Icon(Icons.history),
                 title: const Text('Last Power Action'),
-                subtitle: Text(
-                  _powerAgentStatus?['lastAction'] == null
-                      ? 'No power action recorded'
-                      : '${pretty('${_powerAgentStatus?['lastAction']}')} · ${fmtDate(DateTime.tryParse('${_powerAgentStatus?['lastActionAt'] ?? ''}')?.toLocal())}',
-                ),
+                subtitle: Text(_lastPowerActionLabel()),
               ),
               if ((toStr(_powerAgentStatus?['lastError']) ?? '').isNotEmpty)
                 ListTile(
