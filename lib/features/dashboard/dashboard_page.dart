@@ -257,6 +257,29 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ]),
                 ),
               ]),
+            if (_canPower)
+              Section('Server Power', children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(spacing: 8, runSpacing: 8, children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _requestPowerAction('sleep', 'Sleep'),
+                      icon: const Icon(Icons.bedtime_outlined),
+                      label: const Text('Sleep'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _requestPowerAction('hibernate', 'Hibernate'),
+                      icon: const Icon(Icons.nights_stay_outlined),
+                      label: const Text('Hibernate'),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () => _requestPowerAction('shutdown', 'Shut Down'),
+                      icon: const Icon(Icons.power_settings_new_rounded),
+                      label: const Text('Shut Down'),
+                    ),
+                  ]),
+                ),
+              ]),
             Section('Quick Actions', children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
