@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models.dart';
+import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
 import '../../core/util.dart';
@@ -36,6 +37,28 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   bool _busy = false, _wasVisible = true, _dirty = false;
 
   bool get _canJobs => ref.read(userProvider)?.has(Scopes.jobsManage) ?? false;
+  bool get _canPower => ref.read(userProvider)?.has(Scopes.serverPower) ?? false;
+
+  Future<void> _requestPowerAction(String action, String label) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$label Server?'),
+        content: Text('This will $action the Vaulton host. You will lose access until it is powered back on.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(label)),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(vaultonProvider).requestPowerAction(action);
+      if (mounted) toast(context, '$label request sent to the host agent.');
+    } catch (e) {
+      if (mounted) toast(context, ApiException.from(e).message, error: true);
+    }
+  }
 
   @override
   void initState() {
@@ -188,6 +211,29 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ),
                 ),
               ),
+            if (_canPower)
+              Section('Server Power', children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(spacing: 8, runSpacing: 8, children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _requestPowerAction('sleep', 'Sleep'),
+                      icon: const Icon(Icons.bedtime_outlined),
+                      label: const Text('Sleep'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _requestPowerAction('hibernate', 'Hibernate'),
+                      icon: const Icon(Icons.nights_stay_outlined),
+                      label: const Text('Hibernate'),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () => _requestPowerAction('shutdown', 'Shut Down'),
+                      icon: const Icon(Icons.power_settings_new_rounded),
+                      label: const Text('Shut Down'),
+                    ),
+                  ]),
+                ),
+              ]),
             Section('Quick Actions', children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
