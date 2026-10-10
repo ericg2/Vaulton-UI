@@ -280,7 +280,7 @@ class Vaulton {
   Future<Json> saveWolSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/wol', body: body));
   Future<Json> powerSettings() async => toJson(await _req('GET', '/admin/settings/power'));
   Future<Json> savePowerSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/power', body: body));
-  Future<Json> powerAgentStatus() async => toJson(await _req('GET', '/admin/settings/power/status'));
+  Future<Json> powerAgentStatus() async => toJson(await _req('GET', '/power/agent/status'));
   Future<Json> powerDecision() async => toJson(await _req('GET', '/admin/settings/power/decision'));
   Future<Json> requestPowerAction(String action) async =>
       toJson(await _req('POST', '/power/${_e(action.toLowerCase())}'));
