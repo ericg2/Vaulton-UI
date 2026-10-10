@@ -27,7 +27,6 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   int _powerScheduleProtectionMinutes = 120;
   bool _hasPowerAgentKey = false;
   Json? _powerAgentStatus;
-  Json? _powerDecision;
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -50,12 +49,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       _loaded = true;
     });
     final status = await guarded(context, _v.powerAgentStatus);
-    final decision = await guarded(context, _v.powerDecision);
     if (!mounted) return;
-    setState(() {
-      _powerAgentStatus = status;
-      _powerDecision = decision;
-    });
+    setState(() => _powerAgentStatus = status);
   }
 
   Future<void> _editWake() async {
@@ -243,28 +238,6 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     setState(() => _powerAgentStatus = status);
   }
 
-  Future<void> _testPowerDecision() async {
-    final decision = await guarded(context, _v.powerDecision);
-    if (decision == null || !mounted) return;
-    final execute = toBool(decision['execute']);
-    final reason = toStr(decision['blockReason']);
-    final action = toStr(decision['action']);
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Power Management Test'),
-        content: Text(
-          execute
-              ? 'The server currently meets the conditions for ${action ?? _powerAction.toLowerCase()}. This test does not send a power command.'
-              : 'Power down is currently blocked${reason == null || reason.isEmpty ? '.' : ': $reason.'}',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-        ],
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -310,8 +283,6 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Wrap(spacing: 8, runSpacing: 8, children: [
-                    if (_powerEnabled)
-                      OutlinedButton.icon(onPressed: _testPowerDecision, icon: const Icon(Icons.fact_check_outlined), label: const Text('Test')),
                     FilledButton.tonalIcon(onPressed: _editPower, icon: const Icon(Icons.settings_outlined), label: const Text('Configure')),
                   ]),
                 ),
