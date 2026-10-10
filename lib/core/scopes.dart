@@ -5,6 +5,7 @@ class Scopes {
   static const adminVfs = 'Admin.Vfs';
   static const adminLogs = 'Admin.Logs';
   static const messagesBroadcast = 'Messages.Broadcast';
+  static const serverPower = 'Server.Power';
 
   static const admin = [usersManage, adminVfs, adminLogs, jobsManage];
 }
