@@ -284,6 +284,4 @@ class Vaulton {
   Future<Json> powerDecision() async => toJson(await _req('GET', '/admin/settings/power/decision'));
   Future<Json> requestPowerAction(String action) async =>
       toJson(await _req('POST', '/power/${_e(action.toLowerCase())}'));
-  Future<Json> requestPowerAction(String action) async =>
-      toJson(await _req('POST', '/power/${_e(action.toLowerCase())}'));
 }
