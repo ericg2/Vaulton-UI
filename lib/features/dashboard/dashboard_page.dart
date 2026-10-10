@@ -54,7 +54,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     if (confirmed != true || !mounted) return;
     try {
       await ref.read(vaultonProvider).requestPowerAction(action);
-      if (mounted) toast(context, '$label request sent to the host agent.');
+      if (mounted) toast(context, '$label request was accepted by the host agent. Check Administration → Configuration for the execution result.');
     } catch (e) {
       if (mounted) toast(context, ApiException.from(e).message, error: true);
     }
