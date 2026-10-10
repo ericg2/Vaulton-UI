@@ -24,6 +24,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
   final _new2 = TextEditingController();
   final _key = GlobalKey<FormState>();
   bool _busy = false, _waking = false, _temp = false, _show = false, _rememberPassword = false;
+  String _busyLabel = 'Signing In…';
   String? _pwTitle;
 
   @override
@@ -150,6 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     if (!_key.currentState!.validate()) return;
     setState(() {
       _busy = true;
+      _busyLabel = 'Signing In…';
       _error = null;
     });
     // Grab everything we need up front: signing in swaps this page out.
@@ -161,6 +163,20 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       final url = _serverUrl();
       final password = _temp ? _new.text : _pass.text;
       final remember = _rememberPassword;
+      // Set the target URL before checking readiness so automatic wake targets the
+      // address entered on this screen, not a previously saved server.
+      await session.setBaseUrl(url);
+      if (!_temp && session.wakeToken?.isNotEmpty == true) {
+        setState(() => _busyLabel = 'Waking Up…');
+        final ready = await WakeService.ensureReady(ApiClient(session));
+        if (!ready) {
+          if (mounted) {
+            setState(() => _error = 'The server did not come online. Check your network and wake configuration, then try again.');
+          }
+          return;
+        }
+      }
+      if (mounted) setState(() => _busyLabel = 'Signing In…');
       // signIn() swaps this screen out on success, so only captured values are used afterwards.
       await auth.signIn(url, username, _pass.text, newPassword: _temp ? _new.text : null);
       TextInput.finishAutofillContext();
@@ -449,7 +465,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
                             child: _busy
-                                ? const SizedBox(key: ValueKey('busy'), height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                ? Row(key: const ValueKey('busy'), mainAxisSize: MainAxisSize.min, children: [const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Text(_busyLabel)])
                                 : Text(_temp ? 'Change Password and Sign In' : 'Sign In', key: ValueKey(_temp)),
                           ),
                         ),
