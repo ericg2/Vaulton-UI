@@ -229,6 +229,12 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (mounted) toast(context, 'Automatic power settings saved');
   }
 
+  Future<void> _refreshPowerStatus() async {
+    final status = await guarded(context, _v.powerAgentStatus);
+    if (!mounted) return;
+    setState(() => _powerAgentStatus = status);
+  }
+
   Future<void> _testPowerDecision() async {
     final decision = await guarded(context, _v.powerDecision);
     if (decision == null || !mounted) return;
@@ -241,7 +247,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         title: const Text('Power Management Test'),
         content: Text(
           execute
-              ? 'The server is currently eligible for ${action ?? _powerAction.toLowerCase()}. The host agent would perform the action on its next poll.'
+              ? 'The server currently meets the conditions for ${action ?? _powerAction.toLowerCase()}. This test does not send a power command.'
               : 'Power down is currently blocked${reason == null || reason.isEmpty ? '.' : ': $reason.'}',
         ),
         actions: [
@@ -349,12 +355,41 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               subtitle: Text(_hasPowerAgentKey ? 'Configured' : 'Not configured'),
             ),
             ListTile(
-              leading: Icon(_powerAgentStatus?['online'] == true ? Icons.check_circle_outline : Icons.warning_amber_outlined),
+              leading: Icon(
+                _powerAgentStatus != null ? Icons.check_circle_outline : Icons.warning_amber_outlined,
+                color: _powerAgentStatus != null ? cs.primary : cs.error,
+              ),
               title: const Text('Host Agent'),
-              subtitle: Text(_powerAgentStatus?['online'] == true
-                  ? 'Online · Last seen ${toStr(_powerAgentStatus?['lastSeenAt']) ?? 'recently'} · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'}'
-                  : (_powerAgentStatus?['seen'] == true ? 'Not responding' : 'No heartbeat yet')),
+              subtitle: Text(_powerAgentStatus != null
+                  ? 'Reachable · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'} · Version ${toStr(_powerAgentStatus?['version']) ?? 'Unknown'}'
+                  : 'Not responding · Check the agent service, URL, firewall, and shared key'),
+              trailing: IconButton(
+                tooltip: 'Refresh Agent Status',
+                onPressed: _refreshPowerStatus,
+                icon: const Icon(Icons.refresh),
+              ),
             ),
+            if (_powerAgentStatus != null) ...[
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Last Power Action'),
+                subtitle: Text(
+                  _powerAgentStatus?['lastAction'] == null
+                      ? 'No power action recorded'
+                      : '${pretty('${_powerAgentStatus?['lastAction']}')} · ${fmtDate(DateTime.tryParse('${_powerAgentStatus?['lastActionAt'] ?? ''}')?.toLocal())}',
+                ),
+              ),
+              if ((toStr(_powerAgentStatus?['lastError']) ?? '').isNotEmpty)
+                ListTile(
+                  leading: Icon(Icons.error_outline, color: cs.error),
+                  title: const Text('Last Agent Error'),
+                  subtitle: Text(
+                    toStr(_powerAgentStatus?['lastError'])!,
+                    style: TextStyle(color: cs.error),
+                  ),
+                  isThreeLine: true,
+                ),
+            ],
           ]),
         ],
       ),
