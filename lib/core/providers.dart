@@ -159,7 +159,8 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    await _v.signOut();
+    // Signing out is a local action and must work even when the server is offline.
+    // Clear credentials before any optional network cleanup can delay navigation.
     await _s.clear();
     state = const AuthState(AuthStatus.signedOut);
   }
