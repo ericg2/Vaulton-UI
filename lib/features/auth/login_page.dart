@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/api_client.dart';
 import '../../core/session.dart';
+import '../../core/wake.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -22,7 +23,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
   final _new = TextEditingController();
   final _new2 = TextEditingController();
   final _key = GlobalKey<FormState>();
-  bool _busy = false, _temp = false, _show = false, _rememberPassword = false;
+  bool _busy = false, _waking = false, _temp = false, _show = false, _rememberPassword = false;
   String? _pwTitle;
 
   @override
@@ -123,6 +124,28 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
   }
   String? _error;
 
+  Future<void> _wakeServer() async {
+    final session = ref.read(sessionProvider);
+    setState(() => _waking = true);
+    try {
+      await WakeService.wake(session);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wake request sent')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final ex = ApiException.from(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Couldn’t wake server: ${ex.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _waking = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (!_key.currentState!.validate()) return;
     setState(() {
@@ -204,6 +227,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final note = ref.watch(authProvider.select((a) => a.message));
+    final wakeConfigured = ref.watch(sessionProvider).wakeToken?.isNotEmpty == true;
     final t = Theme.of(context).textTheme;
     const gap = SizedBox(height: 12);
     return Scaffold(
@@ -431,6 +455,16 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         ),
                       ),
                     ),
+                    if (wakeConfigured) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _waking ? null : _wakeServer,
+                        icon: _waking
+                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.power_settings_new_rounded),
+                        label: Text(_waking ? 'Sending Wake Request…' : 'Wake Server'),
+                      ),
+                    ],
                     _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline), label: const Text('Need Help?')))),
                   ]),
                 ),
