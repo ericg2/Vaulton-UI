@@ -110,10 +110,8 @@ class SessionStore {
     accessToken = null;
     refreshToken = null;
     expiresAt = null;
-    wakeBrokerUrl = null;
-    wakeToken = null;
-    wakeBeforeMinutes = 5;
-    for (final k in ['access', 'refresh', 'exp', 'user', 'wakeBrokerUrl', 'wakeToken', 'wakeBeforeMinutes']) {
+    // Wake-on-LAN settings must remain available on the signed-out login screen.
+    for (final k in ['access', 'refresh', 'exp', 'user']) {
       await _st.delete(key: k);
     }
   }
