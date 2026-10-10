@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models.dart';
 import '../../core/api_client.dart';
+import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
 import '../../core/util.dart';
@@ -37,6 +38,28 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   bool _busy = false, _wasVisible = true, _dirty = false;
 
   bool get _canJobs => ref.read(userProvider)?.has(Scopes.jobsManage) ?? false;
+  bool get _canPower => ref.read(userProvider)?.has(Scopes.serverPower) ?? false;
+
+  Future<void> _requestPowerAction(String action, String label) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$label Server?'),
+        content: Text('This will $action the Vaulton host. You will lose access until it is powered back on.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(label)),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(vaultonProvider).requestPowerAction(action);
+      if (mounted) toast(context, '$label request sent to the host agent.');
+    } catch (e) {
+      if (mounted) toast(context, ApiException.from(e).message, error: true);
+    }
+  }
   bool get _canPower => ref.read(userProvider)?.has(Scopes.serverPower) ?? false;
 
   Future<void> _requestPowerAction(String action, String label) async {
