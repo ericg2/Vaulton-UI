@@ -4,15 +4,50 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_client.dart';
 import 'models.dart';
 import 'providers.dart';
+import 'wake.dart';
 
-class ErrorView extends StatelessWidget {
+class ErrorView extends ConsumerStatefulWidget {
   const ErrorView(this.error, {super.key, this.onRetry});
   final Object error;
   final VoidCallback? onRetry;
+
+  @override
+  ConsumerState<ErrorView> createState() => _ErrorViewState();
+}
+
+class _ErrorViewState extends ConsumerState<ErrorView> {
+  bool _waking = false;
+
+  Future<void> _wakeAndRetry() async {
+    setState(() => _waking = true);
+    try {
+      final session = ref.read(sessionProvider);
+      final ready = await WakeService.ensureReady(ApiClient(session));
+      if (!ready) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('The server could not be reached after the wake request.')),
+          );
+        }
+        return;
+      }
+      if (mounted) widget.onRetry?.call();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not wake server: ${ApiException.from(e).message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _waking = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final e = ApiException.from(error);
+    final e = ApiException.from(widget.error);
     final cs = Theme.of(context).colorScheme;
+    final wakeConfigured = ref.watch(sessionProvider).wakeToken?.isNotEmpty == true;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -24,9 +59,19 @@ class ErrorView extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Check that the server is running and you are on the right network.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
           ],
-          if (onRetry != null && !e.isForbidden) ...[
+          if (e.status == null && wakeConfigured) ...[
             const SizedBox(height: 12),
-            FilledButton.tonalIcon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try Again')),
+            FilledButton.tonalIcon(
+              onPressed: _waking ? null : _wakeAndRetry,
+              icon: _waking
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.power_settings_new_rounded),
+              label: Text(_waking ? 'Waking Up…' : 'Wake Server'),
+            ),
+          ],
+          if (widget.onRetry != null && !e.isForbidden) ...[
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(onPressed: _waking ? null : widget.onRetry, icon: const Icon(Icons.refresh), label: const Text('Try Again')),
           ],
         ]),
       ),
