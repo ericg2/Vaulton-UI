@@ -35,7 +35,7 @@ try {
     $pubspec = Get-Content $pubspecPath -Raw
     $settings = Get-Content $settingsPath -Raw
 
-    $versionMatch = [regex]::Match($pubspec, '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$')
+    $versionMatch = [regex]::Match($pubspec, '(?m)^version:[ \t]*(\d+)\.(\d+)\.(\d+)\+(\d+)[ \t]*$')
     if (-not $versionMatch.Success) {
         throw 'Could not parse version from pubspec.yaml (expected X.Y.Z+build).'
     }
@@ -58,7 +58,7 @@ try {
     if ($settings -notmatch "const kAppVersion = '[^']+';") {
         throw 'Could not find kAppVersion in the Settings page.'
     }
-    $newPubspec = [regex]::Replace($pubspec, '(?m)^version:\s*\d+\.\d+\.\d+\+\d+\s*$', "version: $version+$build", 1)
+    $newPubspec = [regex]::Replace($pubspec, '(?m)^version:[ \t]*\d+\.\d+\.\d+\+\d+[ \t]*$', "version: $version+$build", 1)
     $newSettings = [regex]::Replace($settings, "const kAppVersion = '[^']+';", "const kAppVersion = '$version';")
     $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
     [System.IO.File]::WriteAllText($pubspecPath, $newPubspec, $utf8NoBom)
