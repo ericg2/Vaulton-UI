@@ -60,7 +60,7 @@ try {
     }
     $newPubspec = [regex]::Replace($pubspec, '(?m)^version:\s*\d+\.\d+\.\d+\+\d+\s*$', "version: $version+$build", 1)
     $newSettings = [regex]::Replace($settings, "const kAppVersion = '[^']+';", "const kAppVersion = '$version';")
-    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
     [System.IO.File]::WriteAllText($pubspecPath, $newPubspec, $utf8NoBom)
     [System.IO.File]::WriteAllText($settingsPath, $newSettings, $utf8NoBom)
 
