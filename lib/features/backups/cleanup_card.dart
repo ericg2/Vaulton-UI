@@ -5,6 +5,7 @@ import '../../core/providers.dart';
 import '../../core/timezones.dart';
 import '../../core/util.dart';
 import 'backup_options.dart';
+import 'job_detail_page.dart';
 
 Map<String, int> _policyOf(Schedule s) {
   final p = toJson(s.options['policy']);
@@ -45,6 +46,26 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }
+  }
+
+  Future<void> _preview() async {
+    final existing = _schedule;
+    final req = existing == null
+        ? await showRetentionSheet(context)
+        : RetentionRequest(_policyOf(existing), true);
+    if (req == null || !mounted) return;
+
+    final job = await guarded(
+      context,
+      () => ref.read(vaultonProvider).retention(widget.repoId, req.policy, dryRun: true),
+    );
+    if (job == null || !mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => JobDetailPage(jobId: job.id, showVaultLink: false)),
+    );
+    if (mounted) await reload();
   }
 
   Future<void> _setUp() async {
@@ -115,12 +136,26 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
                   final narrow = constraints.maxWidth < 600;
                   final setupLabel = on ? 'Change Plan' : (s == null ? 'Turn on cleanup' : 'Review plan');
                   final buttons = [
-                    FilledButton.icon(onPressed: _setUp, icon: Icon(on ? Icons.edit_outlined : Icons.auto_delete_outlined), label: Text(setupLabel))
+                    OutlinedButton.icon(
+                      onPressed: _preview,
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text('Preview cleanup'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: _setUp,
+                      icon: Icon(on ? Icons.edit_outlined : Icons.auto_delete_outlined),
+                      label: Text(setupLabel),
+                    ),
                   ];
                   if (!narrow) return Wrap(spacing: 8, runSpacing: 8, children: buttons);
-                  return Row(children: [
-                    Expanded(child: buttons[0]),
-                  ]);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      buttons[0],
+                      const SizedBox(height: 8),
+                      buttons[1],
+                    ],
+                  );
                 },
               ),
             ]),
