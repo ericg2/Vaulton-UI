@@ -21,7 +21,7 @@ class TimelineEntry {
       job?.startDate ?? job?.scheduleDate ?? job?.createdAt ?? snap?.time ?? DateTime.fromMillisecondsSinceEpoch(0);
 }
 
-bool _idMatch(String a, String b) => a == b || (a.length >= 6 && b.length >= 6 && (a.startsWith(b) || b.startsWith(a)));
+bool _idMatch(String a, String b) => a == b || (a.length >= 6 && b.length >= 6 && (a.startsWith(b) || b.startsWith(a)));\n\nString _snapshotTimeLabel(DateTime? time) =>\n    time == null ? 'Unknown time' : time.toLocal().toString().substring(0, 16);
 
 /// Joins jobs and snapshots into one newest-first list.
 ///  1. Backup job <-> snapshot by id (full id or prefix, either direction).
@@ -244,7 +244,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       if (!await confirm(
         context,
         'Delete Snapshot?',
-        'Snapshot: ${s.time.toLocal().toString().substring(0, 16)} · ${s.id}\n\nThis forgets the snapshot, then prunes the repository to reclaim unreferenced data. Shared data may remain.',
+        'Snapshot: ${_snapshotTimeLabel(s.time)} · ${s.id}\n\nThis forgets the snapshot, then prunes the repository to reclaim unreferenced data. Shared data may remain.',
         ok: 'Delete',
         danger: true,
       )) return;
@@ -267,7 +267,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       return;
     }
     final count = selected.length;
-    final names = selected.map((s) => '${s.time.toLocal().toString().substring(0, 16)} · ${s.id.substring(0, 8)}').join('\n');
+    final names = selected.map((s) => '${_snapshotTimeLabel(s.time)} · ${s.id.substring(0, 8)}').join('\n');
     if (!await confirm(
       context,
       'Delete $count Snapshot${count == 1 ? '' : 's'}?',
