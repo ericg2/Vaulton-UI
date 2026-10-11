@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'update_service.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/widgets.dart';
@@ -9,7 +10,7 @@ import '../../platform/desktop_window.dart';
 import '../transfers/transfer_manager.dart';
 
 /// Keep in sync with `version:` in pubspec.yaml.
-const kAppVersion = '1.3.0';
+const kAppVersion = '1.3.2';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -137,7 +138,21 @@ class SettingsPage extends ConsumerWidget {
           ),
         ]),
         Section('About', children: [
-          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Vaulton Client'), subtitle: const Text('Version $kAppVersion')),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Vaulton Client'),
+            subtitle: const Text('Version $kAppVersion'),
+            trailing: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+                ? IconButton(
+                    tooltip: 'Check for Updates',
+                    icon: const Icon(Icons.system_update_alt),
+                    onPressed: () => UpdateService.checkAndInstall(context, kAppVersion),
+                  )
+                : null,
+            onTap: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+                ? () => UpdateService.checkAndInstall(context, kAppVersion)
+                : null,
+          ),
         ]),
       ]),
     );
