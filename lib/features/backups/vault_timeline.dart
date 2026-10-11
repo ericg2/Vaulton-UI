@@ -340,7 +340,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                   ),
               ] else if (job?.phase == JobPhase.succeeded)
                 Text(
-                  job!.messages.map((m) => m.message).where((m) => m.contains('reclaimed')).lastOrNull ?? 'The cleanup job completed.',
+                  job!.messages.map((m) => m.message).where((m) => m.contains('Cleanup finished')).lastOrNull ?? 'The cleanup job completed.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
             ],
