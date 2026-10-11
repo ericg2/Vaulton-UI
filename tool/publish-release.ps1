@@ -58,7 +58,7 @@ try {
     if ($settings -notmatch "const kAppVersion = '[^']+';") {
         throw 'Could not find kAppVersion in the Settings page.'
     }
-    $newPubspec = [regex]::Replace($pubspec, '(?m)^version:[ \t]*\d+\.\d+\.\d+\+\d+[ \t]*$', "version: $version+$build", 1)
+    $newPubspec = [regex]::Replace($pubspec, '(?m)^version:[ \t]*\d+\.\d+\.\d+\+\d+[ \t]*$', "version: $version+$build")
     $newSettings = [regex]::Replace($settings, "const kAppVersion = '[^']+';", "const kAppVersion = '$version';")
     $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
     [System.IO.File]::WriteAllText($pubspecPath, $newPubspec, $utf8NoBom)
