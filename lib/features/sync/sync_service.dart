@@ -102,6 +102,32 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   final remote = <SyncSourceEntry>[];
   final v = Vaulton(api);
 
+  Future<void> validateDestinationRoot() async {
+    var current = '/';
+    final parts = profile.remoteDir.split('/').where((part) => part.isNotEmpty);
+    for (final part in parts) {
+      var cursor = '';
+      var found = false;
+      do {
+        final page = await v.list(profile.pointId, current, cursor: cursor, limit: 200, order: 'Asc');
+        for (final node in page.items) {
+          if (node.name == part && node.isDir) {
+            found = true;
+            break;
+          }
+        }
+        cursor = found || !page.hasMore ? null : page.nextCursor;
+      } while (cursor != null);
+      if (!found) {
+        throw Exception('Destination folder "$current$part" does not exist in the selected data folder.');
+      }
+      current = joinPath(current, part);
+    }
+    if (profile.remoteDir == '/') {
+      await v.list(profile.pointId, '/', limit: 1, order: 'Asc');
+    }
+  }
+
   Future<void> walkRemote(String dir, String relBase) async {
     String? cursor;
     do {
@@ -121,7 +147,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     } while (cursor != null);
   }
 
-  await walkRemote(profile.remoteDir, '');
+  await validateDestinationRoot();\n  await walkRemote(profile.remoteDir, '');
   status.scannedDestination = remote.length;
   status.phase = 'Comparing';
   await status.save(prefs, profile.id);
