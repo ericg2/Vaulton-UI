@@ -1,0 +1,63 @@
+name: Build Windows release assets
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.0'
+          cache: true
+
+      - name: Generate platform runner if needed and resolve dependencies
+        run: dart run tool/setup.dart
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Package Windows installer and portable archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          $releaseDir = Join-Path $PWD 'build/release-assets'
+          New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+          $bundle = Join-Path $PWD 'build/windows/x64/runner/Release'
+          if (-not (Test-Path (Join-Path $bundle 'vaulton.exe'))) { throw 'Windows executable was not produced.' }
+          $zip = Join-Path $releaseDir 'Vaulton-Windows.zip'
+          Compress-Archive -Path (Join-Path $bundle '*') -DestinationPath $zip -Force
+          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "$zip.sha256" -Value "$zipHash  Vaulton-Windows.zip" -Encoding ascii
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
+          & $iscc "/DAppVersion=$version" 'installer/windows.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed to build the Windows installer.' }
+          $setup = Join-Path $releaseDir 'Vaulton-Windows-Setup.exe'
+          if (-not (Test-Path $setup)) { throw 'Windows installer was not produced.' }
+          $setupHash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "$setup.sha256" -Value "$setupHash  Vaulton-Windows-Setup.exe" -Encoding ascii
+
+      - name: Attach Windows packages to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        shell: bash
+        run: gh release upload "$TAG" build/release-assets/Vaulton-Windows.zip build/release-assets/Vaulton-Windows.zip.sha256 build/release-assets/Vaulton-Windows-Setup.exe build/release-assets/Vaulton-Windows-Setup.exe.sha256 --clobber
