@@ -112,6 +112,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   int _filter = 0;
   final Set<String> _locking = {};
   final Set<String> _selectedSnapshots = {};
+  String? _deleteJobId;
   Timer? _timer;
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -240,9 +241,18 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     } else if (a == 'copy') {
       copyText(context, s.id, 'Snapshot ID copied');
     } else if (a == 'forget') {
-      if (!await confirm(context, 'Delete Snapshot?', 'Locked snapshots can’t be deleted. Space is freed after cleanup.', ok: 'Delete', danger: true)) return;
+      if (!await confirm(
+        context,
+        'Delete Snapshot?',
+        'This forgets the snapshot, then prunes the repository to reclaim unreferenced data. Shared data may remain.',
+        ok: 'Delete',
+        danger: true,
+      )) return;
       final j = await guarded(context, () => _v.forget(widget.repoId, [s.id]));
-      if (j != null && mounted) await _openJob(j);
+      if (j != null && mounted) {
+        setState(() => _deleteJobId = j.id);
+        await _load(replace: true);
+      }
     }
   }
 
@@ -257,19 +267,87 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       return;
     }
     final count = selected.length;
+    final names = selected.map((s) => '${s.time.toLocal().toString().substring(0, 16)} · ${s.id.substring(0, 8)}').join('\n');
     if (!await confirm(
       context,
       'Delete $count Snapshot${count == 1 ? '' : 's'}?',
-      'The selected snapshots will be forgotten. Space is freed after cleanup.',
+      'The following snapshots will be forgotten, then the repository will be pruned. Shared data may remain.\n\n$names',
       ok: 'Delete $count',
       danger: true,
     )) return;
     final job = await guarded(context, () => _v.forget(widget.repoId, selected.map((s) => s.id).toList()));
     if (job != null && mounted) {
-      setState(() => _selectedSnapshots.clear());
-      await _openJob(job);
+      setState(() {
+        _selectedSnapshots.clear();
+        _deleteJobId = job.id;
+      });
       await _load(replace: true);
     }
+  }
+
+  Widget _deleteProgressBanner() {
+    final id = _deleteJobId;
+    if (id == null) return const SizedBox.shrink();
+    final job = _jobs[id];
+    final active = job == null || job.active;
+    final cs = Theme.of(context).colorScheme;
+    final title = job == null
+        ? 'Starting snapshot cleanup…'
+        : job.active
+            ? '${job.phase == JobPhase.waiting ? 'Snapshot cleanup queued' : 'Deleting snapshots and pruning repository'}'
+            : job.phase == JobPhase.succeeded
+                ? 'Snapshot cleanup finished'
+                : 'Snapshot cleanup ${job.phase == JobPhase.cancelled ? 'cancelled' : 'failed'}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                if (active)
+                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                else
+                  Icon(
+                    job?.phase == JobPhase.succeeded ? Icons.check_circle_outline : Icons.info_outline,
+                    color: job?.phase == JobPhase.succeeded ? cs.primary : cs.error,
+                    size: 20,
+                  ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600))),
+                TextButton(
+                  onPressed: job == null ? () => _load(replace: true) : () => _openJob(job),
+                  child: const Text('View job'),
+                ),
+                IconButton(
+                  tooltip: 'Dismiss',
+                  onPressed: () => setState(() => _deleteJobId = null),
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+              ]),
+              if (active) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(value: job?.progressFraction),
+                if (job?.progressFraction == null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Space is reclaimed during pruning. Shared data may remain in use by other snapshots.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+              ] else if (job?.phase == JobPhase.succeeded)
+                Text(
+                  job!.messages.map((m) => m.message).where((m) => m.contains('reclaimed')).lastOrNull ?? 'The cleanup job completed.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _selectionBar() {
@@ -501,6 +579,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                   pinned: true,
                   delegate: _TimelineFilterDelegate(_filterBar()),
                 ),
+                if (widget.snapshotOnly && _deleteJobId != null)
+                  SliverToBoxAdapter(child: _deleteProgressBanner()),
                 if (widget.snapshotOnly && _selectedSnapshots.isNotEmpty)
                   SliverToBoxAdapter(child: _selectionBar()),
                 SliverList(
