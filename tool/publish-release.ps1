@@ -59,9 +59,10 @@ try {
         throw 'Could not find kAppVersion in the Settings page.'
     }
     $newPubspec = [regex]::Replace($pubspec, '(?m)^version:\s*\d+\.\d+\.\d+\+\d+\s*$', "version: $version+$build", 1)
-    $newSettings = [regex]::Replace($settings, "const kAppVersion = '[^']+';", "const kAppVersion = '$version';", 1)
-    Set-Content -Path $pubspecPath -Value $newPubspec -NoNewline -Encoding utf8
-    Set-Content -Path $settingsPath -Value $newSettings -NoNewline -Encoding utf8
+    $newSettings = [regex]::Replace($settings, "const kAppVersion = '[^']+';", "const kAppVersion = '$version';")
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($pubspecPath, $newPubspec, $utf8NoBom)
+    [System.IO.File]::WriteAllText($settingsPath, $newSettings, $utf8NoBom)
 
     try {
         Write-Host "Building Vaulton Android v$version (build $build)..." -ForegroundColor Cyan
