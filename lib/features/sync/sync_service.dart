@@ -106,7 +106,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     var current = '/';
     final parts = profile.remoteDir.split('/').where((part) => part.isNotEmpty);
     for (final part in parts) {
-      var cursor = '';
+      String? cursor = '';
       var found = false;
       do {
         final page = await v.list(profile.pointId, current, cursor: cursor, limit: 200, order: 'Asc');
