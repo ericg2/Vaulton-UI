@@ -81,16 +81,8 @@ try {
         flutter build apk --release
         if ($LASTEXITCODE -ne 0) { throw 'Flutter Android release build failed.' }
 
-        Write-Host 'Building Windows desktop app...' -ForegroundColor Cyan
-        flutter build windows --release
-        if ($LASTEXITCODE -ne 0) { throw 'Flutter Windows release build failed.' }
-
         $builtApk = Join-Path $root 'build/app/outputs/flutter-apk/app-release.apk'
         if (-not (Test-Path $builtApk)) { throw "Android build output not found: $builtApk" }
-        $builtWindows = Join-Path $root 'build/windows/x64/runner/Release'
-        if (-not (Test-Path (Join-Path $builtWindows 'vaulton.exe'))) {
-            throw "Windows release executable not found in: $builtWindows"
-        }
 
         $stage = Join-Path ([System.IO.Path]::GetTempPath()) "vaulton-release-$version"
         if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
@@ -101,14 +93,6 @@ try {
         $androidChecksum = Join-Path $stage 'Vaulton-Android.apk.sha256'
         Set-Content -Path $androidChecksum -Value "$androidHash  Vaulton-Android.apk" -Encoding ascii
 
-        $windowsStage = Join-Path $stage 'Vaulton-Windows'
-        Copy-Item $builtWindows $windowsStage -Recurse
-        $windowsArchive = Join-Path $stage 'Vaulton-Windows.zip'
-        Compress-Archive -Path (Join-Path $windowsStage '*') -DestinationPath $windowsArchive
-        $windowsHash = (Get-FileHash $windowsArchive -Algorithm SHA256).Hash.ToLowerInvariant()
-        $windowsChecksum = Join-Path $stage 'Vaulton-Windows.zip.sha256'
-        Set-Content -Path $windowsChecksum -Value "$windowsHash  Vaulton-Windows.zip" -Encoding ascii
-
         git add -- pubspec.yaml pubspec.lock lib/features/settings/settings_page.dart
         git commit -m "Prepare Vaulton UI release $tag"
         if ($LASTEXITCODE -ne 0) { throw 'Could not commit the release version.' }
@@ -116,14 +100,15 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Could not push the release version to origin/main.' }
 
         if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
-            gh release create $tag $apk $androidChecksum $windowsArchive $windowsChecksum --title "Vaulton $version" --generate-notes --target main
+            gh release create $tag $apk $androidChecksum --title "Vaulton $version" --generate-notes --target main
         } else {
-            gh release create $tag $apk $androidChecksum $windowsArchive $windowsChecksum --title "Vaulton $version" --notes $ReleaseNotes --target main
+            gh release create $tag $apk $androidChecksum --title "Vaulton $version" --notes $ReleaseNotes --target main
         }
         if ($LASTEXITCODE -ne 0) { throw 'The APK was built and the version commit was pushed, but creating the GitHub Release failed. Re-run after resolving the GitHub CLI error.' }
 
         Write-Host ""
         Write-Host "Published Vaulton v$version successfully." -ForegroundColor Green
+        Write-Host "Android assets are available now; Windows and Linux installers are built by GitHub Actions." -ForegroundColor Cyan
         Write-Host "Release: https://github.com/ericg2/Vaulton-UI/releases/tag/$tag"
     }
     catch {
