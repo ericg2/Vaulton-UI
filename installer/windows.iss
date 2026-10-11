@@ -16,7 +16,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
 RestartApplications=no
 SetupLogging=yes
-OutputDir=..\..\build\release-assets
+OutputDir=..\build\release-assets
 OutputBaseFilename=Vaulton-Windows-Setup
 Compression=lzma2
 SolidCompression=yes
@@ -26,7 +26,7 @@ WizardStyle=modern
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Files]
-Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\Vaulton"; Filename: "{app}\vaulton.exe"
