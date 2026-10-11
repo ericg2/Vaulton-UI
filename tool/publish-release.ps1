@@ -22,7 +22,11 @@ try {
     if ($branch -ne 'main') {
         throw "Switch to the main branch before publishing (current branch: '$branch')."
     }
-    if ((git status --porcelain).Trim()) {
+    $workingTree = (git status --porcelain | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not inspect the Git working tree.'
+    }
+    if ($workingTree) {
         throw 'The working tree is not clean. Commit or stash your changes before publishing.'
     }
     gh auth status | Out-Null
@@ -47,7 +51,11 @@ try {
     $version = "$major.$minor.$patch"
     $tag = "v$version"
 
-    if ((git tag --list $tag).Trim()) {
+    $localTag = (git tag --list $tag | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not inspect local Git tags.'
+    }
+    if ($localTag) {
         throw "Tag $tag already exists locally. Update the version before publishing."
     }
     $remoteTag = git ls-remote --tags origin "refs/tags/$tag"
@@ -101,7 +109,8 @@ try {
         Write-Host "Release: https://github.com/ericg2/Vaulton-UI/releases/tag/$tag"
     }
     catch {
-        if ((git status --porcelain).Trim()) {
+        $workingTreeAfterFailure = (git status --porcelain | Out-String).Trim()
+        if ($workingTreeAfterFailure) {
             Write-Warning 'The release did not finish cleanly. Check git status before retrying; do not run the script again until you have reviewed any changes.'
         }
         throw
