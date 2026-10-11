@@ -39,6 +39,20 @@ To pick up newer package releases later: `flutter pub upgrade --major-versions`.
   desktop-only for the same reason.
 * The Android application ID is `com.ericg2.vaulton`.
 
+### Android updates and publishing releases
+
+The Android app checks GitHub Releases on launch and prompts before downloading a newer version. You can also check manually from **Settings → About → Check for Updates**. Before opening Android's package installer, Vaulton verifies the downloaded APK against the SHA-256 checksum attached to the release. Android may ask you to allow Vaulton to install unknown apps and always requires the system installer to confirm the update.
+
+Updates install over the existing app only when the APK has the same application ID (**com.ericg2.vaulton**) and is signed with the same signing key as the installed version. Keep your signing key safe and use the same Windows PC for releases if you are relying on that PC's default debug signing key. For a long-term/public distribution, configure a persistent private release keystore in `android/key.properties` and back it up securely; never commit the keystore or passwords.
+
+To publish a release from Windows, install and authenticate the [GitHub CLI](https://cli.github.com/) once (`gh auth login`), make sure your local `main` branch is up to date, and commit or stash all other changes. Then run this from the repository root in PowerShell:
+
+```powershell
+.\tool\publish-release.ps1
+```
+
+The script increments the patch version and Android build number, builds the release APK locally, creates a SHA-256 checksum, commits and pushes the version update, and publishes a GitHub Release with `Vaulton-Android.apk` plus its checksum. It does **not** publish on every commit. To supply release notes, run `.\tool\publish-release.ps1 -ReleaseNotes "Your release notes"`. The first release must be published using the same signing key as the app already installed on your phone.
+
 ## Features
 
 | Area | What you get |
