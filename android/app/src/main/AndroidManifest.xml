@@ -2,6 +2,7 @@
     <!-- Without INTERNET a release build cannot reach the server at all
          (only the debug/profile manifests declare it for the Flutter tooling). -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <!-- Photo backup (photo_manager): Android 13+ media permissions, Android 14 partial access,
