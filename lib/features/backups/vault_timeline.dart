@@ -439,7 +439,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     }
     final sum = s?.summary;
     final result = sum == null
-        ? (okBackup ? '0 MB · 0 files · +0 MB new' : null)
+        ? (okBackup ? '${fmtBytes(0)} · 0 files · +${fmtBytes(0)} new' : null)
         : '${fmtBytes(toInt(sum['totalBytesProcessed']))} · ${toInt(sum['totalFilesProcessed'])} files · +${fmtBytes(toInt(sum['bytesAdded']))} new';
     String? note;
     if (j == null) note = 'No job record for this snapshot.';
