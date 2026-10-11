@@ -81,11 +81,6 @@ class UpdateService {
       final apkResponse = await _dio.get<List<int>>(
         apkUrl,
         options: Options(responseType: ResponseType.bytes),
-        onReceiveProgress: (received, total) {
-          if (total > 0 && context.mounted) {
-            // Keep progress reporting simple and avoid flooding the UI with updates.
-          }
-        },
       );
       final bytes = apkResponse.data;
       if (bytes == null || bytes.isEmpty) throw const FormatException('The APK download was empty.');
