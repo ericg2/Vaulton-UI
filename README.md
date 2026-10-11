@@ -41,7 +41,7 @@ To pick up newer package releases later: `flutter pub upgrade --major-versions`.
 
 ### Android updates and publishing releases
 
-The Android app checks GitHub Releases on launch and prompts before downloading a newer version. You can also check manually from **Settings → About → Check for Updates**. Before opening Android's package installer, Vaulton verifies the downloaded APK against the SHA-256 checksum attached to the release. Android may ask you to allow Vaulton to install unknown apps and always requires the system installer to confirm the update.
+Android, Windows, and Linux check GitHub Releases on launch and prompt before installing a newer version. You can also check manually from **Settings → About → Check for Updates**. Every downloaded package is verified against its published SHA-256 checksum. Android opens the system package installer and requires confirmation; Windows downloads the setup installer and replaces the app after it exits; Linux downloads the release bundle and uses a helper process to replace the app files after exit. Web deployments update when the website hosting the Flutter app is redeployed; a browser app cannot update its own hosted files.
 
 Updates install over the existing app only when the APK has the same application ID (**com.ericg2.vaulton**) and is signed with the same signing key as the installed version. Keep your signing key safe and use the same Windows PC for releases if you are relying on that PC's default debug signing key. For a long-term/public distribution, configure a persistent private release keystore in `android/key.properties` and back it up securely; never commit the keystore or passwords.
 
@@ -51,9 +51,13 @@ To publish a release from Windows, install and authenticate the [GitHub CLI](htt
 .\tool\publish-release.ps1
 ```
 
-The script increments the patch version and build number, builds Android and Windows release packages locally, creates SHA-256 checksums, commits and pushes the version update, and publishes a GitHub Release with `Vaulton-Android.apk` and `Vaulton-Windows.zip` plus checksums. A GitHub Actions workflow then builds the Linux package and attaches `Vaulton-Linux.tar.gz` plus its checksum to the same release. Linux packaging completes asynchronously after the release is published, so its assets may take a few minutes to appear. The script does **not** publish on every commit. To supply release notes, run `.\tool\publish-release.ps1 -ReleaseNotes "Your release notes"`. The first Android release must be published using the same signing key as the app already installed on your phone.
+The script increments the patch version and build number, builds the Android APK and checksum locally, commits and pushes the version update, and publishes a GitHub Release. GitHub Actions then builds and attaches the Windows setup installer and portable ZIP, plus the Linux archive and installer script. Desktop assets appear a few minutes after the release is published. The script does **not** publish on every commit. To supply release notes, run `.\tool\publish-release.ps1 -ReleaseNotes "Your release notes"`.
 
-Windows builds require Visual Studio's **Desktop development with C++** workload. The Linux package is built by GitHub Actions on Ubuntu with the native Flutter dependencies installed. Linux users should extract `Vaulton-Linux.tar.gz` and run the `vaulton` executable; the host needs the standard Flutter/GTK runtime libraries. Each platform archive has a corresponding SHA-256 checksum file.
+For Android updates, the installed app and release APK must share the application ID (**com.ericg2.vaulton**) and signing key. Keep your release keystore safe and configure `android/key.properties`; without it, builds use the debug key and updates are only compatible with installs signed by that same key.
+
+**Windows install:** download `Vaulton-Windows-Setup.exe` from the latest GitHub Release and run it. The installer installs per-user, adds a Start menu shortcut, and optionally a desktop shortcut. `Vaulton-Windows.zip` is also available for portable use.
+
+**Linux install:** download `Vaulton-Linux-Install.sh` from the latest GitHub Release and run `bash Vaulton-Linux-Install.sh`. It downloads the latest Linux bundle, verifies its SHA-256 checksum, installs to `~/.local/opt/vaulton`, and adds an application-menu entry. The bundle requires standard Flutter/GTK runtime libraries. You can also download `Vaulton-Linux.tar.gz` for manual installation. Windows and Linux assets are built by GitHub Actions on release publication, so wait for those assets to appear before downloading.
 
 ## Features
 
