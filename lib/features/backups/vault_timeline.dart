@@ -89,7 +89,7 @@ class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
 }
 
 /// The "History" tab. Backups come first by default; restores, cleanups and
-/// health checks live under "Other activity".
+/// repairs live under "Other activity".
 class VaultTimeline extends ConsumerStatefulWidget {
   const VaultTimeline({super.key, required this.repoId, required this.repo, required this.onBackup, this.header, this.showFab = true, this.snapshotOnly = false});
   final String repoId;
