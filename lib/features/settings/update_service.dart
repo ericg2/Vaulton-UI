@@ -11,10 +11,10 @@ class UpdateService {
   static const _api = 'https://api.github.com/repos/ericg2/Vaulton-UI/releases/latest';
   static final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(minutes: 3),
+    receiveTimeout: const Duration(minutes: 5),
     headers: const {
       'Accept': 'application/vnd.github+json',
-      'User-Agent': 'Vaulton-Android',
+      'User-Agent': 'Vaulton',
     },
   ));
 
@@ -41,16 +41,34 @@ class UpdateService {
       final assets = (release['assets'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList();
-      String? apkUrl;
+      final names = Platform.isAndroid
+          ? ('Vaulton-Android.apk', 'Vaulton-Android.apk.sha256')
+          : Platform.isWindows
+              ? ('Vaulton-Windows-Setup.exe', 'Vaulton-Windows-Setup.exe.sha256')
+              : Platform.isLinux
+                  ? ('Vaulton-Linux.tar.gz', 'Vaulton-Linux.tar.gz.sha256')
+                  : (null, null);
+      if (names.$1 == null) {
+        throw const FormatException('Automatic updates are not supported on this platform.');
+      }
+
+      String? packageUrl;
       String? checksumUrl;
+      String? installerUrl;
+      String? installerChecksumUrl;
       for (final asset in assets) {
         final name = asset['name'] as String? ?? '';
         final url = asset['browser_download_url'] as String?;
-        if (name == 'Vaulton-Android.apk') apkUrl = url;
-        if (name == 'Vaulton-Android.apk.sha256') checksumUrl = url;
+        if (name == names.$1) packageUrl = url;
+        if (name == names.$2) checksumUrl = url;
+        if (name == 'Vaulton-Linux-Install.sh') installerUrl = url;
+        if (name == 'Vaulton-Linux-Install.sh.sha256') installerChecksumUrl = url;
       }
-      if (apkUrl == null || checksumUrl == null) {
-        throw const FormatException('The latest release does not contain the APK and checksum assets.');
+      if (packageUrl == null || checksumUrl == null) {
+        throw const FormatException('The latest release is still being prepared or is missing its package/checksum.');
+      }
+      if (Platform.isLinux && (installerUrl == null || installerChecksumUrl == null)) {
+        throw const FormatException('The latest release is missing the Linux update installer.');
       }
 
       if (!context.mounted) return;
@@ -67,49 +85,99 @@ class UpdateService {
       );
       if (install != true || !context.mounted) return;
 
-      messenger.showSnackBar(const SnackBar(content: Text('Downloading Vaulton update…')));
-      final checksumResponse = await _dio.get<String>(
-        checksumUrl,
-        options: Options(responseType: ResponseType.plain),
-      );
-      final expectedHash = RegExp(r'^[0-9a-fA-F]{64}')
-          .firstMatch(checksumResponse.data?.trim() ?? '')
-          ?.group(0)
-          ?.toLowerCase();
-      if (expectedHash == null) throw const FormatException('The release checksum is invalid.');
+      messenger.showSnackBar(const SnackBar(content: Text('Downloading and verifying Vaulton update…')));
+      final directory = await getTemporaryDirectory();
+      final packageName = names.$1!;
+      final package = await _downloadVerified(packageUrl, checksumUrl, p.join(directory.path, packageName));
+      if (!context.mounted) return;
 
-      final apkResponse = await _dio.get<List<int>>(
-        apkUrl,
-        options: Options(responseType: ResponseType.bytes),
-      );
-      final bytes = apkResponse.data;
-      if (bytes == null || bytes.isEmpty) throw const FormatException('The APK download was empty.');
-      final actualHash = sha256.convert(bytes).toString();
-      if (actualHash != expectedHash) {
-        throw const FormatException('The APK checksum did not match. The download was discarded.');
+      if (Platform.isAndroid) {
+        final result = await OpenFilex.open(
+          package.path,
+          type: 'application/vnd.android.package-archive',
+        );
+        if (result.type != ResultType.done && context.mounted) {
+          messenger.showSnackBar(SnackBar(
+            content: Text('Could not open the Android installer: ' + result.message),
+            duration: const Duration(seconds: 8),
+          ));
+        }
+        return;
       }
 
-      final directory = await getApplicationSupportDirectory();
-      final apk = File(p.join(directory.path, 'Vaulton-update-$latestVersion.apk'));
-      await apk.writeAsBytes(bytes, flush: true);
-      if (!context.mounted) return;
-      final result = await OpenFilex.open(
-        apk.path,
-        type: 'application/vnd.android.package-archive',
-      );
-      if (result.type != ResultType.done && context.mounted) {
-        messenger.showSnackBar(SnackBar(
-          content: Text('Could not open the Android installer: ${result.message}'),
-          duration: const Duration(seconds: 8),
-        ));
+      if (Platform.isWindows) {
+        final installDir = p.dirname(Platform.resolvedExecutable);
+        await Process.start(
+          package.path,
+          [
+            '/VERYSILENT',
+            '/SUPPRESSMSGBOXES',
+            '/NORESTART',
+            '/CLOSEAPPLICATIONS',
+            '/DIR="$installDir"',
+          ],
+          mode: ProcessStartMode.detached,
+        );
+        exit(0);
+      }
+
+      if (Platform.isLinux) {
+        final helper = await _downloadVerified(
+          installerUrl!,
+          installerChecksumUrl!,
+          p.join(directory.path, 'Vaulton-Linux-Install.sh'),
+        );
+        await Process.start(
+          'bash',
+          [
+            helper.path,
+            '--update',
+            '--pid',
+            '$pid',
+            '--archive',
+            package.path,
+            '--target',
+            p.dirname(Platform.resolvedExecutable),
+          ],
+          mode: ProcessStartMode.detached,
+        );
+        exit(0);
       }
     } catch (error) {
       if (quietErrors || !context.mounted) return;
       messenger.showSnackBar(SnackBar(
-        content: Text('Could not check or install updates: ${_friendlyError(error)}'),
+        content: Text('Could not check or install updates: ' + _friendlyError(error)),
         duration: const Duration(seconds: 8),
       ));
     }
+  }
+
+  static Future<File> _downloadVerified(String packageUrl, String checksumUrl, String outputPath) async {
+    final checksumResponse = await _dio.get<String>(
+      checksumUrl,
+      options: Options(responseType: ResponseType.plain),
+    );
+    final expectedHash = RegExp(r'^[0-9a-fA-F]{64}')
+        .firstMatch(checksumResponse.data?.trim() ?? '')
+        ?.group(0)
+        ?.toLowerCase();
+    if (expectedHash == null) throw const FormatException('The release checksum is invalid.');
+
+    final response = await _dio.get<List<int>>(
+      packageUrl,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) throw const FormatException('The download was empty.');
+    final actualHash = sha256.convert(bytes).toString();
+    if (actualHash != expectedHash) {
+      throw const FormatException('The SHA-256 checksum did not match. The download was discarded.');
+    }
+
+    final file = File(outputPath);
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
   }
 
   static bool _isNewer(String latest, String current) {
