@@ -1,0 +1,111 @@
+param(
+    [string]$ReleaseNotes
+)
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+function Require-Command([string]$Name) {
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "Required command '$Name' was not found. Install it and retry."
+    }
+}
+
+Require-Command 'git'
+Require-Command 'flutter'
+Require-Command 'gh'
+
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+Push-Location $root
+try {
+    $branch = (git branch --show-current).Trim()
+    if ($branch -ne 'main') {
+        throw "Switch to the main branch before publishing (current branch: '$branch')."
+    }
+    if ((git status --porcelain).Trim()) {
+        throw 'The working tree is not clean. Commit or stash your changes before publishing.'
+    }
+    gh auth status | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw 'GitHub CLI is not authenticated. Run: gh auth login'
+    }
+
+    $pubspecPath = Join-Path $root 'pubspec.yaml'
+    $settingsPath = Join-Path $root 'lib/features/settings/settings_page.dart'
+    $pubspec = Get-Content $pubspecPath -Raw
+    $settings = Get-Content $settingsPath -Raw
+
+    $versionMatch = [regex]::Match($pubspec, '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$')
+    if (-not $versionMatch.Success) {
+        throw 'Could not parse version from pubspec.yaml (expected X.Y.Z+build).'
+    }
+
+    $major = [int]$versionMatch.Groups[1].Value
+    $minor = [int]$versionMatch.Groups[2].Value
+    $patch = [int]$versionMatch.Groups[3].Value + 1
+    $build = [int]$versionMatch.Groups[4].Value + 1
+    $version = "$major.$minor.$patch"
+    $tag = "v$version"
+
+    if ((git tag --list $tag).Trim()) {
+        throw "Tag $tag already exists locally. Update the version before publishing."
+    }
+    $remoteTag = git ls-remote --tags origin "refs/tags/$tag"
+    if ($remoteTag) {
+        throw "Tag $tag already exists on GitHub. Update the version before publishing."
+    }
+
+    if ($settings -notmatch "const kAppVersion = '[^']+';") {
+        throw 'Could not find kAppVersion in the Settings page.'
+    }
+    $newPubspec = [regex]::Replace($pubspec, '(?m)^version:\s*\d+\.\d+\.\d+\+\d+\s*$', "version: $version+$build", 1)
+    $newSettings = [regex]::Replace($settings, "const kAppVersion = '[^']+';", "const kAppVersion = '$version';", 1)
+    Set-Content -Path $pubspecPath -Value $newPubspec -NoNewline -Encoding utf8
+    Set-Content -Path $settingsPath -Value $newSettings -NoNewline -Encoding utf8
+
+    try {
+        Write-Host "Building Vaulton Android v$version (build $build)..." -ForegroundColor Cyan
+        flutter pub get
+        if ($LASTEXITCODE -ne 0) { throw 'flutter pub get failed.' }
+        flutter build apk --release
+        if ($LASTEXITCODE -ne 0) { throw 'Flutter Android release build failed.' }
+
+        $builtApk = Join-Path $root 'build/app/outputs/flutter-apk/app-release.apk'
+        if (-not (Test-Path $builtApk)) { throw "Build output not found: $builtApk" }
+
+        $stage = Join-Path ([System.IO.Path]::GetTempPath()) "vaulton-release-$version"
+        if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+        New-Item -ItemType Directory -Path $stage | Out-Null
+        $apk = Join-Path $stage 'Vaulton-Android.apk'
+        Copy-Item $builtApk $apk
+        $hash = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLowerInvariant()
+        $checksum = Join-Path $stage 'Vaulton-Android.apk.sha256'
+        Set-Content -Path $checksum -Value "$hash  Vaulton-Android.apk" -Encoding ascii
+
+        git add -- pubspec.yaml pubspec.lock lib/features/settings/settings_page.dart
+        git commit -m "Prepare Vaulton UI release $tag"
+        if ($LASTEXITCODE -ne 0) { throw 'Could not commit the release version.' }
+        git push origin main
+        if ($LASTEXITCODE -ne 0) { throw 'Could not push the release version to origin/main.' }
+
+        if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
+            gh release create $tag $apk $checksum --title "Vaulton $version" --generate-notes --target main
+        } else {
+            gh release create $tag $apk $checksum --title "Vaulton $version" --notes $ReleaseNotes --target main
+        }
+        if ($LASTEXITCODE -ne 0) { throw 'The APK was built and the version commit was pushed, but creating the GitHub Release failed. Re-run after resolving the GitHub CLI error.' }
+
+        Write-Host ""
+        Write-Host "Published Vaulton v$version successfully." -ForegroundColor Green
+        Write-Host "Release: https://github.com/ericg2/Vaulton-UI/releases/tag/$tag"
+    }
+    catch {
+        if ((git status --porcelain).Trim()) {
+            Write-Warning 'The release did not finish cleanly. Check git status before retrying; do not run the script again until you have reviewed any changes.'
+        }
+        throw
+    }
+}
+finally {
+    Pop-Location
+}
