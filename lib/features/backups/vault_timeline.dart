@@ -319,7 +319,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                 Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600))),
                 TextButton(
                   onPressed: job == null ? () => _load(replace: true) : () => _openJob(job),
-                  child: const Text('View job'),
+                  child: const Text('View Job'),
                 ),
                 IconButton(
                   tooltip: 'Dismiss',
