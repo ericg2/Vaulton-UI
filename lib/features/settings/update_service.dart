@@ -18,7 +18,12 @@ class UpdateService {
     },
   ));
 
-  static Future<void> checkAndInstall(BuildContext context, String currentVersion) async {
+  static Future<void> checkAndInstall(
+    BuildContext context,
+    String currentVersion, {
+    bool quietIfUpToDate = false,
+    bool quietErrors = false,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final response = await _dio.get<Map<String, dynamic>>(_api);
@@ -27,7 +32,7 @@ class UpdateService {
       final tag = (release['tag_name'] as String? ?? '').trim();
       final latestVersion = tag.startsWith('v') ? tag.substring(1) : tag;
       if (!_isNewer(latestVersion, currentVersion)) {
-        if (context.mounted) {
+        if (!quietIfUpToDate && context.mounted) {
           messenger.showSnackBar(const SnackBar(content: Text('Vaulton is up to date.')));
         }
         return;
@@ -104,7 +109,7 @@ class UpdateService {
         ));
       }
     } catch (error) {
-      if (!context.mounted) return;
+      if (quietErrors || !context.mounted) return;
       messenger.showSnackBar(SnackBar(
         content: Text('Could not check or install updates: ${_friendlyError(error)}'),
         duration: const Duration(seconds: 8),
