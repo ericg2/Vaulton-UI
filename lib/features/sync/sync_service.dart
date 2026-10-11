@@ -147,7 +147,8 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     } while (cursor != null);
   }
 
-  await validateDestinationRoot();\n  await walkRemote(profile.remoteDir, '');
+  await validateDestinationRoot();
+  await walkRemote(profile.remoteDir, '');
   status.scannedDestination = remote.length;
   status.phase = 'Comparing';
   await status.save(prefs, profile.id);
