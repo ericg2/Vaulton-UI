@@ -1,4 +1,4 @@
-name: Build Linux release asset
+name: Build Linux release assets
 
 on:
   release:
@@ -34,18 +34,22 @@ jobs:
       - name: Build Linux release
         run: flutter build linux --release
 
-      - name: Package Linux release
+      - name: Package Linux application and installer
         shell: bash
         run: |
           set -euo pipefail
           bundle='build/linux/x64/release/bundle'
           test -x "$bundle/vaulton"
-          archive='Vaulton-Linux.tar.gz'
+          mkdir -p build/release-assets
+          archive='build/release-assets/Vaulton-Linux.tar.gz'
           tar -czf "$archive" -C "$bundle" .
-          sha256sum "$archive" > "$archive.sha256"
+          (cd build/release-assets && sha256sum Vaulton-Linux.tar.gz > Vaulton-Linux.tar.gz.sha256)
+          cp installer/Vaulton-Linux-Install.sh build/release-assets/Vaulton-Linux-Install.sh
+          chmod +x build/release-assets/Vaulton-Linux-Install.sh
+          (cd build/release-assets && sha256sum Vaulton-Linux-Install.sh > Vaulton-Linux-Install.sh.sha256)
 
-      - name: Attach Linux package to GitHub Release
+      - name: Attach Linux packages to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$TAG" Vaulton-Linux.tar.gz Vaulton-Linux.tar.gz.sha256 --clobber
+        run: gh release upload "$TAG" build/release-assets/Vaulton-Linux.tar.gz build/release-assets/Vaulton-Linux.tar.gz.sha256 build/release-assets/Vaulton-Linux-Install.sh build/release-assets/Vaulton-Linux-Install.sh.sha256 --clobber
