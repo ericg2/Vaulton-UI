@@ -269,8 +269,16 @@ String describeRetention(Map<String, int> p) {
     if (g('keepYearly') > 0) 'one per year for ${g('keepYearly')} ${_s(g('keepYearly'), 'year')}',
     if (g('keepWithinDays') > 0) 'everything from the last ${g('keepWithinDays')} ${_s(g('keepWithinDays'), 'day')}',
   ];
-  var text = parts.isEmpty ? 'Nothing selected yet.' : 'Keeps ${parts.length == 1 ? parts.first : '${parts.sublist(0, parts.length - 1).join(', ')} and ${parts.last}'}.';
-  if (g('reservePercent') > 0) text += ' Also frees space to keep ${g('reservePercent')}% of the vault empty.';
+  var text = parts.isEmpty
+      ? (g('reservePercent') > 0
+          ? 'Removes older snapshots only as needed to maintain free space.'
+          : 'Nothing selected yet.')
+      : 'Keeps ${parts.length == 1 ? parts.first : '${parts.sublist(0, parts.length - 1).join(', ')} and ${parts.last}'}.';
+  if (g('reservePercent') > 0) {
+    text += parts.isEmpty
+        ? ' Targets ${g('reservePercent')}% of the vault quota free.'
+        : ' Also targets ${g('reservePercent')}% of the vault quota free.';
+  }
   return text;
 }
 
