@@ -48,7 +48,8 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           UpdateService.checkAndInstall(
