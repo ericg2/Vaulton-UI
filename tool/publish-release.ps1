@@ -74,8 +74,8 @@ try {
 
     try {
         Write-Host "Preparing Vaulton v$version (build $build)..." -ForegroundColor Cyan
-        dart run tool/setup.dart
-        if ($LASTEXITCODE -ne 0) { throw 'Project setup or flutter pub get failed.' }
+        flutter pub get
+        if ($LASTEXITCODE -ne 0) { throw 'flutter pub get failed.' }
 
         Write-Host 'Building Android APK...' -ForegroundColor Cyan
         flutter build apk --release
