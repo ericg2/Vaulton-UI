@@ -352,7 +352,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         title: Text(n.name, overflow: TextOverflow.ellipsis),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Path: ${joinPath(_path, n.name)}'),
-          if (!n.isDir) Text('Size: ${fmtBytes(n.bytes)} (${n.bytes} bytes)'),
+          if (!n.isDir) Text('Size: ${fmtBytes(n.bytes)}'),
           Text('Modified: ${fmtDate(n.modified)}'),
           Text('Created: ${fmtDate(n.created)}'),
         ]),
