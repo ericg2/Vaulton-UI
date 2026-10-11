@@ -142,14 +142,16 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.info_outline),
             title: const Text('Vaulton Client'),
             subtitle: const Text('Version $kAppVersion'),
-            trailing: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+            trailing: !kIsWeb && (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux)
                 ? IconButton(
                     tooltip: 'Check for Updates',
                     icon: const Icon(Icons.system_update_alt),
                     onPressed: () => UpdateService.checkAndInstall(context, kAppVersion),
                   )
                 : null,
-            onTap: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+            onTap: !kIsWeb && (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux)
                 ? () => UpdateService.checkAndInstall(context, kAppVersion)
                 : null,
           ),
