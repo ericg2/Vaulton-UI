@@ -247,6 +247,7 @@ class _Plan {
 }
 
 const _plans = [
+  _Plan('Space first', 'Keep at least 10% of the vault quota free; older snapshots are removed only as needed.', Icons.storage_outlined, {'reservePercent': 10}),
   _Plan('Recent', 'Last 10 snapshots and one a day for a week.', Icons.bolt_outlined, {'keepLast': 10, 'keepDaily': 7}),
   _Plan('Balanced', 'Daily for a week, weekly for a month, monthly for half a year.', Icons.balance, {'keepDaily': 7, 'keepWeekly': 4, 'keepMonthly': 6}),
   _Plan('Long term', 'Adds a full year of months, plus three yearly snapshots.', Icons.history_toggle_off, {'keepDaily': 7, 'keepWeekly': 4, 'keepMonthly': 12, 'keepYearly': 3}),
@@ -292,8 +293,8 @@ class _RetentionSheet extends StatefulWidget {
 }
 
 class _RetentionSheetState extends State<_RetentionSheet> {
-  int _plan = 1; // index into _plans, or -1 for custom
-  late Map<String, int> _v = {for (final k in _ruleKeys) k: _plans[1].values[k] ?? 0};
+  int _plan = 0; // index into _plans, or -1 for custom
+  late Map<String, int> _v = {for (final k in _ruleKeys) k: _plans[0].values[k] ?? 0};
   late bool _preview = !widget.forSchedule;
 
   @override
@@ -365,7 +366,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
                   _rule('keepMonthly', 'Monthly', 'One per month, for this many months'),
                   _rule('keepYearly', 'Yearly', 'One per year, for this many years'),
                   _rule('keepWithinDays', 'Recent days', 'Keep everything from the last few days'),
-                  _rule('reservePercent', 'Free space', 'Remove extra snapshots to keep this much free', unit: '%', max: 90),
+                  _rule('reservePercent', 'Free space', 'Primary rule: remove older snapshots as needed to keep this much of the vault quota free. Date rules can be added as extra safeguards.', unit: '%', max: 50),
                 ],
               ),
             ),
