@@ -331,7 +331,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean up old snapshots once', style: t.headlineSmall),
             const SizedBox(height: 4),
-            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Choose which snapshots to keep; older ones are removed to free up space. Locked snapshots and the newest snapshot of each data folder are always kept.',
+            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Snapshots outside these rules are removed, then the repository is pruned to reclaim data that no remaining snapshot needs. Shared data may remain. Locked snapshots and the newest snapshot in each backup series are always kept. Preview cleanup to see the candidate snapshots before deleting anything.',
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
             const SizedBox(height: 16),
             for (var i = 0; i < _plans.length; i++)
