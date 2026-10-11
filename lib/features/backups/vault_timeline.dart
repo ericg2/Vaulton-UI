@@ -21,7 +21,10 @@ class TimelineEntry {
       job?.startDate ?? job?.scheduleDate ?? job?.createdAt ?? snap?.time ?? DateTime.fromMillisecondsSinceEpoch(0);
 }
 
-bool _idMatch(String a, String b) => a == b || (a.length >= 6 && b.length >= 6 && (a.startsWith(b) || b.startsWith(a)));\n\nString _snapshotTimeLabel(DateTime? time) =>\n    time == null ? 'Unknown time' : time.toLocal().toString().substring(0, 16);
+bool _idMatch(String a, String b) => a == b || (a.length >= 6 && b.length >= 6 && (a.startsWith(b) || b.startsWith(a)));
+
+String _snapshotTimeLabel(DateTime? time) =>
+    time == null ? 'Unknown time' : time.toLocal().toString().substring(0, 16);
 
 /// Joins jobs and snapshots into one newest-first list.
 ///  1. Backup job <-> snapshot by id (full id or prefix, either direction).
