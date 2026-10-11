@@ -244,7 +244,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       if (!await confirm(
         context,
         'Delete Snapshot?',
-        'This forgets the snapshot, then prunes the repository to reclaim unreferenced data. Shared data may remain.',
+        'Snapshot: ${s.time.toLocal().toString().substring(0, 16)} · ${s.id}\n\nThis forgets the snapshot, then prunes the repository to reclaim unreferenced data. Shared data may remain.',
         ok: 'Delete',
         danger: true,
       )) return;
