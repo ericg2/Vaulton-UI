@@ -107,7 +107,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (j != null) _queued(j);
   }
 
-  Future<void> _healthCheck() async {
+  Future<void> _repair() async {
     final j = await guarded(context, () => _v.check(widget.repoId));
     if (j != null) _queued(j);
   }
@@ -125,13 +125,13 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   Widget _menu() => PopupMenuButton<String>(
         onSelected: (a) {
           switch (a) {
-            case 'check': _healthCheck();
+            case 'check': _repair();
             case 'clean': _retention();
             case 'pw': _password();
           }
         },
         itemBuilder: (_) => const [
-          PopupMenuItem(value: 'check', child: Text('Run Health Check')),
+          PopupMenuItem(value: 'check', child: Text('Repair')),
           PopupMenuItem(value: 'clean', child: Text('Clean Up Old Snapshots…')),
           PopupMenuDivider(),
           PopupMenuItem(value: 'pw', child: Text('Update Vault Password…')),
