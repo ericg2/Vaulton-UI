@@ -51,7 +51,9 @@ To publish a release from Windows, install and authenticate the [GitHub CLI](htt
 .\tool\publish-release.ps1
 ```
 
-The script increments the patch version and Android build number, builds the release APK locally, creates a SHA-256 checksum, commits and pushes the version update, and publishes a GitHub Release with `Vaulton-Android.apk` plus its checksum. It does **not** publish on every commit. To supply release notes, run `.\tool\publish-release.ps1 -ReleaseNotes "Your release notes"`. The first release must be published using the same signing key as the app already installed on your phone.
+The script increments the patch version and build number, builds Android and Windows release packages locally, creates SHA-256 checksums, commits and pushes the version update, and publishes a GitHub Release with `Vaulton-Android.apk` and `Vaulton-Windows.zip` plus checksums. A GitHub Actions workflow then builds the Linux package and attaches `Vaulton-Linux.tar.gz` plus its checksum to the same release. Linux packaging completes asynchronously after the release is published, so its assets may take a few minutes to appear. The script does **not** publish on every commit. To supply release notes, run `.\tool\publish-release.ps1 -ReleaseNotes "Your release notes"`. The first Android release must be published using the same signing key as the app already installed on your phone.
+
+Windows builds require Visual Studio's **Desktop development with C++** workload. The Linux package is built by GitHub Actions on Ubuntu with the native Flutter dependencies installed. Linux users should extract `Vaulton-Linux.tar.gz` and run the `vaulton` executable; the host needs the standard Flutter/GTK runtime libraries. Each platform archive has a corresponding SHA-256 checksum file.
 
 ## Features
 
