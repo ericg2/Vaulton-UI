@@ -51,7 +51,7 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
   Future<void> _preview() async {
     final existing = _schedule;
     final req = existing == null
-        ? await showRetentionSheet(context)
+        ? await showRetentionSheet(context, forSchedule: true)
         : RetentionRequest(_policyOf(existing), true);
     if (req == null || !mounted) return;
 
