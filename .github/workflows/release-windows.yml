@@ -48,8 +48,13 @@ jobs:
           Set-Content -Path "$zip.sha256" -Value "$zipHash  Vaulton-Windows.zip" -Encoding ascii
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
-          & $iscc "/DAppVersion=$version" 'installer/windows.iss'
-          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed to build the Windows installer.' }
+          Push-Location installer
+          try {
+            & $iscc "/DAppVersion=$version" 'windows.iss'
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed to build the Windows installer.' }
+          } finally {
+            Pop-Location
+          }
           $setup = Join-Path $releaseDir 'Vaulton-Windows-Setup.exe'
           if (-not (Test-Path $setup)) { throw 'Windows installer was not produced.' }
           $setupHash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
