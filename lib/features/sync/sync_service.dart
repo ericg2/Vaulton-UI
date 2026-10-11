@@ -35,7 +35,54 @@ class SyncPlan {
   int get deleteBytes => deletes.fold(0, (a, x) => a + x.bytes);
 }
 
-Future<SyncPlan> buildSyncPlan(ApiClient api, SyncProfile profile, SharedPreferences prefs,
+Future<void> _recordSyncFailure(
+  SharedPreferences prefs,
+  SyncProfile profile,
+  Object error, {
+  void Function(SyncRunStatus)? onProgress,
+}) async {
+  final raw = error.toString();
+  final lower = raw.toLowerCase();
+  final sourceMissing = lower.contains('source folder is no longer available') ||
+      lower.contains('source folder is unavailable');
+  final destinationMissing = lower.contains('404') ||
+      lower.contains('not found') ||
+      lower.contains('does not exist') ||
+      lower.contains('no such file or directory');
+  final status = SyncRunStatus(
+    running: false,
+    phase: 'Failed',
+    error: sourceMissing
+        ? 'Source folder is unavailable.'
+        : destinationMissing
+            ? 'Destination folder or data folder is unavailable. $raw'
+            : raw,
+    message: sourceMissing
+        ? 'Sync paused. Choose the source folder again to resume.'
+        : destinationMissing
+            ? 'Check the selected destination data folder and remote path, then run sync again.'
+            : 'Sync failed. Review the error details and try again.',
+    finishedAt: DateTime.now().millisecondsSinceEpoch,
+  );
+  await status.save(prefs, profile.id);
+  onProgress?.call(status);
+}
+
+Future<SyncPlan> buildSyncPlan(
+  ApiClient api,
+  SyncProfile profile,
+  SharedPreferences prefs, {
+  void Function(SyncRunStatus)? onProgress,
+}) async {
+  try {
+    return await _buildSyncPlan(api, profile, prefs, onProgress: onProgress);
+  } catch (error) {
+    await _recordSyncFailure(prefs, profile, error, onProgress: onProgress);
+    rethrow;
+  }
+}
+
+Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPreferences prefs,
     {void Function(SyncRunStatus)? onProgress}) async {
   final source = openSyncSource(SyncSourceInfo(
     kind: profile.sourceKind, location: profile.sourceLocation, label: profile.sourceLabel,
@@ -155,7 +202,23 @@ Future<SyncPlan> buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefere
   return SyncPlan(changes, sourceFiles: local.length, destinationFiles: remote.length);
 }
 
-Future<void> applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, SharedPreferences prefs,
+Future<void> applySyncPlan(
+  ApiClient api,
+  SyncProfile profile,
+  SyncPlan plan,
+  SharedPreferences prefs, {
+  void Function(SyncRunStatus)? onProgress,
+  CancelToken? cancel,
+}) async {
+  try {
+    await _applySyncPlan(api, profile, plan, prefs, onProgress: onProgress, cancel: cancel);
+  } catch (error) {
+    await _recordSyncFailure(prefs, profile, error, onProgress: onProgress);
+    rethrow;
+  }
+}
+
+Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, SharedPreferences prefs,
     {void Function(SyncRunStatus)? onProgress, CancelToken? cancel}) async {
   final source = openSyncSource(SyncSourceInfo(
     kind: profile.sourceKind, location: profile.sourceLocation, label: profile.sourceLabel,
@@ -278,12 +341,26 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     profile.nextRun = profile.lastRun + profile.intervalMinutes * 60000;
   } catch (e) {
     final error = e.toString();
-    final sourceMissing = error.toLowerCase().contains('source folder is no longer available');
+    final lower = error.toLowerCase();
+    final sourceMissing = lower.contains('source folder is no longer available') ||
+        lower.contains('source folder is unavailable');
+    final destinationMissing = lower.contains('404') ||
+        lower.contains('not found') ||
+        lower.contains('does not exist') ||
+        lower.contains('no such file or directory');
     final status = SyncRunStatus(
       running: false,
       phase: 'Failed',
-      error: sourceMissing ? 'Source folder is unavailable.' : error,
-      message: sourceMissing ? 'Sync paused. Choose the source folder again to resume.' : null,
+      error: sourceMissing
+          ? 'Source folder is unavailable.'
+          : destinationMissing
+              ? 'Destination folder or data folder is unavailable. $error'
+              : error,
+      message: sourceMissing
+          ? 'Sync paused. Choose the source folder again to resume.'
+          : destinationMissing
+              ? 'Check the selected destination data folder and remote path, then run sync again.'
+              : 'Sync failed. Review the error details and try again.',
       finishedAt: now,
     );
     await status.save(prefs, profile.id);
