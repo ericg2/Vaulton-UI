@@ -60,7 +60,7 @@ Widget _statusCountsTile(BuildContext context, String title, List<_StatusCount> 
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(c.icon, size: 14, color: c.color),
                 const SizedBox(width: 4),
-                Text(c.value.toString() + ' ' + c.label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
+                Text('${c.value} ${c.label}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
               ]),
             ),
         ],

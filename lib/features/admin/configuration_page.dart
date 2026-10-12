@@ -9,7 +9,7 @@ import '../../core/util.dart';
 import '../../core/widgets.dart';
 
 class ConfigurationTab extends ConsumerStatefulWidget {
-  const ConfigurationTab();
+  const ConfigurationTab({super.key});
   @override
   ConsumerState<ConfigurationTab> createState() => _ConfigurationTabState();
 }
@@ -118,7 +118,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: action,
+                    initialValue: action,
                     decoration: const InputDecoration(labelText: 'Action'),
                     items: const [
                       DropdownMenuItem(value: 'Sleep', child: Text('Sleep')),
@@ -275,7 +275,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 leading: Icon(_powerEnabled ? Icons.power_settings_new : Icons.power_off_outlined, color: _powerEnabled ? cs.primary : null),
                 title: const Text('Power Management'),
                 subtitle: Text(_powerEnabled
-                    ? '${_powerAction} after ${_powerIdleMinutes} minutes idle'
+                    ? '$_powerAction after $_powerIdleMinutes minutes idle'
                     : 'Disabled'),
               ),
               Padding(
@@ -325,7 +325,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               leading: const Icon(Icons.schedule),
               title: const Text('Schedule Protection'),
               subtitle: Text(_powerEnabled
-                  ? 'Blocks power down when a job is due within ${_powerScheduleProtectionMinutes} minutes.'
+                  ? 'Blocks power down when a job is due within $_powerScheduleProtectionMinutes minutes.'
                   : 'Enable to power down an idle server.'),
             ),
             ListTile(

@@ -669,7 +669,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
   late final TextEditingController _capacity;
   late final int _availableBytes;
   String _unit = 'GiB';
-  bool _saving = false;
+  final bool _saving = false;
   int? _exactBytes;
   String? _exactText, _exactUnit;
 

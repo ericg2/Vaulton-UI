@@ -33,7 +33,7 @@ class TransferEngine {
       await ensureDirs(t.pointId, parentPath(t.remotePath));
       final q = {'path': t.remotePath, 'overwrite': t.overwrite};
       if (bytes != null) {
-        await api.dio.put('/files/' + t.pointId + '/content',
+        await api.dio.put('/files/${t.pointId}/content',
           queryParameters: q,
           data: bytes,
           options: Options(contentType: 'application/octet-stream'),
@@ -42,7 +42,7 @@ class TransferEngine {
       } else {
         final len = await localFiles.length(t.localPath!);
         if (len < 0) throw ApiException('Local file no longer exists');
-        await api.dio.put('/files/' + t.pointId + '/content',
+        await api.dio.put('/files/${t.pointId}/content',
           queryParameters: q,
           data: localFiles.openRead(t.localPath!),
           options: Options(contentType: 'application/octet-stream', headers: {Headers.contentLengthHeader: len}),
@@ -66,7 +66,7 @@ class TransferEngine {
     try {
       await ensureDirs(pointId, parentPath(remotePath));
       await api.dio.put(
-        '/files/' + pointId + '/content',
+        '/files/$pointId/content',
         queryParameters: {'path': remotePath, 'overwrite': overwrite},
         data: stream,
         options: Options(
@@ -82,8 +82,8 @@ class TransferEngine {
   }
 
   String _contentUrl(TransferTask t) => t.snapshotId != null
-      ? '/repos/' + t.pointId + '/snapshots/' + Uri.encodeComponent(t.snapshotId!) + '/content'
-      : '/files/' + t.pointId + '/content';
+      ? '/repos/${t.pointId}/snapshots/${Uri.encodeComponent(t.snapshotId!)}/content'
+      : '/files/${t.pointId}/content';
 
   Future<void> download(TransferTask t, {
     required void Function(int received, int total) onProgress,

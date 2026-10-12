@@ -12,19 +12,22 @@ class LoginPage extends ConsumerStatefulWidget {
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateMixin {
+class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProviderStateMixin {
   late final AnimationController _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
   final _passFocus = FocusNode();
-  late final _host = TextEditingController();
-  late final _port = TextEditingController();
+  final _host = TextEditingController();
+  final _port = TextEditingController();
   final _user = TextEditingController();
   final _pass = TextEditingController();
   final _new = TextEditingController();
   final _new2 = TextEditingController();
   final _key = GlobalKey<FormState>();
   bool _busy = false, _temp = false, _show = false, _rememberPassword = false;
+  // The host/port fields stay tucked away once a server is chosen; tap the server card to edit.
+  bool _editServer = true;
   String _busyLabel = 'Signing In…';
   String? _pwTitle;
+  String? _error;
 
   @override
   void dispose() {
@@ -36,8 +39,19 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     super.dispose();
   }
 
-  // Keep form content visible immediately, including after cancelling session restore.
-  Widget _stagger(int i, Widget child) => child;
+  @override
+  void initState() {
+    super.initState();
+    final last = ref.read(accountsProvider).firstOrNull;
+    if (last != null) {
+      _setServerUrl(last.url);
+      _user.text = last.user;
+      _editServer = false;
+      _loadSavedPassword(last.url, last.user);
+    }
+  }
+
+  // ---------------------------------------------------------------- server helpers
 
   void _setServerUrl(String url) {
     final normalized = SessionStore.normalizeUrl(url);
@@ -56,39 +70,24 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     return port.isEmpty ? '$scheme://$host' : '$scheme://$host:$port';
   }
 
-  void _help() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) {
-        final t = Theme.of(ctx).textTheme;
-        Widget tip(IconData i, String title, String body) => ListTile(
-              leading: Icon(i),
-              title: Text(title),
-              subtitle: Text(body),
-            );
-        return SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Need help signing in?', style: t.titleLarge)),
-            tip(Icons.dns_outlined, 'Server address', 'Use the address your administrator gave you, e.g. https://vault.example.com or 192.168.1.10:5141. Without a scheme, http:// is assumed.'),
-            tip(Icons.wifi_off_outlined, 'Cannot reach the server', 'Check that you are on the right network (or VPN) and that the server is running.'),
-            tip(Icons.key_outlined, 'Forgot your password', 'Ask an administrator to reset it. You will then sign in with a temporary password and choose a new one.'),
-            const SizedBox(height: 8),
-          ]),
-        );
-      },
-    );
+  String? _currentHost() {
+    final host = _host.text.trim();
+    return host.isEmpty ? null : host;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    final last = ref.read(accountsProvider).firstOrNull;
-    if (last != null) {
-      _setServerUrl(last.url);
-      _user.text = last.user;
-      _loadSavedPassword(last.url, last.user);
-    }
+  String? _currentPort() {
+    final port = _port.text.trim();
+    return port.isEmpty ? null : port;
+  }
+
+  String _hostFor(String url) {
+    final u = Uri.tryParse(SessionStore.normalizeUrl(url));
+    return (u == null || u.host.isEmpty) ? url : u.host;
+  }
+
+  String? _portFor(String url) {
+    final u = Uri.tryParse(SessionStore.normalizeUrl(url));
+    return (u != null && u.hasPort) ? u.port.toString() : null;
   }
 
   Future<void> _loadSavedPassword(String url, String user) async {
@@ -113,9 +112,107 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     });
     _loadSavedPassword(a.url, a.user);
   }
-  String? _error;
+
+  void _addServer() {
+    setState(() {
+      _host.clear();
+      _port.text = '5141';
+      _user.clear();
+      _pass.clear();
+      _temp = false;
+      _error = null;
+      _rememberPassword = false;
+      _editServer = true;
+    });
+  }
+
+  // ---------------------------------------------------------------- sheets
+
+  void _help() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final t = Theme.of(ctx).textTheme;
+        Widget tip(IconData i, String title, String body) => ListTile(leading: Icon(i), title: Text(title), subtitle: Text(body));
+        return SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Need Help Signing In?', style: t.titleLarge)),
+            tip(Icons.dns, 'Server Address', 'Use the address your administrator gave you, e.g. 192.168.1.10 with port 5141. Servers you sign in to are saved for next time.'),
+            tip(Icons.bolt, 'Wake Support', 'If a server has a saved wake configuration, it is woken automatically before signing in.'),
+            tip(Icons.wifi_off, 'Cannot Reach the Server', 'Check that you are on the right network (or VPN) and that the server is running.'),
+            tip(Icons.key, 'Forgot Your Password', 'Ask an administrator to reset it. You will then sign in with a temporary password and choose a new one.'),
+            const SizedBox(height: 8),
+          ]),
+        );
+      },
+    );
+  }
+
+  void _serversSheet() {
+    final session = ref.read(sessionProvider);
+    final accounts = ref.read(accountsProvider).toList();
+    // One entry per distinct server, keeping the order accounts were last used in.
+    final servers = <String, List<SavedAccount>>{};
+    for (final a in accounts) {
+      servers.putIfAbsent(SessionStore.normalizeUrl(a.url), () => []).add(a);
+    }
+    final currentUrl = SessionStore.normalizeUrl(_serverUrl());
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final t = Theme.of(ctx).textTheme;
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Saved Servers', style: t.titleLarge)),
+              Flexible(
+                child: ListView(shrinkWrap: true, children: [
+                  for (final e in servers.entries)
+                    ListTile(
+                      selected: e.key == currentUrl,
+                      leading: Icon(e.key == currentUrl ? Icons.check_circle : Icons.dns),
+                      title: Text(_hostFor(e.key)),
+                      subtitle: Row(children: [
+                        Flexible(child: Text(e.value.length == 1 ? e.value.first.user : '${e.value.length} Accounts', overflow: TextOverflow.ellipsis)),
+                        if (_portFor(e.key) != null) ...[const SizedBox(width: 10), Text('Port ${_portFor(e.key)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
+                      ]),
+                      trailing: _wakePill(session.hasWakeConfigFor(e.key), cs, t),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _pick(e.value.first);
+                      },
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: const Text('Add Another Server'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addServer();
+                    },
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------- submit
 
   Future<void> _submit() async {
+    if (_host.text.trim().isEmpty && !_editServer) {
+      // Reveal the (empty) server fields so the validator has something to point at.
+      setState(() => _editServer = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _key.currentState?.validate());
+      return;
+    }
     if (!_key.currentState!.validate()) return;
     setState(() {
       _busy = true;
@@ -135,7 +232,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       // address entered on this screen, not a previously saved server.
       await session.setBaseUrl(url);
       if (!_temp && session.hasWakeConfigFor(url)) {
-        setState(() => _busyLabel = 'Waking Up…');
+        setState(() => _busyLabel = 'Waking Server…');
         final ready = await WakeService.ensureReady(ApiClient(session));
         if (!ready) {
           if (mounted) {
@@ -161,7 +258,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
         if (ex.status == 403 && text.contains('password')) {
           // The server wants a permanent password before it will sign this account in.
           _temp = true;
-          _pwTitle = 'Password change required';
+          _pwTitle = 'Password Change Required';
           _error = null;
         } else if (ex.status == 401) {
           _error = 'Incorrect username or password.';
@@ -174,293 +271,296 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     }
   }
 
-  Widget _recent(ColorScheme cs) {
-    final list = ref.watch(accountsProvider);
-    if (list.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: Text('Recent Accounts', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
-        ),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Column(children: [
-            for (final a in list.take(5))
-              ListTile(
-                dense: true,
-                selected: a.url == SessionStore.normalizeUrl(_serverUrl()) && a.user.toLowerCase() == _user.text.trim().toLowerCase(),
-                leading: CircleAvatar(radius: 16, child: Text(a.user.isEmpty ? '?' : a.user[0].toUpperCase())),
-                title: Text(a.user),
-                subtitle: Text(a.host),
-                onTap: () => _pick(a),
-                trailing: IconButton(
-                  tooltip: 'Remove from List',
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => ref.read(accountsProvider.notifier).forget(a),
-                ),
-              ),
-          ]),
-        ),
+  // ---------------------------------------------------------------- widgets
+
+  Widget _wakePill(bool on, ColorScheme cs, TextTheme t) {
+    final fg = on ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: on ? cs.primaryContainer : Colors.transparent,
+        border: on ? null : Border.all(color: cs.outlineVariant),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(on ? Icons.bolt : Icons.power_off, size: 14, color: fg),
+        const SizedBox(width: 4),
+        Text(on ? 'Wake Ready' : 'No Wake', style: t.labelSmall?.copyWith(color: fg)),
       ]),
     );
   }
 
+  Widget _serverCard(ColorScheme cs, TextTheme t, bool wakeConfigured, bool hasSaved) {
+    final label = _currentHost();
+    final port = _currentPort();
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          ListTile(
+            onTap: () => setState(() => _editServer = !_editServer),
+            leading: const Icon(Icons.dns),
+            title: Text(label ?? 'Add a Server', maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: label == null
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(children: [
+                      _wakePill(wakeConfigured, cs, t),
+                      if (port != null) ...[const SizedBox(width: 10), Text('Port $port', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
+                    ]),
+                  ),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (hasSaved) IconButton(tooltip: 'Saved Servers', icon: const Icon(Icons.unfold_more), onPressed: _serversSheet),
+              Icon(_editServer ? Icons.expand_less : Icons.edit, size: 20),
+              const SizedBox(width: 4),
+            ]),
+          ),
+          if (_editServer)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _host,
+                    onChanged: (_) => setState(() {}),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.next,
+                    autocorrect: false,
+                    decoration: const InputDecoration(labelText: 'Server Address', hintText: '192.168.1.10', isDense: true),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your server address' : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 88,
+                  child: TextFormField(
+                    controller: _port,
+                    onChanged: (_) => setState(() {}),
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(labelText: 'Port', hintText: '5141', isDense: true),
+                    validator: (v) {
+                      final value = v?.trim() ?? '';
+                      if (value.isEmpty) return null;
+                      final port = int.tryParse(value);
+                      return port == null || port < 1 || port > 65535 ? 'Invalid port' : null;
+                    },
+                  ),
+                ),
+              ]),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  /// Saved accounts for the server currently selected, as removable chips.
+  Widget _accountChips(ColorScheme cs) {
+    final current = SessionStore.normalizeUrl(_serverUrl());
+    final mine = ref.watch(accountsProvider).where((a) => SessionStore.normalizeUrl(a.url) == current).take(6).toList();
+    if (mine.isEmpty) return const SizedBox.shrink();
+    final typed = _user.text.trim().toLowerCase();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Wrap(spacing: 8, runSpacing: 4, children: [
+        for (final a in mine)
+          InputChip(
+            avatar: CircleAvatar(child: Text(a.user.isEmpty ? '?' : a.user[0].toUpperCase(), style: const TextStyle(fontSize: 11))),
+            label: Text(a.user),
+            selected: a.user.toLowerCase() == typed,
+            showCheckmark: false,
+            onPressed: () => _pick(a),
+            deleteIcon: const Icon(Icons.close, size: 16),
+            deleteButtonTooltipMessage: 'Forget This Account',
+            onDeleted: () => ref.read(accountsProvider.notifier).forget(a),
+          ),
+      ]),
+    );
+  }
+
+  Widget _banner(ColorScheme cs, IconData icon, Color bg, Color fg, Widget child, {EdgeInsets margin = EdgeInsets.zero}) => Container(
+        margin: margin,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, size: 18, color: fg),
+          const SizedBox(width: 10),
+          Expanded(child: child),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final note = ref.watch(authProvider.select((a) => a.message));
     final t = Theme.of(context).textTheme;
-    const gap = SizedBox(height: 12);
+    final note = ref.watch(authProvider.select((a) => a.message));
+    final hasSaved = ref.watch(accountsProvider).isNotEmpty;
     final wakeConfigured = ref.watch(sessionProvider).hasWakeConfigFor(_serverUrl());
+    const gap = SizedBox(height: 12);
+
     return Scaffold(
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _busy
-                          ? Row(key: const ValueKey('busy'), mainAxisSize: MainAxisSize.min, children: [const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Text(_busyLabel)])
-                          : Text(_temp ? 'Change Password and Sign In' : 'Sign In', key: ValueKey(_temp)),
-                    ),
-                  ),
-                ),
-                TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline), label: const Text('Need Help?')),
-              ]),
-            ),
-          ),
-        ),
-      ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Form(
-                key: _key,
-                child: AutofillGroup(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    // Logo: pops in, then gently breathes.
-                    _stagger(
-                      0,
-                      Center(
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.5, end: 1),
-                          duration: const Duration(milliseconds: 800),
-                          curve: Curves.easeOutBack,
-                          builder: (_, v, child) => Transform.scale(scale: v, child: child),
-                          child: AnimatedBuilder(
+              constraints: BoxConstraints(minHeight: (box.maxHeight - 16).clamp(0.0, double.infinity)),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Form(
+                    key: _key,
+                    child: AutofillGroup(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        // Compact header: logo + title on the left, help on the right.
+                        Row(children: [
+                          AnimatedBuilder(
                             animation: _breath,
                             builder: (_, child) => Container(
-                              width: 64,
-                              height: 64,
+                              width: 44,
+                              height: 44,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: cs.primaryContainer,
-                                boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.10 + 0.14 * _breath.value), blurRadius: 14 + 18 * _breath.value, spreadRadius: 2 * _breath.value)],
+                                boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.08 + 0.12 * _breath.value), blurRadius: 8 + 12 * _breath.value, spreadRadius: 1.5 * _breath.value)],
                               ),
                               child: child,
                             ),
-                            child: Icon(Icons.lock_outline_rounded, size: 32, color: cs.onPrimaryContainer),
+                            child: Icon(Icons.lock_rounded, size: 22, color: cs.onPrimaryContainer),
                           ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('Vaulton', style: t.titleLarge),
+                              Text('Sign In to Your Server', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                            ]),
+                          ),
+                          IconButton(tooltip: 'Help', icon: const Icon(Icons.help), onPressed: _help),
+                        ]),
+                        const SizedBox(height: 16),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: (note != null && _error == null)
+                              ? _banner(cs, Icons.info, cs.tertiaryContainer, cs.onTertiaryContainer, Text(note, style: TextStyle(color: cs.onTertiaryContainer)), margin: const EdgeInsets.only(bottom: 12))
+                              : const SizedBox(width: double.infinity),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    _stagger(1, Text('Vaulton', textAlign: TextAlign.center, style: t.headlineSmall)),
-                    const SizedBox(height: 4),
-                    _stagger(1, Text('Sign in to your server', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant))),
-                    const SizedBox(height: 8),
-                    _stagger(2, AnimatedSize(duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic, alignment: Alignment.topCenter, child: _recent(cs))),
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: (note != null && _error == null)
-                          ? Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(12)),
-                              child: Row(children: [
-                                Icon(Icons.info_outline, size: 18, color: cs.onTertiaryContainer),
-                                const SizedBox(width: 12),
-                                Expanded(child: Text(note, style: TextStyle(color: cs.onTertiaryContainer))),
-                              ]),
-                            )
-                          : const SizedBox(width: double.infinity),
-                    ),
-                    _stagger(
-                      3,
-                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _host,
-                            onChanged: (_) => setState(() {}),
-                            keyboardType: TextInputType.url,
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            decoration: const InputDecoration(
-                              labelText: 'Server Address',
-                              prefixIcon: Icon(Icons.dns_outlined),
-                              hintText: '192.168.1.10',
+                        _serverCard(cs, t, wakeConfigured, hasSaved),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: _accountChips(cs),
+                        ),
+                        gap,
+                        TextFormField(
+                          controller: _user,
+                          onChanged: (_) => setState(() {}),
+                          autofillHints: const [AutofillHints.username],
+                          textInputAction: TextInputAction.next,
+                          autocorrect: false,
+                          onFieldSubmitted: (_) => _passFocus.requestFocus(),
+                          decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person)),
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your username' : null,
+                        ),
+                        gap,
+                        TextFormField(
+                          controller: _pass,
+                          focusNode: _passFocus,
+                          obscureText: !_show,
+                          autofillHints: const [AutofillHints.password],
+                          textInputAction: _temp ? TextInputAction.next : TextInputAction.done,
+                          onFieldSubmitted: (_) => _temp ? null : _submit(),
+                          decoration: InputDecoration(
+                            labelText: _temp ? 'Temporary Password' : 'Password',
+                            prefixIcon: const Icon(Icons.key),
+                            suffixIcon: IconButton(
+                              tooltip: _show ? 'Hide Password' : 'Show Password',
+                              icon: Icon(_show ? Icons.visibility_off : Icons.visibility),
+                              onPressed: () => setState(() => _show = !_show),
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your server address' : null,
                           ),
+                          validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
                         ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 104,
-                          child: TextFormField(
-                            controller: _port,
-                            onChanged: (_) => setState(() {}),
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.next,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(labelText: 'Port', hintText: '5141'),
-                            validator: (v) {
-                              final value = v?.trim() ?? '';
-                              if (value.isEmpty) return null;
-                              final port = int.tryParse(value);
-                              return port == null || port < 1 || port > 65535 ? 'Invalid port' : null;
-                            },
-                          ),
-                        ),
-                      ]),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(wakeConfigured ? Icons.power_settings_new : Icons.power_off_outlined, size: 16, color: wakeConfigured ? cs.primary : cs.onSurfaceVariant),
-                        const SizedBox(width: 6),
-                        Flexible(child: Text(wakeConfigured ? 'Wake support saved for this server' : 'No saved wake configuration for this server', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant), textAlign: TextAlign.center)),
-                      ]),
-                    ),
-                    gap,
-                    _stagger(
-                      5,
-                      TextFormField(
-                        controller: _user,
-                        autofillHints: const [AutofillHints.username],
-                        textInputAction: TextInputAction.next,
-                        autocorrect: false,
-                        onFieldSubmitted: (_) => _passFocus.requestFocus(),
-                        decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your username' : null,
-                      ),
-                    ),
-                    gap,
-                    _stagger(
-                      6,
-                      TextFormField(
-                        controller: _pass,
-                        focusNode: _passFocus,
-                        obscureText: !_show,
-                        autofillHints: const [AutofillHints.password],
-                        textInputAction: _temp ? TextInputAction.next : TextInputAction.done,
-                        onFieldSubmitted: (_) => _temp ? null : _submit(),
-                        decoration: InputDecoration(
-                          labelText: _temp ? 'Temporary Password' : 'Password',
-                          prefixIcon: const Icon(Icons.key_outlined),
-                          suffixIcon: IconButton(
-                            tooltip: _show ? 'Hide Password' : 'Show Password',
-                            icon: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              transitionBuilder: (c, a) => RotationTransition(turns: Tween<double>(begin: 0.85, end: 1).animate(a), child: FadeTransition(opacity: a, child: c)),
-                              child: Icon(_show ? Icons.visibility_off : Icons.visibility, key: ValueKey(_show)),
-                            ),
-                            onPressed: () => setState(() => _show = !_show),
-                          ),
-                        ),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
-                      ),
-                    ),
-                    // Password-change section slides open when the server asks for it.
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: !_temp
-                          ? const SizedBox(width: double.infinity)
-                          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                              Container(
-                                margin: const EdgeInsets.only(top: 16, bottom: 12),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(12)),
-                                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Icon(Icons.lock_reset, size: 20, color: cs.onTertiaryContainer),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        // Password-change section slides open when the server asks for it.
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: !_temp
+                              ? const SizedBox(width: double.infinity)
+                              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                                  _banner(
+                                    cs,
+                                    Icons.lock_reset,
+                                    cs.tertiaryContainer,
+                                    cs.onTertiaryContainer,
+                                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Text(_pwTitle ?? 'Password Change Required', style: t.titleSmall?.copyWith(color: cs.onTertiaryContainer)),
-                                      Text('Enter the temporary password, then choose a permanent one.', style: TextStyle(color: cs.onTertiaryContainer)),
+                                      Text('Enter the temporary password above, then choose a permanent one.', style: t.bodySmall?.copyWith(color: cs.onTertiaryContainer)),
                                     ]),
+                                    margin: const EdgeInsets.only(top: 12, bottom: 12),
+                                  ),
+                                  TextFormField(
+                                    controller: _new,
+                                    obscureText: !_show,
+                                    textInputAction: TextInputAction.next,
+                                    decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.password), helperText: 'At least 8 characters'),
+                                    validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters' : null,
+                                  ),
+                                  gap,
+                                  TextFormField(
+                                    controller: _new2,
+                                    obscureText: !_show,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) => _submit(),
+                                    decoration: const InputDecoration(labelText: 'Repeat New Password', prefixIcon: Icon(Icons.password)),
+                                    validator: (v) => v != _new.text ? 'Passwords do not match' : null,
                                   ),
                                 ]),
-                              ),
-                              TextFormField(
-                                controller: _new,
-                                obscureText: !_show,
-                                textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.password_outlined), helperText: 'At least 8 characters'),
-                                validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters' : null,
-                              ),
-                              gap,
-                              TextFormField(
-                                controller: _new2,
-                                obscureText: !_show,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submit(),
-                                decoration: const InputDecoration(labelText: 'Repeat New Password', prefixIcon: Icon(Icons.password_outlined)),
-                                validator: (v) => v != _new.text ? 'Passwords do not match' : null,
-                              ),
-                            ]),
+                        ),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: _rememberPassword,
+                          onChanged: (v) => setState(() => _rememberPassword = v ?? false),
+                          title: const Text('Remember Password on This Device'),
+                        ),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: _error == null
+                              ? const SizedBox(width: double.infinity)
+                              : _banner(cs, Icons.error, cs.errorContainer, cs.onErrorContainer, Text(_error!, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onErrorContainer)), margin: const EdgeInsets.only(bottom: 4)),
+                        ),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          onPressed: _busy ? null : _submit,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: _busy
+                                  ? Row(key: const ValueKey('busy'), mainAxisSize: MainAxisSize.min, children: [const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Text(_busyLabel)])
+                                  : Text(_temp ? 'Change Password and Sign In' : 'Sign In', key: ValueKey(_temp)),
+                            ),
+                          ),
+                        ),
+                      ]),
                     ),
-                    _stagger(
-                      7,
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        value: _rememberPassword,
-                        onChanged: (v) => setState(() => _rememberPassword = v ?? false),
-                        title: const Text('Remember Password'),
-                        subtitle: const Text('Stored on this device.'),
-                      ),
-                    ),
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: _error == null
-                            ? const SizedBox(width: double.infinity, key: ValueKey('noerr'))
-                            : Container(
-                                key: ValueKey(_error),
-                                margin: const EdgeInsets.only(top: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(12)),
-                                child: Row(children: [
-                                  Icon(Icons.error_outline, size: 18, color: cs.onErrorContainer),
-                                  const SizedBox(width: 12),
-                                  Expanded(child: Text(_error!, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onErrorContainer))),
-                                ]),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ]),
+                  ),
                 ),
               ),
             ),

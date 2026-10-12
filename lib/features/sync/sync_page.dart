@@ -172,7 +172,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       setState(() {
         _profiles = profiles;
         _points = points;
-        for (final p in profiles) _status[p.id] = SyncRunStatus.load(prefs, p.id);
+        for (final p in profiles) {
+          _status[p.id] = SyncRunStatus.load(prefs, p.id);
+        }
       });
       await _openRequestedSettings(profiles);
     } catch (_) {
@@ -186,7 +188,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     if (!mounted) return;
     setState(() {
       _profiles = SyncProfile.loadAll(prefs);
-      for (final p in _profiles) _status[p.id] = SyncRunStatus.load(prefs, p.id);
+      for (final p in _profiles) {
+        _status[p.id] = SyncRunStatus.load(prefs, p.id);
+      }
     });
   }
 
@@ -227,7 +231,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     var source = initialSource;
     var name = existing?.name ?? source.label;
     var pointId = existing?.pointId ?? _points.first.id;
-    var remoteDir = existing?.remoteDir ?? '/' + source.label;
+    var remoteDir = existing?.remoteDir ?? '/${source.label}';
     var interval = existing?.intervalMinutes ?? 60;
     var enabled = existing?.enabled ?? true;
     var deleteExtras = existing?.deleteExtras ?? true;
@@ -471,7 +475,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               trailing: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 110),
                 child: Text(
-                  count.toString() + (bytes == '0 B' ? '' : ' · ' + bytes),
+                  count.toString() + (bytes == '0 B' ? '' : ' · $bytes'),
                   textAlign: TextAlign.end,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -487,7 +491,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             width: 560,
             child: ListView(shrinkWrap: true, children: [
               Text(
-                p.sourceLabel + ' → ' + _pointName(p.pointId) + p.remoteDir,
+                '${p.sourceLabel} → ${_pointName(p.pointId)}${p.remoteDir}',
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(ctx).textTheme.titleMedium,
@@ -502,7 +506,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               tile(Icons.check_circle_outline, 'Already In Sync', s.unchangedFiles, '0 B'),
               const SizedBox(height: 12),
               Text(
-                'Source: ' + s.scannedSource.toString() + ' items · Destination: ' + s.scannedDestination.toString() + ' items',
+                'Source: ${s.scannedSource} items · Destination: ${s.scannedDestination} items',
                 style: Theme.of(ctx).textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
@@ -510,7 +514,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 Card(
                   child: ExpansionTile(
                     title: const Text('All Planned Changes'),
-                    subtitle: Text(plan.changes.length.toString() + ' items'),
+                    subtitle: Text('${plan.changes.length} items'),
                     children: [
                       for (final change in plan.changes.take(500))
                         ListTile(
@@ -530,12 +534,12 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                             change.kind == SyncChangeKind.delete
                                 ? 'Delete from destination'
                                 : change.kind == SyncChangeKind.add
-                                    ? 'New file · ' + fmtBytes(change.bytes)
+                                    ? 'New file · ${fmtBytes(change.bytes)}'
                                     : change.kind == SyncChangeKind.update
-                                        ? 'Update · ' + fmtBytes(change.bytes)
+                                        ? 'Update · ${fmtBytes(change.bytes)}'
                                         : change.kind == SyncChangeKind.mkdir
                                             ? 'Create folder'
-                                            : 'Replace · ' + fmtBytes(change.bytes),
+                                            : 'Replace · ${fmtBytes(change.bytes)}',
                           ),
                         ),
                       if (plan.changes.length > 500)
@@ -570,11 +574,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     final ok = await confirm(
                       context,
                       'Remove Destination Extras?',
-                      'This will permanently delete ' +
-                          plan.deletedFiles.toString() +
-                          ' destination item' +
-                          (plan.deletedFiles == 1 ? '' : 's') +
-                          ' so the destination exactly matches the source.',
+                      'This will permanently delete ${plan.deletedFiles} destination item${plan.deletedFiles == 1 ? '' : 's'} so the destination exactly matches the source.',
                     );
                     if (!ok) return;
                   }
@@ -645,7 +645,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 final ok = await confirm(
                   context,
                   'Delete Source Files?',
-                  'This permanently deletes ' + selected.length.toString() + ' file' + (selected.length == 1 ? '' : 's') + ' from the source device. The Vaulton copies remain.',
+                  'This permanently deletes ${selected.length} file${selected.length == 1 ? '' : 's'} from the source device. The Vaulton copies remain.',
                 );
                 if (!ok) return;
                 var removed = 0;
@@ -658,7 +658,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 _safeCleanup[p.id] = files.where((x) => !selected.contains(x.location)).toList();
                 if (mounted) {
                   setState(() {});
-                  toast(context, removed.toString() + ' source file' + (removed == 1 ? '' : 's') + ' deleted');
+                  toast(context, '$removed source file${removed == 1 ? '' : 's'} deleted');
                 }
               },
               child: const Text('Delete Selected'),
@@ -740,7 +740,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     child: Row(children: [
                       const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
                       const SizedBox(width: 16),
-                      Text(active.toString() + ' Sync' + (active == 1 ? '' : 's') + ' Running'),
+                      Text('$active Sync${active == 1 ? '' : 's'} Running'),
                     ]),
                   ),
                 ),
@@ -779,7 +779,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
                 Text(
-                  p.sourceLabel + ' → ' + (point?.name ?? 'Data Folder') + p.remoteDir,
+                  '${p.sourceLabel} → ${point?.name ?? 'Data Folder'}${p.remoteDir}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.outline),
@@ -823,14 +823,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             LinearProgressIndicator(value: progress),
             const SizedBox(height: 8),
             Text(
-              fmtBytes(st.bytesDone) + ' of ' + fmtBytes(st.bytesTotal) + ' · ' + st.completed.toString() + ' completed · ' + st.failed.toString() + ' failed',
+              '${fmtBytes(st.bytesDone)} of ${fmtBytes(st.bytesTotal)} · ${st.completed} completed · ${st.failed} failed',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ] else ...[
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(_frequencyLabel(p.intervalMinutes)),
               _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
-              if (p.nextRun > 0) _chip('Next Run: ' + fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))),
+              if (p.nextRun > 0) _chip('Next Run: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
             ]),
             const SizedBox(height: 8),
             if (st.finishedAt > 0)
@@ -840,7 +840,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               ),
             if (plan != null && plan.changes.isNotEmpty)
               Text(
-                plan.newFiles.toString() + ' new · ' + plan.updatedFiles.toString() + ' updated · ' + plan.deletedFiles.toString() + ' destination extras',
+                '${plan.newFiles} new · ${plan.updatedFiles} updated · ${plan.deletedFiles} destination extras',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             if (_safeCleanup[p.id]?.isNotEmpty == true)
@@ -850,7 +850,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   Icon(Icons.cleaning_services_outlined, size: 18, color: cs.primary),
                   const SizedBox(width: 12),
                   Expanded(child: Text(
-                    _safeCleanup[p.id]!.length.toString() + ' source files are safe to delete',
+                    '${_safeCleanup[p.id]!.length} source files are safe to delete',
                     style: Theme.of(context).textTheme.bodySmall,
                   )),
                   TextButton(onPressed: () => _reviewSourceCleanup(p), child: const Text('Review')),
@@ -892,9 +892,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   }
 
   String _frequencyLabel(int minutes) {
-    if (minutes < 60) return 'Every ' + minutes.toString() + ' minutes';
-    if (minutes % 60 == 0) return 'Every ' + (minutes ~/ 60).toString() + ' hours';
-    return 'Every ' + minutes.toString() + ' minutes';
+    if (minutes < 60) return 'Every $minutes minutes';
+    if (minutes % 60 == 0) return 'Every ${minutes ~/ 60} hours';
+    return 'Every $minutes minutes';
   }
 
   Widget _chip(String text) => chip(context, text);

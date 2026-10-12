@@ -123,10 +123,12 @@ Future<void> restoreSnapshotFlow({
         set(() => counting = true);
         try {
           final count = await destinationFileCountFuture;
-          if (ctx.mounted) set(() {
+          if (ctx.mounted) {
+            set(() {
             destinationFileCount = count;
             counting = false;
           });
+          }
         } catch (_) {
           if (ctx.mounted) set(() => counting = false);
         }
@@ -414,8 +416,8 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
           });
           return;
         }
-      } else if (pick == null) {
-        pick = list.firstOrNull;
+      } else {
+        pick ??= list.firstOrNull;
       }
       if (!mounted) return;
       setState(() {
@@ -610,7 +612,11 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) _sel.clear(); else _sel.addAll(_loaded.map(_entryKey)); })),
+              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) {
+                _sel.clear();
+              } else {
+                _sel.addAll(_loaded.map(_entryKey));
+              } })),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(
                 tooltip: 'Restore…',

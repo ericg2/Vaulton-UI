@@ -82,8 +82,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final value = path.replaceAll('\\\\', '/');
     if (value == '/') return '/';
     var trimmed = value;
-    while (trimmed.startsWith('/')) trimmed = trimmed.substring(1);
-    while (trimmed.endsWith('/')) trimmed = trimmed.substring(0, trimmed.length - 1);
+    while (trimmed.startsWith('/')) {
+      trimmed = trimmed.substring(1);
+    }
+    while (trimmed.endsWith('/')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1);
+    }
     return trimmed.isEmpty ? '/' : '/$trimmed';
   }
 
@@ -415,7 +419,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
             title: Text('${_sel.length} selected'),
             actions: [
-              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) _sel.clear(); else _sel.addAll(_loaded.map((n) => n.name)); })),
+              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) {
+                _sel.clear();
+              } else {
+                _sel.addAll(_loaded.map((n) => n.name));
+              } })),
               IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
               IconButton(tooltip: 'Move', icon: const Icon(Icons.drive_file_move_outline), onPressed: () => _moveCopy(_selected, false)),
               IconButton(tooltip: 'Copy', icon: const Icon(Icons.copy_outlined), onPressed: () => _moveCopy(_selected, true)),
@@ -609,7 +617,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                               }
                             },
                             child: ListTile(
-                            key: ValueKey('${pt.id}:${_path}:${n.isDir ? "d" : "f"}:${n.name}'),
+                            key: ValueKey('${pt.id}:$_path:${n.isDir ? "d" : "f"}:${n.name}'),
                             selected: sel,
                             leading: selecting
                                 ? SizedBox(

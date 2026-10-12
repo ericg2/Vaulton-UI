@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +17,6 @@ import '../files/files_page.dart';
 import '../messages/messages_page.dart';
 import '../settings/settings_page.dart';
 import '../storage/storage_page.dart';
-import '../sync/sync_models.dart';
 import '../sync/sync_page.dart';
 import '../transfers/transfer_manager.dart';
 import '../transfers/transfers_page.dart';

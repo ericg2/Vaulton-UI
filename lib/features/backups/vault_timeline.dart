@@ -250,7 +250,9 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
         'Snapshot: ${_snapshotTimeLabel(s.time)} · ${s.id}\n\nThis forgets the snapshot, then prunes the repository to reclaim unreferenced data. Shared data may remain.',
         ok: 'Delete',
         danger: true,
-      )) return;
+      )) {
+        return;
+      }
       final j = await guarded(context, () => _v.forget(widget.repoId, [s.id]));
       if (j != null && mounted) {
         setState(() => _deleteJobId = j.id);
@@ -277,7 +279,9 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       'The following snapshots will be forgotten, then the repository will be pruned. Shared data may remain.\n\n$names',
       ok: 'Delete $count',
       danger: true,
-    )) return;
+    )) {
+      return;
+    }
     final job = await guarded(context, () => _v.forget(widget.repoId, selected.map((s) => s.id).toList()));
     if (job != null && mounted) {
       setState(() {
@@ -297,7 +301,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     final title = job == null
         ? 'Starting snapshot cleanup…'
         : job.active
-            ? '${job.phase == JobPhase.waiting ? 'Snapshot cleanup queued' : 'Deleting snapshots and pruning repository'}'
+            ? job.phase == JobPhase.waiting ? 'Snapshot cleanup queued' : 'Deleting snapshots and pruning repository'
             : job.phase == JobPhase.succeeded
                 ? 'Snapshot cleanup finished'
                 : 'Snapshot cleanup ${job.phase == JobPhase.cancelled ? 'cancelled' : 'failed'}';
@@ -314,8 +318,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                   const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 else
                   Icon(
-                    job?.phase == JobPhase.succeeded ? Icons.check_circle_outline : Icons.info_outline,
-                    color: job?.phase == JobPhase.succeeded ? cs.primary : cs.error,
+                    job.phase == JobPhase.succeeded ? Icons.check_circle_outline : Icons.info_outline,
+                    color: job.phase == JobPhase.succeeded ? cs.primary : cs.error,
                     size: 20,
                   ),
                 const SizedBox(width: 10),
@@ -341,9 +345,9 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     ),
                   ),
-              ] else if (job?.phase == JobPhase.succeeded)
+              ] else if (job.phase == JobPhase.succeeded)
                 Text(
-                  job!.messages.map((m) => m.message).where((m) => m.contains('Cleanup finished') || m.contains('Retention finished')).lastOrNull ?? 'The cleanup job completed.',
+                  job.messages.map((m) => m.message).where((m) => m.contains('Cleanup finished') || m.contains('Retention finished')).lastOrNull ?? 'The cleanup job completed.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
             ],
@@ -447,8 +451,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     String? note;
     if (j == null) note = 'No job record for this snapshot.';
     if (okBackup && browseId == null) {
-      note = j?.snapshotId?.isNotEmpty == true
-          ? 'Snapshot ${shortId(j!.snapshotId!)} could not be found in this vault.'
+      note = j.snapshotId?.isNotEmpty == true
+          ? 'Snapshot ${shortId(j.snapshotId!)} could not be found in this vault.'
           : 'This run did not record a snapshot.';
     }
     final err = cleanJobError(j?.error);

@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import '../core/api_client.dart';
 import '../core/session.dart';
-import '../core/wake.dart';
 import '../features/sync/sync_models.dart';
 import '../features/sync/sync_service.dart';
 import '../features/transfers/transfer_engine.dart';
@@ -103,7 +102,7 @@ Future<void> initBackground() async {
 Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
   if (!backgroundSupported) return;
   for (final p in profiles) {
-    final unique = 'vaulton-sync-' + p.id;
+    final unique = 'vaulton-sync-${p.id}';
     if (!p.enabled) {
       await Workmanager().cancelByUniqueName(unique);
       continue;

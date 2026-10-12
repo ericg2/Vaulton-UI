@@ -98,7 +98,7 @@ class UpdateService {
         );
         if (result.type != ResultType.done && context.mounted) {
           messenger.showSnackBar(SnackBar(
-            content: Text('Could not open the Android installer: ' + result.message),
+            content: Text('Could not open the Android installer: ${result.message}'),
             duration: const Duration(seconds: 8),
           ));
         }
@@ -146,7 +146,7 @@ class UpdateService {
     } catch (error) {
       if (quietErrors || !context.mounted) return;
       messenger.showSnackBar(SnackBar(
-        content: Text('Could not check or install updates: ' + _friendlyError(error)),
+        content: Text('Could not check or install updates: ${_friendlyError(error)}'),
         duration: const Duration(seconds: 8),
       ));
     }

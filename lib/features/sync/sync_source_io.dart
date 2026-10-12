@@ -22,6 +22,7 @@ abstract class SyncSource {
 class _PathSource implements SyncSource {
   _PathSource(this.root);
   final String root;
+  @override
   Future<List<SyncSourceEntry>> scan() async {
     final out = <SyncSourceEntry>[];
     final dir = Directory(root);
@@ -35,7 +36,9 @@ class _PathSource implements SyncSource {
     }
     return out;
   }
+  @override
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry) async => File(entry.location).openRead();
+  @override
   Future<void> delete(SyncSourceEntry entry) async => FileSystemEntity.typeSync(entry.location) == FileSystemEntityType.directory
       ? Directory(entry.location).delete(recursive: true)
       : File(entry.location).delete();
@@ -44,6 +47,7 @@ class _SafSource implements SyncSource {
   _SafSource(this.root);
   final String root;
   final Saf _saf = Saf();
+  @override
   Future<List<SyncSourceEntry>> scan() async {
     final out = <SyncSourceEntry>[];
     await for (final e in _saf.walk(root)) {
@@ -53,7 +57,9 @@ class _SafSource implements SyncSource {
     }
     return out;
   }
+  @override
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry) => _saf.readFileStream(entry.location);
+  @override
   Future<void> delete(SyncSourceEntry entry) => _saf.delete(entry.location);
 }
 Future<SyncSourceInfo?> pickSyncSource() async {

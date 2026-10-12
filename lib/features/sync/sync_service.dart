@@ -133,7 +133,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     do {
       final page = await v.list(profile.pointId, dir, cursor: cursor, limit: 200, order: 'Asc');
       for (final n in page.items) {
-        final rel = relBase.isEmpty ? n.name : relBase + '/' + n.name;
+        final rel = relBase.isEmpty ? n.name : '$relBase/${n.name}';
         remote.add(SyncSourceEntry(
           relative: rel,
           size: n.bytes,
@@ -195,7 +195,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
       var prefix = '';
       var covered = false;
       for (var i = 0; i < parts.length - 1; i++) {
-        prefix = prefix.isEmpty ? parts[i] : prefix + '/' + parts[i];
+        prefix = prefix.isEmpty ? parts[i] : '$prefix/${parts[i]}';
         if (deleteRoots.contains(prefix)) {
           covered = true;
           break;
