@@ -232,7 +232,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 FilledButton(
                   onPressed: _busy ? null : _submit,
                   child: Padding(
