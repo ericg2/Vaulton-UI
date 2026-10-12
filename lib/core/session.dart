@@ -54,7 +54,8 @@ class SessionStore {
     userName = m['user'];
     wakeBrokerUrl = m['wakeBrokerUrl'];
     wakeToken = m['wakeToken'];
-    wakeServerUrl = m['wakeServerUrl'];
+    wakeServerUrl = m['wakeServerUrl'] ??
+        ((m['wakeToken']?.isNotEmpty ?? false) ? baseUrl : null);
     wakeBeforeMinutes = int.tryParse(m['wakeBeforeMinutes'] ?? '') ?? 5;
     final e = int.tryParse(m['exp'] ?? '');
     expiresAt = e == null ? null : DateTime.fromMillisecondsSinceEpoch(e);
