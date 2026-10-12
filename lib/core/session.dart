@@ -118,6 +118,16 @@ class SessionStore {
   Future<void> deleteSavedPassword(String url, String user) =>
       _st.delete(key: _credentialKey(url, user));
 
+  Future<void> clearTokensIf(String refresh) async {
+    if (refreshToken != refresh) return;
+    accessToken = null;
+    refreshToken = null;
+    expiresAt = null;
+    for (final k in ['access', 'refresh', 'exp', 'user']) {
+      await _st.delete(key: k);
+    }
+  }
+
   Future<void> clear() async {
     accessToken = null;
     refreshToken = null;
