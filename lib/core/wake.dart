@@ -83,6 +83,8 @@ class WakeService {
       }
     } catch (_) {}
 
+    if (!api.session.hasWakeConfigFor(api.session.baseUrl)) return false;
+
     try {
       await wake(api.session);
     } catch (_) {
