@@ -138,8 +138,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         return SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Need Help Signing In?', style: t.titleLarge)),
-            tip(Icons.dns, 'Server Address', 'Use the address your administrator gave you, e.g. 192.168.1.10 with port 5141. Servers you sign in to are saved for next time.'),
-            tip(Icons.bolt, 'Wake Support', 'If a server has a saved wake configuration, it is woken automatically before signing in.'),
+            tip(Icons.storage, 'Server Address', 'Use the address your administrator gave you, e.g. 192.168.1.10 with port 5141. Servers you sign in to are saved for next time.'),
+            tip(Icons.power_settings_new, 'Wake Support', 'If a server has a saved wake configuration, it is woken automatically before signing in.'),
             tip(Icons.wifi_off, 'Cannot Reach the Server', 'Check that you are on the right network (or VPN) and that the server is running.'),
             tip(Icons.key, 'Forgot Your Password', 'Ask an administrator to reset it. You will then sign in with a temporary password and choose a new one.'),
             const SizedBox(height: 8),
@@ -175,7 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                   for (final e in servers.entries)
                     ListTile(
                       selected: e.key == currentUrl,
-                      leading: Icon(e.key == currentUrl ? Icons.check_circle : Icons.dns),
+                      leading: Icon(e.key == currentUrl ? Icons.check_circle : Icons.storage),
                       title: Text(_hostFor(e.key)),
                       subtitle: Row(children: [
                         Flexible(child: Text(e.value.length == 1 ? e.value.first.user : '${e.value.length} Accounts', overflow: TextOverflow.ellipsis)),
@@ -283,7 +283,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(on ? Icons.bolt : Icons.power_off, size: 14, color: fg),
+        Icon(on ? Icons.power_settings_new : Icons.power_off, size: 14, color: fg),
         const SizedBox(width: 4),
         Text(on ? 'Wake Ready' : 'No Wake', style: t.labelSmall?.copyWith(color: fg)),
       ]),
@@ -304,7 +304,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           ListTile(
             onTap: () => setState(() => _editServer = !_editServer),
-            leading: const Icon(Icons.dns),
+            leading: const Icon(Icons.storage),
             title: Text(label ?? 'Add a Server', maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: label == null
                 ? null
@@ -434,7 +434,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                               ),
                               child: child,
                             ),
-                            child: Icon(Icons.lock_rounded, size: 22, color: cs.onPrimaryContainer),
+                            child: Icon(Icons.lock_outline_rounded, size: 22, color: cs.onPrimaryContainer),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
