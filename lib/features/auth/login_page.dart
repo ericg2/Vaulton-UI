@@ -156,7 +156,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         return SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Need Help Signing In?', style: t.titleLarge)),
-            tip(Icons.storage, 'Server Address', 'Use the address your administrator gave you, e.g. 192.168.1.10 with port 5141. Servers you sign in to are saved for next time.'),
+            tip(Icons.storage, 'Server Address', 'Use your server address, e.g. 192.168.1.10. Port 5141 is used by default; enter a port only if your server uses a custom one. Servers you sign in to are saved for next time.'),
             tip(Icons.power_settings_new, 'Wake Support', 'If a server has a saved wake configuration, it is woken automatically before signing in.'),
             tip(Icons.wifi_off, 'Cannot Reach the Server', 'Check that you are on the right network (or VPN) and that the server is running.'),
             tip(Icons.key, 'Forgot Your Password', 'Ask an administrator to reset it. You will then sign in with a temporary password and choose a new one.'),
@@ -421,7 +421,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.next,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(labelText: 'Port (Optional)', hintText: 'Default: 5141', isDense: true),
+                    decoration: const InputDecoration(labelText: 'Port', hintText: '5141', isDense: true),
                     validator: (v) {
                       final value = v?.trim() ?? '';
                       if (value.isEmpty) return null;
