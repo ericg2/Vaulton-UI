@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../../background/background_api.dart';
 
 class _UpdateProgress {
   const _UpdateProgress(this.message, {this.progress});
@@ -95,6 +96,99 @@ class UpdateService {
         ),
       );
       if (install != true || !context.mounted) return;
+
+      if (Platform.isAndroid) {
+        final progress = ValueNotifier<_UpdateProgress>(const _UpdateProgress('Preparing background download…'));
+        var dialogOpen = true;
+        Timer? poller;
+        unawaited(showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => ValueListenableBuilder<_UpdateProgress>(
+            valueListenable: progress,
+            builder: (context, value, _) => AlertDialog(
+              title: const Text('Downloading Vaulton'),
+              content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.downloading_outlined, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(value.message)),
+                ]),
+                const SizedBox(height: 18),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(value: value.progress, minHeight: 8),
+                ),
+                if (value.progress != null) ...[
+                  const SizedBox(height: 8),
+                  Align(alignment: Alignment.centerRight, child: Text('${(value.progress! * 100).round()}%')),
+                ],
+                const SizedBox(height: 8),
+                Text('You can leave Vaulton while the download continues. A notification will show its progress.',
+                  style: Theme.of(context).textTheme.bodySmall),
+              ]),
+            ),
+          ),
+        ));
+        try {
+          await startBackgroundUpdateDownload(
+            packageUrl: packageUrl,
+            checksumUrl: checksumUrl,
+            fileName: names.$1!,
+            version: latestVersion,
+          );
+          poller = Timer.periodic(const Duration(milliseconds: 600), (_) async {
+            if (!context.mounted) {
+              poller?.cancel();
+              progress.dispose();
+              return;
+            }
+            final state = await readBackgroundUpdateState();
+            final status = state['status'] as String? ?? 'idle';
+            final message = state['message'] as String? ?? 'Preparing download…';
+            final rawProgress = state['progress'];
+            final value = rawProgress is num ? rawProgress.toDouble() : null;
+            progress.value = _UpdateProgress(message, progress: value);
+            if (status == 'ready' || status == 'failed') {
+              poller?.cancel();
+              if (dialogOpen && context.mounted) {
+                Navigator.of(context, rootNavigator: true).pop();
+                dialogOpen = false;
+              }
+              progress.dispose();
+              if (status == 'failed') {
+                final error = state['error'] as String? ?? 'The background download failed.';
+                if (context.mounted) messenger.showSnackBar(SnackBar(
+                  content: Text('Update download failed: ${_friendlyError(FormatException(error))}'),
+                  duration: const Duration(seconds: 10),
+                  action: SnackBarAction(label: 'Retry', onPressed: () => checkAndInstall(context, currentVersion)),
+                ));
+                return;
+              }
+              final path = state['path'] as String?;
+              if (path == null || !await File(path).exists()) {
+                if (context.mounted) messenger.showSnackBar(const SnackBar(content: Text('The update finished, but its file could not be found. Please check for updates again.')));
+                return;
+              }
+              if (context.mounted) {
+                final result = await OpenFilex.open(path, type: 'application/vnd.android.package-archive');
+                if (result.type != ResultType.done && context.mounted) {
+                  messenger.showSnackBar(SnackBar(
+                    content: Text('Download complete, but Android could not open the installer: ${result.message}'),
+                    duration: const Duration(seconds: 10),
+                  ));
+                }
+              }
+            }
+          });
+        } catch (error) {
+          poller?.cancel();
+          if (dialogOpen && context.mounted) Navigator.of(context, rootNavigator: true).pop();
+          progress.dispose();
+          rethrow;
+        }
+        return;
+      }
 
       final progress = ValueNotifier<_UpdateProgress>(
         const _UpdateProgress('Preparing the update…'),
