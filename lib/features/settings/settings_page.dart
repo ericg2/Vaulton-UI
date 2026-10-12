@@ -10,7 +10,7 @@ import '../../platform/desktop_window.dart';
 import '../transfers/transfer_manager.dart';
 
 /// Keep in sync with `version:` in pubspec.yaml.
-const kAppVersion = '1.3.6';
+const kAppVersion = '1.3.7';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -30,7 +30,7 @@ class SettingsPage extends ConsumerWidget {
             child: ListTile(
               leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
               title: Text(u.displayName),
-              subtitle: Text('${u.userName} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${session.baseUrl}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${u.userName} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${session.baseUrl}', maxLines: 1, overflow: TextOverflow.ellipsis),
               trailing: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit Profile', onPressed: () async {
                 final f = await formDialog(context, 'Profile', [
                   FieldSpec('first', 'First Name', initial: u.firstName ?? ''),
