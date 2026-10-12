@@ -191,13 +191,13 @@ Future<bool> _runUpdateDownload(Map<String, dynamic>? input, SharedPreferences p
     await partial.rename(file.path);
     await prefs.setString(_updatePathKey, file.path);
     await prefs.setString(_updateStatusKey, 'ready');
-    await report('Download verified. Return to Vaulton to install.', percent: 100, ongoing: false);
+    await report('Download verified. Open Vaulton to install.', percent: 100, ongoing: false);
     return true;
   } catch (error) {
     await prefs.setString(_updateStatusKey, 'failed');
     await prefs.setString(_updateErrorKey, error.toString());
     await report('Update download failed. Open Vaulton to retry.', ongoing: false);
-    return false;
+    return true;
   }
 }
 
