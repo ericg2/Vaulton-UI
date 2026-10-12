@@ -136,7 +136,7 @@ class UpdateService {
           p.join(directory.path, names.$1!),
           onProgress: (received, total) => setProgress(
             'Downloading Vaulton $latestVersion…',
-            value: total > 0 ? (received / total).clamp(0.0, 1.0) : null,
+            value: total > 0 ? (received / total).clamp(0.0, 1.0).toDouble() : null,
           ),
           onStatus: (message) => setProgress(message),
         );
@@ -186,7 +186,7 @@ class UpdateService {
             p.join(directory.path, 'Vaulton-Linux-Install.sh'),
             onProgress: (received, total) => setProgress(
               'Downloading the Linux installer…',
-              value: total > 0 ? (received / total).clamp(0.0, 1.0) : null,
+              value: total > 0 ? (received / total).clamp(0.0, 1.0).toDouble() : null,
             ),
             onStatus: (message) => setProgress(message),
           );
