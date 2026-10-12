@@ -30,6 +30,7 @@ class SessionStore {
   String? userName;
   String? wakeBrokerUrl;
   String? wakeToken;
+  String? wakeServerUrl;
   int wakeBeforeMinutes = 5;
   DateTime? expiresAt;
 
@@ -53,6 +54,7 @@ class SessionStore {
     userName = m['user'];
     wakeBrokerUrl = m['wakeBrokerUrl'];
     wakeToken = m['wakeToken'];
+    wakeServerUrl = m['wakeServerUrl'];
     wakeBeforeMinutes = int.tryParse(m['wakeBeforeMinutes'] ?? '') ?? 5;
     final e = int.tryParse(m['exp'] ?? '');
     expiresAt = e == null ? null : DateTime.fromMillisecondsSinceEpoch(e);
@@ -68,21 +70,30 @@ class SessionStore {
     await _st.write(key: 'user', value: name);
   }
 
+  bool hasWakeConfigFor(String url) =>
+      wakeToken != null && wakeToken!.isNotEmpty &&
+      wakeBrokerUrl != null && wakeBrokerUrl!.isNotEmpty &&
+      wakeServerUrl != null && normalizeUrl(wakeServerUrl!) == normalizeUrl(url);
+
   Future<void> setWakeConfig({required String brokerUrl, required String token, required int wakeBeforeMinutes}) async {
     wakeBrokerUrl = normalizeUrl(brokerUrl);
+    wakeServerUrl = normalizeUrl(baseUrl);
     wakeToken = token;
     this.wakeBeforeMinutes = wakeBeforeMinutes;
     await _st.write(key: 'wakeBrokerUrl', value: wakeBrokerUrl);
     await _st.write(key: 'wakeToken', value: wakeToken);
+    await _st.write(key: 'wakeServerUrl', value: wakeServerUrl);
     await _st.write(key: 'wakeBeforeMinutes', value: '${this.wakeBeforeMinutes}');
   }
 
   Future<void> clearWakeConfig() async {
     wakeBrokerUrl = null;
     wakeToken = null;
+    wakeServerUrl = null;
     wakeBeforeMinutes = 5;
     await _st.delete(key: 'wakeBrokerUrl');
     await _st.delete(key: 'wakeToken');
+    await _st.delete(key: 'wakeServerUrl');
     await _st.delete(key: 'wakeBeforeMinutes');
   }
 
