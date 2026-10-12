@@ -330,7 +330,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     );
   }
 
-  Widget _serverCard(ColorScheme cs, TextTheme t, bool wakeConfigured, bool hasSaved) {
+  Widget _serverCard(ColorScheme cs, TextTheme t, bool wakeConfigured) {
     final label = _currentHost();
     final port = _currentPort();
     return Card(
@@ -440,7 +440,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     final note = ref.watch(authProvider.select((a) => a.message));
-    final hasSaved = ref.watch(accountsProvider).isNotEmpty;
     final wakeConfigured = ref.watch(sessionProvider).hasWakeConfigFor(_serverUrl());
     const gap = SizedBox(height: 12);
 
@@ -493,7 +492,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                               ? _banner(cs, Icons.info, cs.tertiaryContainer, cs.onTertiaryContainer, Text(note, style: TextStyle(color: cs.onTertiaryContainer)), margin: const EdgeInsets.only(bottom: 12))
                               : const SizedBox(width: double.infinity),
                         ),
-                        _serverCard(cs, t, wakeConfigured, hasSaved),
+                        _serverCard(cs, t, wakeConfigured),
                         AnimatedSize(
                           duration: const Duration(milliseconds: 250),
                           curve: Curves.easeOutCubic,
