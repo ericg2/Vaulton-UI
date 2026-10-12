@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -6,6 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+class _UpdateProgress {
+  const _UpdateProgress(this.message, {this.progress});
+
+  final String message;
+  final double? progress;
+}
 
 class UpdateService {
   static const _api = 'https://api.github.com/repos/ericg2/Vaulton-UI/releases/latest';
@@ -76,7 +84,10 @@ class UpdateService {
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Update Available'),
-          content: Text('Vaulton $latestVersion is available. You are using $currentVersion. Download and install the update?'),
+          content: Text(
+            'Vaulton $latestVersion is ready to install. Your current version is $currentVersion. '
+            'Continue to download and verify the update?',
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Later')),
             FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Update')),
@@ -85,74 +96,140 @@ class UpdateService {
       );
       if (install != true || !context.mounted) return;
 
-      messenger.showSnackBar(const SnackBar(content: Text('Downloading and verifying Vaulton update…')));
-      final directory = await getTemporaryDirectory();
-      final packageName = names.$1!;
-      final package = await _downloadVerified(packageUrl, checksumUrl, p.join(directory.path, packageName));
-      if (!context.mounted) return;
+      final progress = ValueNotifier<_UpdateProgress>(
+        const _UpdateProgress('Preparing the update…'),
+      );
+      var progressDialogOpen = true;
+      unawaited(showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => ValueListenableBuilder<_UpdateProgress>(
+          valueListenable: progress,
+          builder: (context, value, _) => AlertDialog(
+            title: const Text('Updating Vaulton'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value.message),
+                const SizedBox(height: 16),
+                LinearProgressIndicator(value: value.progress),
+                if (value.progress != null) ...[
+                  const SizedBox(height: 8),
+                  Text('${(value.progress! * 100).round()}%'),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ));
 
-      if (Platform.isAndroid) {
-        final result = await OpenFilex.open(
-          package.path,
-          type: 'application/vnd.android.package-archive',
-        );
-        if (result.type != ResultType.done && context.mounted) {
-          messenger.showSnackBar(SnackBar(
-            content: Text('Could not open the Android installer: ${result.message}'),
-            duration: const Duration(seconds: 8),
-          ));
-        }
-        return;
+      void setProgress(String message, {double? value}) {
+        progress.value = _UpdateProgress(message, progress: value);
       }
 
-      if (Platform.isWindows) {
-        final installDir = p.dirname(Platform.resolvedExecutable);
-        await Process.start(
-          package.path,
-          [
-            '/VERYSILENT',
-            '/SUPPRESSMSGBOXES',
-            '/NORESTART',
-            '/CLOSEAPPLICATIONS',
-            '/DIR="$installDir"',
-          ],
-          mode: ProcessStartMode.detached,
+      try {
+        final directory = await getTemporaryDirectory();
+        final package = await _downloadVerified(
+          packageUrl,
+          checksumUrl,
+          p.join(directory.path, names.$1!),
+          onProgress: (received, total) => setProgress(
+            'Downloading Vaulton $latestVersion…',
+            value: total > 0 ? (received / total).clamp(0.0, 1.0) : null,
+          ),
+          onStatus: (message) => setProgress(message),
         );
-        exit(0);
-      }
+        if (!context.mounted) return;
 
-      if (Platform.isLinux) {
-        final helper = await _downloadVerified(
-          installerUrl!,
-          installerChecksumUrl!,
-          p.join(directory.path, 'Vaulton-Linux-Install.sh'),
-        );
-        await Process.start(
-          'bash',
-          [
-            helper.path,
-            '--update',
-            '--pid',
-            '$pid',
-            '--archive',
+        if (Platform.isAndroid) {
+          setProgress('Download verified. Opening Android installer…', value: 1);
+          await Future<void>.delayed(const Duration(milliseconds: 350));
+          if (context.mounted && progressDialogOpen) {
+            Navigator.of(context, rootNavigator: true).pop();
+            progressDialogOpen = false;
+          }
+          final result = await OpenFilex.open(
             package.path,
-            '--target',
-            p.dirname(Platform.resolvedExecutable),
-          ],
-          mode: ProcessStartMode.detached,
-        );
-        exit(0);
+            type: 'application/vnd.android.package-archive',
+          );
+          if (result.type != ResultType.done && context.mounted) {
+            messenger.showSnackBar(SnackBar(
+              content: Text('Could not open the Android installer: ${result.message}'),
+              duration: const Duration(seconds: 8),
+            ));
+          }
+          return;
+        }
+
+        if (Platform.isWindows) {
+          setProgress('Starting the installer…', value: 1);
+          final installDir = p.dirname(Platform.resolvedExecutable);
+          await Process.start(
+            package.path,
+            [
+              '/VERYSILENT',
+              '/SUPPRESSMSGBOXES',
+              '/NORESTART',
+              '/CLOSEAPPLICATIONS',
+              '/DIR="$installDir"',
+            ],
+            mode: ProcessStartMode.detached,
+          );
+          exit(0);
+        }
+
+        if (Platform.isLinux) {
+          final helper = await _downloadVerified(
+            installerUrl!,
+            installerChecksumUrl!,
+            p.join(directory.path, 'Vaulton-Linux-Install.sh'),
+            onProgress: (received, total) => setProgress(
+              'Downloading the Linux installer…',
+              value: total > 0 ? (received / total).clamp(0.0, 1.0) : null,
+            ),
+            onStatus: (message) => setProgress(message),
+          );
+          setProgress('Starting the installer…', value: 1);
+          await Process.start(
+            'bash',
+            [
+              helper.path,
+              '--update',
+              '--pid',
+              '$pid',
+              '--archive',
+              package.path,
+              '--target',
+              p.dirname(Platform.resolvedExecutable),
+            ],
+            mode: ProcessStartMode.detached,
+          );
+          exit(0);
+        }
+      } finally {
+        if (progressDialogOpen && context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+        progress.dispose();
       }
     } catch (error) {
       if (quietErrors || !context.mounted) return;
       messenger.showSnackBar(SnackBar(
-        content: Text('Could not check or install updates: ${_friendlyError(error)}'),
+        content: Text('Update failed: ${_friendlyError(error)}'),
         duration: const Duration(seconds: 8),
       ));
     }
   }
 
-  static Future<File> _downloadVerified(String packageUrl, String checksumUrl, String outputPath) async {
+  static Future<File> _downloadVerified(
+    String packageUrl,
+    String checksumUrl,
+    String outputPath, {
+    void Function(int received, int total)? onProgress,
+    void Function(String message)? onStatus,
+  }) async {
+    onStatus?.call('Checking the downloaded file…');
     final checksumResponse = await _dio.get<String>(
       checksumUrl,
       options: Options(responseType: ResponseType.plain),
@@ -163,20 +240,36 @@ class UpdateService {
         ?.toLowerCase();
     if (expectedHash == null) throw const FormatException('The release checksum is invalid.');
 
+    final file = File(outputPath);
+    if (await file.exists()) {
+      onStatus?.call('Checking the saved download…');
+      final existingBytes = await file.readAsBytes();
+      if (existingBytes.isNotEmpty && sha256.convert(existingBytes).toString() == expectedHash) {
+        onStatus?.call('Using the verified download already on this device.');
+        return file;
+      }
+      await file.delete();
+    }
+
+    onStatus?.call('Downloading update…');
     final response = await _dio.get<List<int>>(
       packageUrl,
       options: Options(responseType: ResponseType.bytes),
+      onReceiveProgress: onProgress,
     );
     final bytes = response.data;
     if (bytes == null || bytes.isEmpty) throw const FormatException('The download was empty.');
+
+    onStatus?.call('Verifying the download…');
     final actualHash = sha256.convert(bytes).toString();
     if (actualHash != expectedHash) {
       throw const FormatException('The SHA-256 checksum did not match. The download was discarded.');
     }
 
-    final file = File(outputPath);
     await file.parent.create(recursive: true);
-    await file.writeAsBytes(bytes, flush: true);
+    final temporaryFile = File('$outputPath.part');
+    await temporaryFile.writeAsBytes(bytes, flush: true);
+    await temporaryFile.rename(outputPath);
     return file;
   }
 
