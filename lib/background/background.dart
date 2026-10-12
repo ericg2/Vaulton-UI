@@ -141,7 +141,7 @@ Future<bool> _runUpdateDownload(Map<String, dynamic>? input, SharedPreferences p
   final notifications = FlutterLocalNotificationsPlugin();
   const channel = AndroidNotificationChannel('vaulton_updates', 'Vaulton updates',
     description: 'Download and verification progress for Vaulton updates.', importance: Importance.low);
-  await notifications.initialize(const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  await notifications.initialize(settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
   final android = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   await android?.createNotificationChannel(channel);
   Future<void> report(String message, {int? percent, bool ongoing = true}) async {
