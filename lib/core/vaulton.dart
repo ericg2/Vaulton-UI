@@ -54,7 +54,7 @@ class Vaulton {
 
   Future<void> logoutAll() => _req('POST', '/auth/logout-all');
 
-  Future<Json> wakeConfig() async => toJson(await _req('GET', '/wake/config'));
+  Future<Json> wakeConfig({CancelToken? cancelToken}) async => toJson(await _req('GET', '/wake/config', cancelToken: cancelToken));
 
   Future<AuthTokens> changePassword(String current, String next) async {
     final d = await _req('POST', '/auth/change-password', body: {'currentPassword': current, 'newPassword': next});
@@ -62,7 +62,7 @@ class Vaulton {
   }
 
   // --------------------------------------------------------------- users
-  Future<UserAccount> me() async => UserAccount.fromJson(toJson(await _req('GET', '/users/me')));
+  Future<UserAccount> me({CancelToken? cancelToken}) async => UserAccount.fromJson(toJson(await _req('GET', '/users/me', cancelToken: cancelToken)));
   Future<List<({String name, String description})>> scopes() async {
     final d = await _req('GET', '/users/scopes') as List;
     return d.map((e) => (name: '${e['name']}', description: '${e['description']}')).toList();
