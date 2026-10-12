@@ -14,7 +14,7 @@ class WakeService {
   }) async {
     try {
       final data = await vaulton.wakeConfig(cancelToken: cancelToken);
-      cancelToken?.throwIfCancelled();
+      throwIfCancelled(cancelToken);
       if (_bool(data['enabled']) &&
           _str(data['brokerUrl']).isNotEmpty &&
           _str(data['wakeToken']).isNotEmpty) {
