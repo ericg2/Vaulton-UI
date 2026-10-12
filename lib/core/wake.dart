@@ -9,10 +9,12 @@ import 'vaulton.dart';
 class WakeService {
   static Future<void> refreshConfig(
     Vaulton vaulton,
-    SessionStore session,
-  ) async {
+    SessionStore session, {
+    CancelToken? cancelToken,
+  }) async {
     try {
-      final data = await vaulton.wakeConfig();
+      final data = await vaulton.wakeConfig(cancelToken: cancelToken);
+      cancelToken?.throwIfCancelled();
       if (_bool(data['enabled']) &&
           _str(data['brokerUrl']).isNotEmpty &&
           _str(data['wakeToken']).isNotEmpty) {
@@ -25,6 +27,7 @@ class WakeService {
         await session.clearWakeConfig();
       }
     } on ApiException catch (e) {
+      if (e.isCancelled || cancelToken?.isCancelled == true) rethrow;
       if (e.isForbidden) {
         await session.clearWakeConfig();
       } else if (e.status != null) {
