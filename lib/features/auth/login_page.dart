@@ -144,7 +144,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
       // Set the target URL before checking readiness so automatic wake targets the
       // address entered on this screen, not a previously saved server.
       await session.setBaseUrl(url);
-      if (!_temp && session.wakeToken?.isNotEmpty == true) {
+      if (!_temp && session.hasWakeConfigFor(url)) {
         setState(() => _busyLabel = 'Waking Up…');
         final ready = await WakeService.ensureReady(ApiClient(session));
         if (!ready) {
@@ -223,11 +223,38 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     final note = ref.watch(authProvider.select((a) => a.message));
     final t = Theme.of(context).textTheme;
     const gap = SizedBox(height: 12);
+    final wakeConfigured = ref.watch(sessionProvider).hasWakeConfigFor(_serverUrl());
     return Scaffold(
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                FilledButton(
+                  onPressed: _busy ? null : _submit,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _busy
+                          ? Row(key: const ValueKey('busy'), mainAxisSize: MainAxisSize.min, children: [const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Text(_busyLabel)])
+                          : Text(_temp ? 'Change Password and Sign In' : 'Sign In', key: ValueKey(_temp)),
+                    ),
+                  ),
+                ),
+                TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline), label: const Text('Need Help?')),
+              ]),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
@@ -260,11 +287,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
                     _stagger(1, Text('Vaulton', textAlign: TextAlign.center, style: t.headlineSmall)),
                     const SizedBox(height: 4),
                     _stagger(1, Text('Sign in to your server', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant))),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     _stagger(2, AnimatedSize(duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic, alignment: Alignment.topCenter, child: _recent(cs))),
                     AnimatedSize(
                       duration: const Duration(milliseconds: 250),
@@ -317,6 +344,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                             },
                           ),
                         ),
+                      ]),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(wakeConfigured ? Icons.power_settings_new : Icons.power_off_outlined, size: 16, color: wakeConfigured ? cs.primary : cs.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Flexible(child: Text(wakeConfigured ? 'Wake support saved for this server' : 'No saved wake configuration for this server', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant), textAlign: TextAlign.center)),
                       ]),
                     ),
                     gap,
@@ -432,23 +467,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                               ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _stagger(
-                      8,
-                      FilledButton(
-                        onPressed: _busy ? null : _submit,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: _busy
-                                ? Row(key: const ValueKey('busy'), mainAxisSize: MainAxisSize.min, children: [const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Text(_busyLabel)])
-                                : Text(_temp ? 'Change Password and Sign In' : 'Sign In', key: ValueKey(_temp)),
-                          ),
-                        ),
-                      ),
-                    ),
-                    _stagger(9, Center(child: TextButton.icon(onPressed: _help, icon: const Icon(Icons.help_outline), label: const Text('Need Help?')))),
+                    const SizedBox(height: 8),
                   ]),
                 ),
               ),
