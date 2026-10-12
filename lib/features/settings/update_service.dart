@@ -163,15 +163,14 @@ class UpdateService {
         }
 
         if (Platform.isWindows) {
-          setProgress('Starting the installer…', value: 1);
+          setProgress('Opening the Windows installer. Vaulton will close, then reopen when the update is complete.', value: 1);
+          await Future<void>.delayed(const Duration(milliseconds: 800));
           final installDir = p.dirname(Platform.resolvedExecutable);
           await Process.start(
             package.path,
             [
-              '/VERYSILENT',
-              '/SUPPRESSMSGBOXES',
-              '/NORESTART',
               '/CLOSEAPPLICATIONS',
+              '/RESTARTAPPLICATIONS',
               '/DIR="$installDir"',
             ],
             mode: ProcessStartMode.detached,
