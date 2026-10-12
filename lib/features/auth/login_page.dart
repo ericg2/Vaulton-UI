@@ -23,6 +23,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   final _new2 = TextEditingController();
   final _key = GlobalKey<FormState>();
   bool _busy = false, _temp = false, _show = false, _rememberPassword = false;
+  int _attemptGeneration = 0;
+  CancelToken? _attemptCancelToken;
   // The host/port fields stay tucked away once a server is chosen; tap the server card to edit.
   bool _editServer = true;
   String _busyLabel = 'Signing In…';
@@ -58,7 +60,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     final uri = Uri.tryParse(normalized);
     if (uri == null) return;
     _host.text = uri.host.isEmpty ? normalized : uri.host;
-    _port.text = uri.hasPort ? uri.port.toString() : '5141';
+    _port.text = uri.hasPort && uri.port != 5141 ? uri.port.toString() : '';
   }
 
   String _serverUrl() {
@@ -67,7 +69,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     if (host.isEmpty) return '';
     final current = SessionStore.normalizeUrl(ref.read(sessionProvider).baseUrl);
     final scheme = current.startsWith('https://') ? 'https' : 'http';
-    return port.isEmpty ? '$scheme://$host' : '$scheme://$host:$port';
+    return port.isEmpty ? '$scheme://$host:5141' : '$scheme://$host:$port';
   }
 
   String? _currentHost() {
@@ -77,7 +79,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   String? _currentPort() {
     final port = _port.text.trim();
-    return port.isEmpty ? null : port;
+    return port.isEmpty || port == '5141' ? null : port;
   }
 
   String _hostFor(String url) {
@@ -87,7 +89,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   String? _portFor(String url) {
     final u = Uri.tryParse(SessionStore.normalizeUrl(url));
-    return (u != null && u.hasPort) ? u.port.toString() : null;
+    return (u != null && u.hasPort && u.port != 5141) ? u.port.toString() : null;
   }
 
   Future<void> _loadSavedPassword(String url, String user) async {
@@ -101,7 +103,20 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     }
   }
 
+  void _cancelAttempt() {
+    _attemptGeneration++;
+    _attemptCancelToken?.cancel('Server or account changed');
+    _attemptCancelToken = null;
+    if (_busy && mounted) {
+      setState(() {
+        _busy = false;
+        _busyLabel = 'Signing In…';
+      });
+    }
+  }
+
   void _pick(SavedAccount a) {
+    _cancelAttempt();
     setState(() {
       _setServerUrl(a.url);
       _user.text = a.user;
@@ -114,9 +129,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   }
 
   void _addServer() {
+    _cancelAttempt();
     setState(() {
       _host.clear();
-      _port.text = '5141';
+      _port.clear();
       _user.clear();
       _pass.clear();
       _temp = false;
@@ -150,6 +166,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   }
 
   void _serversSheet() {
+    _cancelAttempt();
     final session = ref.read(sessionProvider);
     final accounts = ref.read(accountsProvider).toList();
     // One entry per distinct server, keeping the order accounts were last used in.
@@ -193,6 +210,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         onSelected: (action) async {
                           if (action == 'edit') {
                             Navigator.pop(ctx);
+                            _cancelAttempt();
                             setState(() {
                               _setServerUrl(e.key);
                               _editServer = true;
@@ -248,6 +266,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   // ---------------------------------------------------------------- submit
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (_host.text.trim().isEmpty && !_editServer) {
       // Reveal the (empty) server fields so the validator has something to point at.
       setState(() => _editServer = true);
@@ -255,6 +274,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
       return;
     }
     if (!_key.currentState!.validate()) return;
+    final generation = ++_attemptGeneration;
+    final cancelToken = CancelToken();
+    _attemptCancelToken = cancelToken;
     setState(() {
       _busy = true;
       _busyLabel = 'Signing In…';
@@ -272,9 +294,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
       // Set the target URL before checking readiness so automatic wake targets the
       // address entered on this screen, not a previously saved server.
       await session.setBaseUrl(url);
+      if (generation != _attemptGeneration || cancelToken.isCancelled) return;
       if (!_temp && session.hasWakeConfigFor(url)) {
         setState(() => _busyLabel = 'Waking Server…');
-        final ready = await WakeService.ensureReady(ApiClient(session));
+        final ready = await WakeService.ensureReady(ApiClient(session), cancelToken: cancelToken);
+        if (generation != _attemptGeneration || cancelToken.isCancelled) return;
         if (!ready) {
           if (mounted) {
             setState(() => _error = 'The server did not come online. Check your network and wake configuration, then try again.');
@@ -282,9 +306,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
           return;
         }
       }
+      if (generation != _attemptGeneration || cancelToken.isCancelled) return;
       if (mounted) setState(() => _busyLabel = 'Signing In…');
       // signIn() swaps this screen out on success, so only captured values are used afterwards.
-      await auth.signIn(url, username, _pass.text, newPassword: _temp ? _new.text : null);
+      await auth.signIn(url, username, _pass.text, newPassword: _temp ? _new.text : null, cancelToken: cancelToken);
+      if (generation != _attemptGeneration || cancelToken.isCancelled) return;
       TextInput.finishAutofillContext();
       if (remember) {
         await session.savePassword(url, username, password);
@@ -292,7 +318,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         await session.deleteSavedPassword(url, username);
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _attemptGeneration || cancelToken.isCancelled) return;
       final ex = ApiException.from(e);
       setState(() {
         final text = '${ex.title ?? ''} ${ex.message}'.toLowerCase();
@@ -308,7 +334,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         }
       });
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (generation == _attemptGeneration) {
+        _attemptCancelToken = null;
+        if (mounted) setState(() => _busy = false);
+      }
     }
   }
 
@@ -367,7 +396,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                 Expanded(
                   child: TextFormField(
                     controller: _host,
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) {
+                      _cancelAttempt();
+                      setState(() {});
+                    },
                     keyboardType: TextInputType.url,
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
@@ -380,11 +412,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                   width: 88,
                   child: TextFormField(
                     controller: _port,
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) {
+                      _cancelAttempt();
+                      setState(() {});
+                    },
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.next,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(labelText: 'Port', hintText: '5141', isDense: true),
+                    decoration: const InputDecoration(labelText: 'Port (Optional)', hintText: 'Default: 5141', isDense: true),
                     validator: (v) {
                       final value = v?.trim() ?? '';
                       if (value.isEmpty) return null;
