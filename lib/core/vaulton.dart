@@ -12,7 +12,7 @@ class Vaulton {
   Dio get _d => api.dio;
 
   Future<dynamic> _req(String method, String path,
-      {Map<String, dynamic>? q, Object? body, bool noAuth = false}) async {
+      {Map<String, dynamic>? q, Object? body, bool noAuth = false, CancelToken? cancelToken}) async {
     try {
       final query = <String, dynamic>{};
       q?.forEach((k, v) {
@@ -21,6 +21,7 @@ class Vaulton {
       final r = await _d.request(path,
           data: body,
           queryParameters: query,
+          cancelToken: cancelToken,
           options: Options(method: method, extra: {if (noAuth) 'noAuth': true}));
       return r.data;
     } catch (e) {
@@ -35,10 +36,11 @@ class Vaulton {
       {'cursor': cursor, 'limit': limit.clamp(1, 200), 'order': _ord(order), ...?more};
 
   // ---------------------------------------------------------------- auth
-  Future<AuthTokens> signIn(String user, String pass, {String? newPassword}) async {
+  Future<AuthTokens> signIn(String user, String pass, {String? newPassword, CancelToken? cancelToken}) async {
     final d = await _req('POST', '/auth/token',
         body: {'username': user, 'password': pass, if (newPassword != null && newPassword.isNotEmpty) 'newPassword': newPassword},
-        noAuth: true);
+        noAuth: true, cancelToken: cancelToken);
+    cancelToken?.throwIfCancelled();
     return AuthTokens.fromJson(toJson(d));
   }
 
