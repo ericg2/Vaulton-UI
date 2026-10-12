@@ -132,7 +132,7 @@ Future<bool> _runUpdateDownload(Map<String, dynamic>? input, SharedPreferences p
     if (expected == null) throw const FormatException('The release checksum is invalid.');
     final directory = await getTemporaryDirectory();
     final file = File(p.join(directory.path, fileName));
-    final partial = File('\${file.path}.part');
+    final partial = File('${file.path}.part');
     if (await partial.exists()) await partial.delete();
     await report('Downloading Vaulton $version…', percent: 0);
     var lastReported = DateTime.fromMillisecondsSinceEpoch(0);
