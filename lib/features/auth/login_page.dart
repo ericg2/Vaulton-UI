@@ -177,11 +177,52 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                       selected: e.key == currentUrl,
                       leading: Icon(e.key == currentUrl ? Icons.check_circle : Icons.storage),
                       title: Text(_hostFor(e.key)),
-                      subtitle: Row(children: [
-                        Flexible(child: Text(e.value.length == 1 ? e.value.first.user : '${e.value.length} Accounts', overflow: TextOverflow.ellipsis)),
-                        if (_portFor(e.key) != null) ...[const SizedBox(width: 10), Text('Port ${_portFor(e.key)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
-                      ]),
-                      trailing: _wakePill(session.hasWakeConfigFor(e.key), cs, t),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(e.value.length == 1 ? e.value.first.user : '${e.value.length} Accounts', overflow: TextOverflow.ellipsis),
+                          if (_portFor(e.key) != null) Text('Port ${_portFor(e.key)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                          if (session.hasWakeConfigFor(e.key)) ...[
+                            const SizedBox(height: 4),
+                            _wakePill(true, cs, t),
+                          ],
+                        ],
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        tooltip: 'Manage Server',
+                        onSelected: (action) async {
+                          if (action == 'edit') {
+                            Navigator.pop(ctx);
+                            setState(() {
+                              _setServerUrl(e.key);
+                              _editServer = true;
+                              _error = null;
+                            });
+                          } else if (action == 'remove') {
+                            final remove = await showDialog<bool>(
+                              context: ctx,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Remove Saved Server?'),
+                                content: Text('Remove ${_hostFor(e.key)} and its saved accounts from this device?'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+                                  FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Remove')),
+                                ],
+                              ),
+                            );
+                            if (remove == true) {
+                              for (final account in e.value) {
+                                await session.deleteSavedPassword(account.url, account.user);
+                                ref.read(accountsProvider.notifier).forget(account);
+                              }
+                            }
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit), title: Text('Edit Server'), dense: true, contentPadding: EdgeInsets.zero)),
+                          PopupMenuItem(value: 'remove', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Remove Saved Server'), dense: true, contentPadding: EdgeInsets.zero)),
+                        ],
+                      ),
                       onTap: () {
                         Navigator.pop(ctx);
                         _pick(e.value.first);
@@ -302,7 +343,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
         alignment: Alignment.topCenter,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           ListTile(
-            onTap: () => setState(() => _editServer = !_editServer),
             leading: const Icon(Icons.storage),
             title: Text(label ?? 'Add a Server', maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: label == null
@@ -314,19 +354,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                       if (port != null) ...[const SizedBox(width: 10), Text('Port $port', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
                     ]),
                   ),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (hasSaved)
-                IconButton(
-                  tooltip: 'Manage Saved Servers',
-                  icon: const Icon(Icons.storage),
-                  onPressed: _serversSheet,
-                ),
-              IconButton(
-                tooltip: _editServer ? 'Done Editing Server' : 'Edit Server',
-                icon: Icon(_editServer ? Icons.expand_less : Icons.edit),
-                onPressed: () => setState(() => _editServer = !_editServer),
-              ),
-            ]),
+            trailing: IconButton(
+              tooltip: 'Manage Servers',
+              icon: const Icon(Icons.edit),
+              onPressed: _serversSheet,
+            ),
           ),
           if (_editServer)
             Padding(
