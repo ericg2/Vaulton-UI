@@ -72,9 +72,10 @@ void backgroundDispatcher() {
         case _kSync:
           final profiles = SyncProfile.loadAll(prefs);
           final profileId = input?['profileId'] as String?;
-          final selected = profileId == null
-              ? profiles
-              : profiles.where((profile) => profile.id == profileId).toList();
+          // Old installations may still have an unscoped periodic job queued.
+          // Never let a legacy worker fan out and start every profile concurrently.
+          if (profileId == null) return true;
+          final selected = profiles.where((profile) => profile.id == profileId).toList();
           for (final profile in selected) {
             await runScheduledSync(api, prefs, profile);
           }
