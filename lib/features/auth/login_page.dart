@@ -239,8 +239,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           }
                         },
                         itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit), title: Text('Edit Server'), dense: true, contentPadding: EdgeInsets.zero)),
-                          PopupMenuItem(value: 'remove', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Remove Saved Server'), dense: true, contentPadding: EdgeInsets.zero)),
+                          PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true, contentPadding: EdgeInsets.zero)),
+                          PopupMenuItem(value: 'remove', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Remove'), dense: true, contentPadding: EdgeInsets.zero)),
                         ],
                       ),
                       onTap: () {
@@ -250,7 +250,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                     ),
                   ListTile(
                     leading: const Icon(Icons.add),
-                    title: const Text('Add Another Server'),
+                    title: const Text('Add Server'),
                     onTap: () {
                       Navigator.pop(ctx);
                       _addServer();
@@ -610,7 +610,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           controlAffinity: ListTileControlAffinity.leading,
                           value: _rememberPassword,
                           onChanged: (v) => setState(() => _rememberPassword = v ?? false),
-                          title: const Text('Remember Password on This Device'),
+                          title: const Text('Remember Password'),
                         ),
                         AnimatedSize(
                           duration: const Duration(milliseconds: 250),
