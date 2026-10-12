@@ -28,6 +28,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   CancelToken? _attemptCancelToken;
   // Server details stay tucked away after a server is selected.
   bool _editServer = true;
+  bool _addingServer = false;
+  String? _previousHost;
+  String? _previousPort;
+  String? _previousUser;
+  String? _previousPassword;
+  bool _previousEditServer = false;
   String _busyLabel = 'Signing In…';
   String? _pwTitle;
   String? _error;
@@ -120,6 +126,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   void _pick(SavedAccount a) {
     _cancelAttempt();
     setState(() {
+      _addingServer = false;
       _setServerUrl(a.url);
       _user.text = a.user;
       _pass.clear();
@@ -133,6 +140,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   void _addServer() {
     _cancelAttempt();
     setState(() {
+      _previousHost = _host.text;
+      _previousPort = _port.text;
+      _previousUser = _user.text;
+      _previousPassword = _pass.text;
+      _previousEditServer = _editServer;
+      _addingServer = true;
       _host.clear();
       _port.clear();
       _user.clear();
@@ -141,6 +154,22 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
       _error = null;
       _rememberPassword = false;
       _editServer = true;
+    });
+  }
+
+  void _restorePreviousServer() {
+    if (!_addingServer || !mounted) return;
+    _cancelAttempt();
+    setState(() {
+      _host.text = _previousHost ?? '';
+      _port.text = _previousPort ?? '';
+      _user.text = _previousUser ?? '';
+      _pass.text = _previousPassword ?? '';
+      _editServer = _previousEditServer;
+      _addingServer = false;
+      _temp = false;
+      _error = null;
+      _rememberPassword = false;
     });
   }
 
@@ -499,7 +528,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     final wakeConfigured = ref.watch(sessionProvider).hasWakeConfigFor(_serverUrl());
     const gap = SizedBox(height: 12);
 
-    return Scaffold(
+    return PopScope<void>(
+      canPop: !_addingServer,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _addingServer) _restorePreviousServer();
+      },
+      child: Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, box) => SingleChildScrollView(
@@ -660,6 +694,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
             ),
           ),
         ),
+      ),
       ),
     );
   }
