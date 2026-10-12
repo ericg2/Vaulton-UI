@@ -143,8 +143,8 @@ class UpdateService {
         if (!context.mounted) return;
 
         if (Platform.isAndroid) {
-          setProgress('Download verified. Opening Android installer…', value: 1);
-          await Future<void>.delayed(const Duration(milliseconds: 350));
+          setProgress('Download verified. Android will now ask you to confirm the installation.', value: 1);
+          await Future<void>.delayed(const Duration(milliseconds: 800));
           if (context.mounted && progressDialogOpen) {
             Navigator.of(context, rootNavigator: true).pop();
             progressDialogOpen = false;
