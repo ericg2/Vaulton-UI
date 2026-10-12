@@ -33,7 +33,7 @@ class WakeService {
     }
   }
 
-  static Future<void> wake(SessionStore session) async {
+  static Future<void> wake(SessionStore session, {CancelToken? cancelToken}) async {
     final rawUrl = session.wakeBrokerUrl;
     final token = session.wakeToken;
     final uri = rawUrl == null ? null : Uri.tryParse(rawUrl);
@@ -57,6 +57,7 @@ class WakeService {
 
       await dio.post(
         '/wake',
+        cancelToken: cancelToken,
         options: Options(
           headers: {'X-Wake-Token': token},
         ),
@@ -66,7 +67,7 @@ class WakeService {
     }
   }
 
-  static Future<bool> ensureReady(ApiClient api) async {
+  static Future<bool> ensureReady(ApiClient api, {CancelToken? cancelToken}) async {
     final ready = Dio(
       BaseOptions(
         baseUrl: api.session.baseUrl,
@@ -76,32 +77,40 @@ class WakeService {
     );
 
     try {
-      final response = await ready.get('/health/ready');
+      final response = await ready.get('/health/ready', cancelToken: cancelToken);
       final status = response.statusCode ?? 500;
       if (status >= 200 && status < 300) {
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+      if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
+    }
 
+    if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
     if (!api.session.hasWakeConfigFor(api.session.baseUrl)) return false;
 
     try {
-      await wake(api.session);
+      await wake(api.session, cancelToken: cancelToken);
     } catch (_) {
+      if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
       return false;
     }
 
     final deadline = DateTime.now().add(const Duration(minutes: 2));
     while (DateTime.now().isBefore(deadline)) {
+      if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
       await Future<void>.delayed(const Duration(seconds: 2));
+      if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
 
       try {
-        final response = await ready.get('/health/ready');
+        final response = await ready.get('/health/ready', cancelToken: cancelToken);
         final status = response.statusCode ?? 500;
         if (status >= 200 && status < 300) {
           return true;
         }
-      } catch (_) {}
+      } catch (_) {
+        if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
+      }
     }
 
     return false;
