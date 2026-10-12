@@ -140,6 +140,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   Timer? _poll;
   Timer? _desktopSchedule;
   CancelToken? _cancel;
+  final Set<String> _activeSyncIds = {};
 
   @override
   void initState() {
@@ -368,7 +369,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   wifiOnly: wifiOnly,
                   chargingOnly: chargingOnly,
                   lastRun: existing?.lastRun ?? 0,
-                  nextRun: existing?.nextRun ?? (DateTime.now().millisecondsSinceEpoch + interval * 60000),
+                  nextRun: existing == null || existing.intervalMinutes != interval
+                      ? DateTime.now().millisecondsSinceEpoch + interval * 60000
+                      : existing.nextRun,
                 ));
               },
               child: const Text('Save'),
@@ -591,7 +594,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   String _pointName(String id) => _points.where((p) => p.id == id).firstOrNull?.name ?? 'Data Folder';
 
   Future<void> _run(SyncProfile p) async {
-    await _preview(p);
+    if (!_activeSyncIds.add(p.id)) return;
+    if (mounted) setState(() {});
+    try {
+      await _preview(p);
+    } finally {
+      _activeSyncIds.remove(p.id);
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _reviewSourceCleanup(SyncProfile p) async {
@@ -860,7 +870,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           const SizedBox(height: 8),
           Row(children: [
             FilledButton.tonalIcon(
-              onPressed: running ? null : () => _run(p),
+              onPressed: running || _activeSyncIds.contains(p.id) ? null : () => _run(p),
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
