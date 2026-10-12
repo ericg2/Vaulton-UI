@@ -45,6 +45,11 @@ String _humanBytes(int bytes) {
   return '${value.toStringAsFixed(digits)} ${units[unit]}';
 }
 
+/// Throws the app's standard cancellation error when a request was cancelled.
+void throwIfCancelled(CancelToken? cancelToken) {
+  if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
+}
+
 class ApiException implements Exception {
   ApiException(this.message, {this.status, this.title});
   final String message;
