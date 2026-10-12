@@ -19,6 +19,40 @@ import '../features/transfers/transfer_models.dart';
 
 const _kSync = 'vaulton.sync.periodic';
 const _kDrain = 'vaulton.drain';
+const _kUpdateDownload = 'vaulton.update.download';
+const _updateStatusKey = 'vaulton.update.status';
+const _updatePathKey = 'vaulton.update.path';
+const _updateMessageKey = 'vaulton.update.message';
+const _updateProgressKey = 'vaulton.update.progress';
+const _updateVersionKey = 'vaulton.update.version';
+const _updateErrorKey = 'vaulton.update.error';
+
+Future<void> startBackgroundUpdateDownload({required String packageUrl, required String checksumUrl, required String fileName, required String version}) async {
+  if (!backgroundSupported) throw StateError('Background updates are only supported on Android.');
+  final notifications = FlutterLocalNotificationsPlugin();
+  await notifications.initialize(const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  await notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_updateStatusKey, 'downloading');
+  await prefs.setString(_updateMessageKey, 'Starting download…');
+  await prefs.setDouble(_updateProgressKey, 0);
+  await prefs.remove(_updateErrorKey);
+  await prefs.setString(_updateVersionKey, version);
+  await Workmanager().registerOneOffTask('vaulton-update-download', _kUpdateDownload,
+    inputData: {'url': packageUrl, 'checksum': checksumUrl, 'fileName': fileName, 'version': version},
+    existingWorkPolicy: ExistingWorkPolicy.replace,
+    constraints: Constraints(networkType: NetworkType.connected),
+    outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest);
+}
+
+Future<Map<String, Object?>> readBackgroundUpdateState() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.reload();
+  return {'status': prefs.getString(_updateStatusKey) ?? 'idle', 'path': prefs.getString(_updatePathKey),
+    'message': prefs.getString(_updateMessageKey) ?? 'Preparing download…',
+    'progress': prefs.getDouble(_updateProgressKey), 'version': prefs.getString(_updateVersionKey),
+    'error': prefs.getString(_updateErrorKey)};
+}
 bool get backgroundSupported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 @pragma('vm:entry-point')
@@ -28,6 +62,7 @@ void backgroundDispatcher() {
       WidgetsFlutterBinding.ensureInitialized();
       final prefs = await SharedPreferences.getInstance();
       await prefs.reload();
+      if (task == _kUpdateDownload) return await _runUpdateDownload(input, prefs);
       final session = SessionStore();
       await session.load();
       if (!session.isSignedIn) return true;
