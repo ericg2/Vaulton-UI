@@ -200,7 +200,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(e.value.length == 1 ? e.value.first.user : '${e.value.length} Accounts', overflow: TextOverflow.ellipsis),
-                          if (_portFor(e.key) != null) Text('Port ${_portFor(e.key)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                          if (_portFor(e.key) != null) ...[
+                            const SizedBox(height: 4),
+                            _portPill(_portFor(e.key)!, cs, t),
+                          ],
                           if (session.hasWakeConfigFor(e.key)) ...[
                             const SizedBox(height: 4),
                             _wakePill(true, cs, t),
@@ -361,6 +364,22 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     );
   }
 
+  Widget _portPill(String port, ColorScheme cs, TextTheme t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.settings_ethernet, size: 14, color: cs.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Text('Port $port', style: t.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+      ]),
+    );
+  }
+
   Widget _serverCard(ColorScheme cs, TextTheme t, bool wakeConfigured) {
     final label = _currentHost();
     final port = _currentPort();
@@ -382,7 +401,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                     padding: const EdgeInsets.only(top: 4),
                     child: Row(children: [
                       _wakePill(wakeConfigured, cs, t),
-                      if (port != null) ...[const SizedBox(width: 10), Text('Port $port', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))],
+                      if (port != null) ...[const SizedBox(width: 8), _portPill(port, cs, t)],
                     ]),
                   ),
             trailing: IconButton(
