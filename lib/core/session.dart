@@ -46,6 +46,13 @@ class SessionStore {
     return s;
   }
 
+  static String normalizeServerUrl(String url) {
+    final normalized = normalizeUrl(url);
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || uri.host.isEmpty || uri.hasPort) return normalized;
+    return uri.replace(port: 5141).toString();
+  }
+
   Future<void> load() async {
     final m = await _st.readAll();
     baseUrl = m['baseUrl'] ?? baseUrl;
@@ -74,7 +81,7 @@ class SessionStore {
   bool hasWakeConfigFor(String url) =>
       wakeToken != null && wakeToken!.isNotEmpty &&
       wakeBrokerUrl != null && wakeBrokerUrl!.isNotEmpty &&
-      wakeServerUrl != null && normalizeUrl(wakeServerUrl!) == normalizeUrl(url);
+      wakeServerUrl != null && normalizeServerUrl(wakeServerUrl!) == normalizeServerUrl(url);
 
   Future<void> setWakeConfig({required String brokerUrl, required String token, required int wakeBeforeMinutes}) async {
     wakeBrokerUrl = normalizeUrl(brokerUrl);
