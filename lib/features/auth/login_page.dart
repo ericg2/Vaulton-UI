@@ -188,7 +188,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Saved Servers', style: t.titleLarge)),
+              Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 8), child: Text('Servers', style: t.titleLarge)),
               Flexible(
                 child: ListView(shrinkWrap: true, children: [
                   for (final e in servers.entries)
@@ -222,7 +222,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             final remove = await showDialog<bool>(
                               context: ctx,
                               builder: (dialogContext) => AlertDialog(
-                                title: const Text('Remove Saved Server?'),
+                                title: const Text('Remove Server?'),
                                 content: Text('Remove ${_hostFor(e.key)} and its saved accounts from this device?'),
                                 actions: [
                                   TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
