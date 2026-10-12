@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
@@ -33,6 +34,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   @override
   void dispose() {
+    _attemptCancelToken?.cancel('Login screen closed');
     _breath.dispose();
     _passFocus.dispose();
     for (final c in [_host, _port, _user, _pass, _new, _new2]) {
