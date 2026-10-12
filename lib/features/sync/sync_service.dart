@@ -306,12 +306,14 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
       size: src.size,
       overwrite: true,
       onProgress: (sent, _) {
-        status.bytesDone = base + sent;
+        // Retries can report a lower intermediate count; keep progress monotonic.
+        final reported = base + sent;
+        if (reported > status.bytesDone) status.bytesDone = reported;
         onProgress?.call(status);
       },
       cancel: cancel,
     );
-    status.bytesDone = base + src.size;
+    status.bytesDone = status.bytesDone > base + src.size ? status.bytesDone : base + src.size;
     status.completed++;
     await status.save(prefs, profile.id);
     onProgress?.call(status);
@@ -356,6 +358,13 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
   if (!profile.enabled) return;
   final now = DateTime.now().millisecondsSinceEpoch;
   if (profile.nextRun > 0 && now < profile.nextRun) return;
+
+  // A previous worker may have been killed. Ignore a live run, but recover stale markers.
+  final previous = SyncRunStatus.load(prefs, profile.id);
+  if (previous.running && previous.startedAt > 0 &&
+      now - previous.startedAt < const Duration(hours: 3).inMilliseconds) {
+    return;
+  }
 
   try {
     final ready = await WakeService.ensureReady(api);
