@@ -1,4 +1,10 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -93,6 +99,71 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
   final more = tasks.any((t) => t.state == TState.queued);
   await prefs.setInt(kBgHeartbeat, 0);
   return more;
+}
+
+
+Future<bool> _runUpdateDownload(Map<String, dynamic>? input, SharedPreferences prefs) async {
+  final notifications = FlutterLocalNotificationsPlugin();
+  const channel = AndroidNotificationChannel('vaulton_updates', 'Vaulton updates',
+    description: 'Download and verification progress for Vaulton updates.', importance: Importance.low);
+  await notifications.initialize(const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  final android = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await android?.createNotificationChannel(channel);
+  Future<void> report(String message, {int? percent, bool ongoing = true}) async {
+    await prefs.setString(_updateMessageKey, message);
+    if (percent != null) await prefs.setDouble(_updateProgressKey, percent / 100);
+    await notifications.show(7301, 'Vaulton update', percent == null ? message : '$message ($percent%)',
+      NotificationDetails(android: AndroidNotificationDetails(channel.id, channel.name,
+        channelDescription: channel.description, importance: Importance.low, priority: Priority.low,
+        onlyAlertOnce: true, ongoing: ongoing, showProgress: true, maxProgress: 100,
+        progress: percent ?? 0, indeterminate: percent == null)));
+  }
+  try {
+    final url = input?['url'] as String?;
+    final checksumUrl = input?['checksum'] as String?;
+    final fileName = input?['fileName'] as String?;
+    final version = input?['version'] as String? ?? '';
+    if (url == null || checksumUrl == null || fileName == null) throw const FormatException('The update download request was incomplete.');
+    final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 20), receiveTimeout: const Duration(minutes: 8),
+      headers: const {'Accept': 'application/vnd.github+json', 'User-Agent': 'Vaulton'}));
+    await report('Checking release checksum…');
+    final checksumResponse = await dio.get<String>(checksumUrl, options: Options(responseType: ResponseType.plain));
+    final expected = RegExp(r'^[0-9a-fA-F]{64}').firstMatch(checksumResponse.data?.trim() ?? '')?.group(0)?.toLowerCase();
+    if (expected == null) throw const FormatException('The release checksum is invalid.');
+    final directory = await getTemporaryDirectory();
+    final file = File(p.join(directory.path, fileName));
+    final partial = File('\${file.path}.part');
+    if (await partial.exists()) await partial.delete();
+    await report('Downloading Vaulton $version…', percent: 0);
+    var lastReported = DateTime.fromMillisecondsSinceEpoch(0);
+    final response = await dio.download(url, partial.path, deleteOnError: true, onReceiveProgress: (received, total) {
+      if (total <= 0) return;
+      final now = DateTime.now();
+      if (now.difference(lastReported) < const Duration(milliseconds: 350) && received < total) return;
+      lastReported = now;
+      final percent = (received * 100 / total).floor().clamp(0, 100);
+      unawaited(report('Downloading Vaulton $version…', percent: percent));
+    });
+    if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) throw const FormatException('The update download did not complete successfully.');
+    final bytes = await partial.readAsBytes();
+    if (bytes.isEmpty) throw const FormatException('The download was empty.');
+    await report('Verifying update…');
+    if (sha256.convert(bytes).toString() != expected) {
+      await partial.delete();
+      throw const FormatException('The SHA-256 checksum did not match. The download was discarded.');
+    }
+    if (await file.exists()) await file.delete();
+    await partial.rename(file.path);
+    await prefs.setString(_updatePathKey, file.path);
+    await prefs.setString(_updateStatusKey, 'ready');
+    await report('Download verified. Return to Vaulton to install.', percent: 100, ongoing: false);
+    return true;
+  } catch (error) {
+    await prefs.setString(_updateStatusKey, 'failed');
+    await prefs.setString(_updateErrorKey, error.toString());
+    await report('Update download failed. Open Vaulton to retry.', ongoing: false);
+    return false;
+  }
 }
 
 Future<void> initBackground() async {
