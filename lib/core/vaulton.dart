@@ -40,7 +40,7 @@ class Vaulton {
     final d = await _req('POST', '/auth/token',
         body: {'username': user, 'password': pass, if (newPassword != null && newPassword.isNotEmpty) 'newPassword': newPassword},
         noAuth: true, cancelToken: cancelToken);
-    cancelToken?.throwIfCancelled();
+    throwIfCancelled(cancelToken);
     return AuthTokens.fromJson(toJson(d));
   }
 
