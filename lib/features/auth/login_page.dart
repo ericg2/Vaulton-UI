@@ -13,7 +13,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateMixin {
-  late final AnimationController _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
   late final AnimationController _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
   final _passFocus = FocusNode();
   late final _host = TextEditingController();
@@ -29,7 +28,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
 
   @override
   void dispose() {
-    _in.dispose();
     _breath.dispose();
     _passFocus.dispose();
     for (final c in [_host, _port, _user, _pass, _new, _new2]) {
@@ -38,16 +36,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
     super.dispose();
   }
 
-  /// Staggered fade + slide-up used for every block of the form.
-  Widget _stagger(int i, Widget child) {
-    final start = (i * 0.09).clamp(0.0, 0.7).toDouble();
-    final end = (start + 0.4).clamp(0.0, 1.0).toDouble();
-    final a = _in.drive(CurveTween(curve: Interval(start, end, curve: Curves.easeOutCubic)));
-    return FadeTransition(
-      opacity: a,
-      child: SlideTransition(position: a.drive(Tween(begin: const Offset(0, 0.12), end: Offset.zero)), child: child),
-    );
-  }
+  // Keep form content visible immediately, including after cancelling session restore.
+  Widget _stagger(int i, Widget child) => child;
 
   void _setServerUrl(String url) {
     final normalized = SessionStore.normalizeUrl(url);
