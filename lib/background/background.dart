@@ -18,6 +18,7 @@ import '../features/transfers/transfer_manager.dart';
 import '../features/transfers/transfer_models.dart';
 
 const _kSync = 'vaulton.sync.periodic';
+const _kScheduledSyncIds = 'vaulton.sync.scheduled_ids';
 const _kDrain = 'vaulton.drain';
 const _kUpdateDownload = 'vaulton.update.download';
 const _updateStatusKey = 'vaulton.update.status';
@@ -69,8 +70,13 @@ void backgroundDispatcher() {
       final api = ApiClient(session);
       switch (task) {
         case _kSync:
-          for (final p in SyncProfile.loadAll(prefs)) {
-            await runScheduledSync(api, prefs, p);
+          final profiles = SyncProfile.loadAll(prefs);
+          final profileId = input?['profileId'] as String?;
+          final selected = profileId == null
+              ? profiles
+              : profiles.where((profile) => profile.id == profileId).toList();
+          for (final profile in selected) {
+            await runScheduledSync(api, prefs, profile);
           }
           return true;
         case _kDrain:
@@ -207,35 +213,88 @@ Future<void> initBackground() async {
 
 Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
   if (!backgroundSupported) return;
-  for (final p in profiles) {
-    final unique = 'vaulton-sync-${p.id}';
-    if (!p.enabled) {
+  final prefs = await SharedPreferences.getInstance();
+  final currentIds = profiles.map((profile) => profile.id).toSet();
+  final previousIds = prefs.getStringList(_kScheduledSyncIds) ?? const <String>[];
+  for (final id in previousIds.where((id) => !currentIds.contains(id))) {
+    await Workmanager().cancelByUniqueName('vaulton-sync-$id');
+    await Workmanager().cancelByUniqueName('vaulton-sync-now-$id');
+  }
+  await prefs.setStringList(_kScheduledSyncIds, currentIds.toList());
+
+  final notifications = FlutterLocalNotificationsPlugin();
+  await notifications.initialize(
+    settings: const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ),
+  );
+  await notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+
+  for (final profile in profiles) {
+    final unique = 'vaulton-sync-${profile.id}';
+    if (!profile.enabled) {
       await Workmanager().cancelByUniqueName(unique);
+      await Workmanager().cancelByUniqueName('vaulton-sync-now-${profile.id}');
       continue;
     }
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final delayMs = profile.nextRun > now ? profile.nextRun - now : 0;
+    final minutes = profile.intervalMinutes < 15
+        ? 15
+        : profile.intervalMinutes > 1440 ? 1440 : profile.intervalMinutes;
     await Workmanager().registerPeriodicTask(
       unique,
       _kSync,
-      frequency: const Duration(minutes: 15),
+      frequency: Duration(minutes: minutes),
+      initialDelay: Duration(milliseconds: delayMs),
+      inputData: {'profileId': profile.id},
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       constraints: Constraints(
-        networkType: p.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
-        requiresCharging: p.chargingOnly,
+        networkType: profile.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+        requiresCharging: profile.chargingOnly,
         requiresBatteryNotLow: true,
+      ),
+      foregroundServiceConfig: ForegroundServiceConfig(
+        notificationTitle: 'Vaulton folder sync',
+        notificationText: 'A scheduled folder sync is running.',
+        notificationChannelId: 'vaulton_sync',
+        notificationChannelName: 'Folder sync',
+        notificationId: 7302 + (profile.id.hashCode & 0x3fffffff),
+        foregroundServiceType: ForegroundServiceType.dataSync,
       ),
     );
   }
 }
 
-Future<void> triggerSyncNow() async {
+Future<void> triggerSyncNow({String? profileId}) async {
   if (!backgroundSupported) return;
-  await Workmanager().registerOneOffTask(
-    'vaulton-sync-now',
-    _kSync,
-    existingWorkPolicy: ExistingWorkPolicy.replace,
-    constraints: Constraints(networkType: NetworkType.connected),
-    outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
-  );
+  final prefs = await SharedPreferences.getInstance();
+  final profiles = SyncProfile.loadAll(prefs);
+  final selected = profiles.where((profile) =>
+      profile.enabled && (profileId == null || profile.id == profileId));
+  for (final profile in selected) {
+    await Workmanager().registerOneOffTask(
+      'vaulton-sync-now-${profile.id}',
+      _kSync,
+      inputData: {'profileId': profile.id},
+      existingWorkPolicy: ExistingWorkPolicy.keep,
+      constraints: Constraints(
+        networkType: profile.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+        requiresCharging: profile.chargingOnly,
+        requiresBatteryNotLow: true,
+      ),
+      outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
+      foregroundServiceConfig: ForegroundServiceConfig(
+        notificationTitle: 'Vaulton folder sync',
+        notificationText: 'A folder sync is running.',
+        notificationChannelId: 'vaulton_sync',
+        notificationChannelName: 'Folder sync',
+        notificationId: 7302 + (profile.id.hashCode & 0x3fffffff),
+        foregroundServiceType: ForegroundServiceType.dataSync,
+      ),
+    );
+  }
 }
 
 Future<void> scheduleDrain() async {
