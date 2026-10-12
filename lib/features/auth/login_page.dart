@@ -316,6 +316,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                         Expanded(
                           child: TextFormField(
                             controller: _host,
+                            onChanged: (_) => setState(() {}),
                             keyboardType: TextInputType.url,
                             textInputAction: TextInputAction.next,
                             autocorrect: false,
@@ -332,6 +333,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with TickerProviderStateM
                           width: 104,
                           child: TextFormField(
                             controller: _port,
+                            onChanged: (_) => setState(() {}),
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.next,
                             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
