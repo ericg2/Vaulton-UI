@@ -145,18 +145,18 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> signIn(String url, String user, String pass, {String? newPassword, CancelToken? cancelToken}) async {
     await _s.setBaseUrl(url);
-    cancelToken?.throwIfCancelled();
+    throwIfCancelled(cancelToken);
     final t = await _v.signIn(user, pass, newPassword: newPassword, cancelToken: cancelToken);
     try {
-      cancelToken?.throwIfCancelled();
+      throwIfCancelled(cancelToken);
       await _s.setTokens(t);
-      cancelToken?.throwIfCancelled();
+      throwIfCancelled(cancelToken);
       await _s.setUser(user);
-      cancelToken?.throwIfCancelled();
+      throwIfCancelled(cancelToken);
       final u = await _v.me(cancelToken: cancelToken);
-      cancelToken?.throwIfCancelled();
+      throwIfCancelled(cancelToken);
       await WakeService.refreshConfig(_v, _s, cancelToken: cancelToken);
-      cancelToken?.throwIfCancelled();
+      throwIfCancelled(cancelToken);
       ref.read(accountsProvider.notifier).remember(url, user);
       state = AuthState(AuthStatus.signedIn, user: u);
     } catch (_) {
