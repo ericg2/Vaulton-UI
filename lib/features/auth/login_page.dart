@@ -26,7 +26,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   bool _busy = false, _temp = false, _show = false, _rememberPassword = false;
   int _attemptGeneration = 0;
   CancelToken? _attemptCancelToken;
-  // The host/port fields stay tucked away once a server is chosen; tap the server card to edit.
+  // Server details stay tucked away after a server is selected.
   bool _editServer = true;
   String _busyLabel = 'Signing In…';
   String? _pwTitle;
@@ -97,7 +97,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   Future<void> _loadSavedPassword(String url, String user) async {
     final pw = await ref.read(sessionProvider).savedPassword(url, user);
     if (!mounted) return;
-    if (_serverUrl() == SessionStore.normalizeUrl(url) && _user.text.trim().toLowerCase() == user.trim().toLowerCase()) {
+    if (SessionStore.normalizeServerUrl(_serverUrl()) == SessionStore.normalizeServerUrl(url) && _user.text.trim().toLowerCase() == user.trim().toLowerCase()) {
       setState(() {
         _pass.text = pw ?? '';
         _rememberPassword = pw != null && pw.isNotEmpty;
@@ -174,9 +174,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     // One entry per distinct server, keeping the order accounts were last used in.
     final servers = <String, List<SavedAccount>>{};
     for (final a in accounts) {
-      servers.putIfAbsent(SessionStore.normalizeUrl(a.url), () => []).add(a);
+      servers.putIfAbsent(SessionStore.normalizeServerUrl(a.url), () => []).add(a);
     }
-    final currentUrl = SessionStore.normalizeUrl(_serverUrl());
+    final currentUrl = SessionStore.normalizeServerUrl(_serverUrl());
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -439,8 +439,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   /// Saved accounts for the server currently selected, as removable chips.
   Widget _accountChips(ColorScheme cs) {
-    final current = SessionStore.normalizeUrl(_serverUrl());
-    final mine = ref.watch(accountsProvider).where((a) => SessionStore.normalizeUrl(a.url) == current).take(6).toList();
+    final current = SessionStore.normalizeServerUrl(_serverUrl());
+    final mine = ref.watch(accountsProvider).where((a) => SessionStore.normalizeServerUrl(a.url) == current).take(6).toList();
     if (mine.isEmpty) return const SizedBox.shrink();
     final typed = _user.text.trim().toLowerCase();
     return Padding(
