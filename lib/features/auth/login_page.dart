@@ -274,18 +274,17 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   // ---------------------------------------------------------------- widgets
 
   Widget _wakePill(bool on, ColorScheme cs, TextTheme t) {
-    final fg = on ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+    if (!on) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: on ? cs.primaryContainer : Colors.transparent,
-        border: on ? null : Border.all(color: cs.outlineVariant),
+        color: cs.primaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(on ? Icons.power_settings_new : Icons.power_off, size: 14, color: fg),
+        Icon(Icons.power_settings_new, size: 14, color: cs.onPrimaryContainer),
         const SizedBox(width: 4),
-        Text(on ? 'Wake Ready' : 'No Wake', style: t.labelSmall?.copyWith(color: fg)),
+        Text('Wake Ready', style: t.labelSmall?.copyWith(color: cs.onPrimaryContainer)),
       ]),
     );
   }
@@ -316,9 +315,17 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                     ]),
                   ),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (hasSaved) IconButton(tooltip: 'Saved Servers', icon: const Icon(Icons.unfold_more), onPressed: _serversSheet),
-              Icon(_editServer ? Icons.expand_less : Icons.edit, size: 20),
-              const SizedBox(width: 4),
+              if (hasSaved)
+                IconButton(
+                  tooltip: 'Manage Saved Servers',
+                  icon: const Icon(Icons.storage),
+                  onPressed: _serversSheet,
+                ),
+              IconButton(
+                tooltip: _editServer ? 'Done Editing Server' : 'Edit Server',
+                icon: Icon(_editServer ? Icons.expand_less : Icons.edit),
+                onPressed: () => setState(() => _editServer = !_editServer),
+              ),
             ]),
           ),
           if (_editServer)
