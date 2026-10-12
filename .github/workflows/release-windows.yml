@@ -26,10 +26,8 @@ jobs:
       - name: Generate platform runner if needed and resolve dependencies
         run: dart run tool/setup.dart
 
-      # Keep the complete Material Icons font in Windows release builds.
-      # Some icons are selected dynamically and can be omitted by font tree shaking.
       - name: Build Windows release
-        run: flutter build windows --release --no-tree-shake-icons
+        run: flutter build windows --release
 
       - name: Install Inno Setup
         shell: pwsh
