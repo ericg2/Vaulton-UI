@@ -30,7 +30,7 @@ const _updateErrorKey = 'vaulton.update.error';
 Future<void> startBackgroundUpdateDownload({required String packageUrl, required String checksumUrl, required String fileName, required String version}) async {
   if (!backgroundSupported) throw StateError('Background updates are only supported on Android.');
   final notifications = FlutterLocalNotificationsPlugin();
-  await notifications.initialize(const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  await notifications.initialize(settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
   await notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(_updateStatusKey, 'downloading');
@@ -147,8 +147,8 @@ Future<bool> _runUpdateDownload(Map<String, dynamic>? input, SharedPreferences p
   Future<void> report(String message, {int? percent, bool ongoing = true}) async {
     await prefs.setString(_updateMessageKey, message);
     if (percent != null) await prefs.setDouble(_updateProgressKey, percent / 100);
-    await notifications.show(7301, 'Vaulton update', percent == null ? message : '$message ($percent%)',
-      NotificationDetails(android: AndroidNotificationDetails(channel.id, channel.name,
+    await notifications.show(id: 7301, title: 'Vaulton update', body: percent == null ? message : '$message ($percent%)',
+      notificationDetails: NotificationDetails(android: AndroidNotificationDetails(channel.id, channel.name,
         channelDescription: channel.description, importance: Importance.low, priority: Priority.low,
         onlyAlertOnce: true, ongoing: ongoing, showProgress: true, maxProgress: 100,
         progress: percent ?? 0, indeterminate: percent == null)));
