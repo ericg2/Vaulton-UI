@@ -98,6 +98,19 @@ class UpdateService {
       if (install != true || !context.mounted) return;
 
       if (Platform.isAndroid) {
+        final previous = await readBackgroundUpdateState();
+        final previousPath = previous['path'] as String?;
+        if (previous['status'] == 'ready' && previous['version'] == latestVersion &&
+            previousPath != null && await File(previousPath).exists()) {
+          final result = await OpenFilex.open(previousPath, type: 'application/vnd.android.package-archive');
+          if (result.type != ResultType.done && context.mounted) {
+            messenger.showSnackBar(SnackBar(
+              content: Text('The update is downloaded, but Android could not open the installer: ${result.message}'),
+              duration: const Duration(seconds: 10),
+            ));
+          }
+          return;
+        }
         final progress = ValueNotifier<_UpdateProgress>(const _UpdateProgress('Preparing background download…'));
         var dialogOpen = true;
         Timer? poller;
