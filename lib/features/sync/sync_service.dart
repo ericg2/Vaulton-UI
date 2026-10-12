@@ -354,9 +354,19 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
   onProgress?.call(status);
 }
 
+int _nextSyncRun(int scheduledAt, int completedAt, int intervalMinutes) {
+  final intervalMs = (intervalMinutes < 15 ? 15 : intervalMinutes) * 60000;
+  var next = scheduledAt > 0 ? scheduledAt + intervalMs : completedAt + intervalMs;
+  while (next <= completedAt) {
+    next += intervalMs;
+  }
+  return next;
+}
+
 Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfile profile) async {
   if (!profile.enabled) return;
   final now = DateTime.now().millisecondsSinceEpoch;
+  final scheduledAt = profile.nextRun > 0 ? profile.nextRun : now;
   if (profile.nextRun > 0 && now < profile.nextRun) return;
 
   // A previous worker may have been killed. Ignore a live run, but recover stale markers.
@@ -374,7 +384,7 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     final plan = await buildSyncPlan(api, profile, prefs);
     await applySyncPlan(api, profile, plan, prefs);
     profile.lastRun = DateTime.now().millisecondsSinceEpoch;
-    profile.nextRun = profile.lastRun + profile.intervalMinutes * 60000;
+    profile.nextRun = _nextSyncRun(scheduledAt, profile.lastRun, profile.intervalMinutes);
   } catch (e) {
     final error = e.toString();
     final lower = error.toLowerCase();
@@ -401,7 +411,7 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     );
     await status.save(prefs, profile.id);
     profile.enabled = !sourceMissing;
-    profile.nextRun = now + profile.intervalMinutes * 60000;
+    profile.nextRun = _nextSyncRun(scheduledAt, DateTime.now().millisecondsSinceEpoch, profile.intervalMinutes);
   }
 
   final profiles = SyncProfile.loadAll(prefs);
