@@ -110,7 +110,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     status.current = entry.relative;
     if (scanned == 1 || scanned % 8 == 0) {
       onProgress?.call(status);
-      progressSave = progressSave.then((_) => status.save(prefs, profile.id));
+      progressSave = progressSave.then((_) async { await status.save(prefs, profile.id); });
     }
   });
   await progressSave;
