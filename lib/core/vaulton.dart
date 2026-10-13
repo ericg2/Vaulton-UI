@@ -160,6 +160,13 @@ class Vaulton {
     return (d['occurrences'] as List? ?? []).map((e) => toDate(e)).whereType<DateTime>().toList();
   }
 
+  Future<List<String>> previewCronLabels(String cron, {String? tz, int count = 5}) async {
+    final d = toJson(await _req('GET', '/schedules/preview', q: {'cron': cron, 'timeZone': tz, 'count': count}));
+    final labels = d['occurrenceLabels'] as List?;
+    if (labels != null) return labels.map((e) => '$e').toList();
+    return (d['occurrences'] as List? ?? []).map((e) => '$e').toList();
+  }
+
   // ---------------------------------------------------------------- jobs
   /// [kind]: Backup|Restore|Check|Forget|Retention. [status]: Pending|Running|Succeeded|Failed|Cancelled.
   Future<Paged<RepoJob>> jobs({String? repoId, String? dataId, String? kind, String? status, String? cursor, int limit = 50,
