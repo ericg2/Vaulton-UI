@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:saf/saf.dart';
@@ -15,7 +16,7 @@ class SyncSourceEntry {
   final bool isDir;
 }
 abstract class SyncSource {
-  Future<List<SyncSourceEntry>> scan();
+  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry});
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry);
   Future<void> delete(SyncSourceEntry entry);
 }
@@ -23,15 +24,18 @@ class _PathSource implements SyncSource {
   _PathSource(this.root);
   final String root;
   @override
-  Future<List<SyncSourceEntry>> scan() async {
+  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry}) async {
     final out = <SyncSourceEntry>[];
     final dir = Directory(root);
     if (!await dir.exists()) throw Exception('Source folder is no longer available.');
     await for (final e in dir.list(recursive: true, followLinks: false)) {
+      _throwIfCancelled(cancel);
       try {
         final st = await e.stat();
-        out.add(SyncSourceEntry(relative: p.relative(e.path, from: root).replaceAll('\\', '/'),
-          size: e is File ? st.size : 0, modified: st.modified, isDir: e is Directory, location: e.path));
+        final entry = SyncSourceEntry(relative: p.relative(e.path, from: root).replaceAll('\\', '/'),
+          size: e is File ? st.size : 0, modified: st.modified, isDir: e is Directory, location: e.path);
+        out.add(entry);
+        onEntry?.call(entry);
       } catch (_) {}
     }
     return out;
@@ -48,12 +52,15 @@ class _SafSource implements SyncSource {
   final String root;
   final Saf _saf = Saf();
   @override
-  Future<List<SyncSourceEntry>> scan() async {
+  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry}) async {
     final out = <SyncSourceEntry>[];
     await for (final e in _saf.walk(root)) {
+      _throwIfCancelled(cancel);
       final f = e.file;
-      out.add(SyncSourceEntry(relative: e.relativePath.replaceAll('\\', '/'), size: f.length,
-        modified: DateTime.fromMillisecondsSinceEpoch(f.lastModified), isDir: f.isDir, location: f.uri));
+      final entry = SyncSourceEntry(relative: e.relativePath.replaceAll('\\', '/'), size: f.length,
+        modified: DateTime.fromMillisecondsSinceEpoch(f.lastModified), isDir: f.isDir, location: f.uri);
+      out.add(entry);
+      onEntry?.call(entry);
     }
     return out;
   }
@@ -73,3 +80,9 @@ Future<SyncSourceInfo?> pickSyncSource() async {
   return SyncSourceInfo(kind: 'path', location: path, label: p.basename(path));
 }
 SyncSource openSyncSource(SyncSourceInfo info) => info.kind == 'saf' ? _SafSource(info.location) : _PathSource(info.location);
+
+void _throwIfCancelled(CancelToken? cancel) {
+  if (cancel?.isCancelled == true) {
+    throw DioException(requestOptions: RequestOptions(path: ''), type: DioExceptionType.cancel);
+  }
+}
