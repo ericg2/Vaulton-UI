@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -52,17 +53,65 @@ class _SafSource implements SyncSource {
   final String root;
   final Saf _saf = Saf();
   @override
-  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry}) async {
+  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry}) {
     final out = <SyncSourceEntry>[];
-    await for (final e in _saf.walk(root)) {
-      _throwIfCancelled(cancel);
-      final f = e.file;
-      final entry = SyncSourceEntry(relative: e.relativePath.replaceAll('\\', '/'), size: f.length,
-        modified: DateTime.fromMillisecondsSinceEpoch(f.lastModified), isDir: f.isDir, location: f.uri);
-      out.add(entry);
-      onEntry?.call(entry);
+    final completer = Completer<List<SyncSourceEntry>>();
+    late StreamSubscription<dynamic> subscription;
+    subscription = _saf.walk(root).listen(
+      (e) {
+        if (cancel?.isCancelled == true) {
+          subscription.cancel();
+          if (!completer.isCompleted) {
+            completer.completeError(DioException(
+              requestOptions: RequestOptions(path: ''),
+              type: DioExceptionType.cancel,
+            ));
+          }
+          return;
+        }
+        try {
+          final f = e.file;
+          final entry = SyncSourceEntry(
+            relative: e.relativePath.replaceAll('\\', '/'),
+            size: f.length,
+            modified: DateTime.fromMillisecondsSinceEpoch(f.lastModified),
+            isDir: f.isDir,
+            location: f.uri,
+          );
+          out.add(entry);
+          onEntry?.call(entry);
+        } catch (error, stackTrace) {
+          if (!completer.isCompleted) completer.completeError(error, stackTrace);
+          subscription.cancel();
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!completer.isCompleted) completer.completeError(error, stackTrace);
+      },
+      onDone: () {
+        if (!completer.isCompleted) completer.complete(out);
+      },
+    );
+
+    cancel?.whenCancel.then((_) async {
+      await subscription.cancel();
+      if (!completer.isCompleted) {
+        completer.completeError(DioException(
+          requestOptions: RequestOptions(path: ''),
+          type: DioExceptionType.cancel,
+        ));
+      }
+    });
+    if (cancel?.isCancelled == true) {
+      subscription.cancel();
+      if (!completer.isCompleted) {
+        completer.completeError(DioException(
+          requestOptions: RequestOptions(path: ''),
+          type: DioExceptionType.cancel,
+        ));
+      }
     }
-    return out;
+    return completer.future;
   }
   @override
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry) => _saf.readFileStream(entry.location);
