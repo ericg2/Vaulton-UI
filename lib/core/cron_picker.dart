@@ -187,7 +187,7 @@ class _CronFieldState extends State<CronField> {
           controller: widget.controller,
           decoration: const InputDecoration(labelText: 'Cron Expression', hintText: 'min hour day month weekday', helperText: 'Advanced: minute, hour, day, month, weekday'),
           onChanged: (_) => setState(() {}),
-          validator: (v) => (v == null || v.trim().split(RegExp(r'\s+')).length < 5) ? 'Needs 5 fields' : null,
+          validator: (v) => (v == null || v.trim().split(RegExp(r'\s+')).length != 5) ? 'Use exactly 5 fields' : null,
         ),
       Padding(
         padding: const EdgeInsets.only(top: 12),
