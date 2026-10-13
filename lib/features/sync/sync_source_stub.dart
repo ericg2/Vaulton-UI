@@ -10,7 +10,7 @@ class SyncSourceEntry {
   final bool isDir;
 }
 abstract class SyncSource {
-  Future<List<SyncSourceEntry>> scan();
+  Future<List<SyncSourceEntry>> scan({dynamic cancel, void Function(SyncSourceEntry)? onEntry});
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry);
   Future<void> delete(SyncSourceEntry entry);
 }
