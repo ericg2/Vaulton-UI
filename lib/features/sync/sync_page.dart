@@ -914,7 +914,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               _chip(p.timeZone),
               _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
               if (p.skipIfRunning) _chip('Skip if Running'),
-              if (p.nextRun > 0) _chip('Next Run: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
+              if (p.nextRun > 0) _chip('Next Run (local): ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
             ]),
             const SizedBox(height: 8),
             if (st.finishedAt > 0)
