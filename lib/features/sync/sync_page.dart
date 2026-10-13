@@ -171,6 +171,23 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         points.addAll(page.items);
         cursor = page.hasMore ? page.nextCursor : null;
       } while (cursor != null);
+      var schedulesChanged = false;
+      for (final profile in profiles.where((item) => item.nextRun <= 0)) {
+        try {
+          final runs = await ref.read(vaultonProvider).previewCron(
+            profile.cron,
+            tz: profile.timeZone,
+            count: 1,
+          );
+          profile.nextRun = runs.isNotEmpty
+              ? runs.first.millisecondsSinceEpoch
+              : DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch;
+        } catch (_) {
+          profile.nextRun = DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch;
+        }
+        schedulesChanged = true;
+      }
+      if (schedulesChanged) await SyncProfile.saveAll(prefs, profiles);
       if (!mounted) return;
       setState(() {
         _profiles = profiles;
