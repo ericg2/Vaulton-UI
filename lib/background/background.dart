@@ -78,6 +78,12 @@ void backgroundDispatcher() {
           final selected = profiles.where((profile) => profile.id == profileId).toList();
           for (final profile in selected) {
             await runScheduledSync(api, prefs, profile);
+            if (input?['scheduled'] == true) {
+              final updated = SyncProfile.loadAll(prefs)
+                  .where((item) => item.id == profile.id)
+                  .firstOrNull;
+              if (updated != null) await _scheduleSyncOccurrence(updated, append: true);
+            }
           }
           return true;
         case _kDrain:
@@ -218,8 +224,8 @@ Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
   final currentIds = profiles.map((profile) => profile.id).toSet();
   final previousIds = prefs.getStringList(_kScheduledSyncIds) ?? const <String>[];
   for (final id in previousIds.where((id) => !currentIds.contains(id))) {
-    await Workmanager().cancelByUniqueName('vaulton-sync-$id');
-    await Workmanager().cancelByUniqueName('vaulton-sync-now-$id');
+    await Workmanager().cancelByUniqueName('vaulton-sync-' + id);
+    await Workmanager().cancelByUniqueName('vaulton-sync-now-' + id);
   }
   await prefs.setStringList(_kScheduledSyncIds, currentIds.toList());
 
@@ -233,39 +239,41 @@ Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
       ?.requestNotificationsPermission();
 
   for (final profile in profiles) {
-    final unique = 'vaulton-sync-${profile.id}';
+    final unique = 'vaulton-sync-' + profile.id;
+    await Workmanager().cancelByUniqueName(unique);
     if (!profile.enabled) {
-      await Workmanager().cancelByUniqueName(unique);
-      await Workmanager().cancelByUniqueName('vaulton-sync-now-${profile.id}');
+      await Workmanager().cancelByUniqueName('vaulton-sync-now-' + profile.id);
       continue;
     }
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final delayMs = profile.nextRun > now ? profile.nextRun - now : 0;
-    final minutes = profile.intervalMinutes < 15
-        ? 15
-        : profile.intervalMinutes > 1440 ? 1440 : profile.intervalMinutes;
-    await Workmanager().registerPeriodicTask(
-      unique,
-      _kSync,
-      frequency: Duration(minutes: minutes),
-      initialDelay: Duration(milliseconds: delayMs),
-      inputData: {'profileId': profile.id},
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-      constraints: Constraints(
-        networkType: profile.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
-        requiresCharging: profile.chargingOnly,
-        requiresBatteryNotLow: true,
-      ),
-      foregroundServiceConfig: ForegroundServiceConfig(
-        notificationTitle: 'Vaulton folder sync',
-        notificationText: 'A scheduled folder sync is running.',
-        notificationChannelId: 'vaulton_sync',
-        notificationChannelName: 'Folder sync',
-        notificationId: 7302 + (profile.id.hashCode & 0x3fffffff),
-        foregroundServiceType: ForegroundServiceType.dataSync,
-      ),
-    );
+    await _scheduleSyncOccurrence(profile);
   }
+}
+
+Future<void> _scheduleSyncOccurrence(SyncProfile profile, {bool append = false}) async {
+  if (!backgroundSupported || !profile.enabled) return;
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final delayMs = profile.nextRun > now ? profile.nextRun - now : 0;
+  await Workmanager().registerOneOffTask(
+    'vaulton-sync-' + profile.id,
+    _kSync,
+    initialDelay: Duration(milliseconds: delayMs),
+    inputData: {'profileId': profile.id, 'scheduled': true},
+    existingWorkPolicy: append ? ExistingWorkPolicy.appendOrReplace : ExistingWorkPolicy.replace,
+    constraints: Constraints(
+      networkType: profile.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+      requiresCharging: profile.chargingOnly,
+      requiresBatteryNotLow: true,
+    ),
+    outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
+    foregroundServiceConfig: ForegroundServiceConfig(
+      notificationTitle: 'Vaulton folder sync',
+      notificationText: 'A scheduled folder sync is running.',
+      notificationChannelId: 'vaulton_sync',
+      notificationChannelName: 'Folder sync',
+      notificationId: 7302 + (profile.id.hashCode & 0x3fffffff),
+      foregroundServiceType: ForegroundServiceType.dataSync,
+    ),
+  );
 }
 
 Future<void> triggerSyncNow({String? profileId}) async {
