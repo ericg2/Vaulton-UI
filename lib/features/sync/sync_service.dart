@@ -1,3 +1,4 @@
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api_client.dart';
@@ -19,9 +20,10 @@ class SyncChange {
 }
 
 class SyncPlan {
-  SyncPlan(this.changes, {required this.sourceFiles, required this.destinationFiles});
+  SyncPlan(this.changes, {required this.sourceFiles, required this.destinationFiles, this.sourceHashes = const {}});
   final List<SyncChange> changes;
   final int sourceFiles, destinationFiles;
+  final Map<String, String> sourceHashes;
   Iterable<SyncChange> get uploads => changes.where((x) =>
       x.kind == SyncChangeKind.add || x.kind == SyncChangeKind.update || x.kind == SyncChangeKind.replace);
   Iterable<SyncChange> get deletes => changes.where((x) => x.kind == SyncChangeKind.delete);
@@ -94,6 +96,13 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   onProgress?.call(status);
 
   final local = await source.scan();
+  final sourceHashes = <String, String>{};
+  if (profile.sourceKind == 'saf') {
+    for (final entry in local.where((entry) => !entry.isDir)) {
+      final stream = await source.openRead(entry);
+      sourceHashes[entry.relative] = (await sha256.bind(stream).first).toString();
+    }
+  }
   status.scannedSource = local.length;
   status.phase = 'Scanning Destination';
   await status.save(prefs, profile.id);
@@ -177,9 +186,10 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
       // Vaulton stores its own destination modified time, which is not
       // necessarily the source file's modified time.
       final previous = manifest[e.relative];
-      final sourceUnchanged = previous != null &&
-          previous.size == e.size &&
-          previous.modified == e.modified.millisecondsSinceEpoch;
+      final currentHash = sourceHashes[e.relative];
+      final sourceUnchanged = previous != null && (currentHash != null && previous.hash != null
+          ? previous.hash == currentHash
+          : previous.size == e.size && previous.modified == e.modified.millisecondsSinceEpoch);
       if (!sourceUnchanged) {
         changes.add(SyncChange(kind: SyncChangeKind.update, path: e.relative, bytes: e.size, source: e));
       }
@@ -226,7 +236,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
 
   await status.save(prefs, profile.id);
   onProgress?.call(status);
-  return SyncPlan(changes, sourceFiles: local.length, destinationFiles: remote.length);
+  return SyncPlan(changes, sourceFiles: local.length, destinationFiles: remote.length, sourceHashes: sourceHashes);
 }
 
 Future<void> applySyncPlan(
@@ -333,13 +343,12 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
   }
 
   final manifest = loadSyncManifest(prefs, profile.id);
-  for (final entry in plan.changes
-      .map((x) => x.source)
-      .whereType<SyncSourceEntry>()
-      .where((x) => !x.isDir)) {
+  final sourceEntries = await source.scan();
+  for (final entry in sourceEntries.where((entry) => !entry.isDir)) {
     manifest[entry.relative] = SyncManifestEntry(
       size: entry.size,
       modified: entry.modified.millisecondsSinceEpoch,
+      hash: plan.sourceHashes[entry.relative] ?? manifest[entry.relative]?.hash,
     );
   }
   await saveSyncManifest(prefs, profile.id, manifest);

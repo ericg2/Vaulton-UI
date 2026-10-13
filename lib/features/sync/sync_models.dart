@@ -57,15 +57,21 @@ String _legacySyncCron(int minutes) {
 }
 
 class SyncManifestEntry {
-  const SyncManifestEntry({required this.size, required this.modified});
+  const SyncManifestEntry({required this.size, required this.modified, this.hash});
   final int size;
   final int modified;
+  final String? hash;
 
-  Map<String, dynamic> toJson() => {'size': size, 'modified': modified};
+  Map<String, dynamic> toJson() => {
+    'size': size,
+    'modified': modified,
+    if (hash != null) 'hash': hash,
+  };
 
   factory SyncManifestEntry.fromJson(Map<String, dynamic> j) => SyncManifestEntry(
     size: j['size'] ?? 0,
     modified: j['modified'] ?? 0,
+    hash: j['hash'] as String?,
   );
 }
 

@@ -50,4 +50,16 @@ void main() {
       expect(restored.nextRun, 123456789);
     });
   });
+
+  group('SyncManifestEntry', () {
+    test('round trips a content hash while reading older manifests', () {
+      final entry = SyncManifestEntry(size: 42, modified: 1234, hash: 'abc123');
+      final restored = SyncManifestEntry.fromJson(entry.toJson());
+
+      expect(restored.size, 42);
+      expect(restored.modified, 1234);
+      expect(restored.hash, 'abc123');
+      expect(SyncManifestEntry.fromJson({'size': 42, 'modified': 1234}).hash, isNull);
+    });
+  });
 }
