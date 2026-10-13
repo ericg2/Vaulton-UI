@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,9 +21,10 @@ class SyncChange {
 }
 
 class SyncPlan {
-  SyncPlan(this.changes, {required this.sourceFiles, required this.destinationFiles, this.sourceHashes = const {}});
+  SyncPlan(this.changes, {required this.sourceFiles, required this.destinationFiles, required this.sourceEntries, this.sourceHashes = const {}});
   final List<SyncChange> changes;
   final int sourceFiles, destinationFiles;
+  final List<SyncSourceEntry> sourceEntries;
   final Map<String, String> sourceHashes;
   Iterable<SyncChange> get uploads => changes.where((x) =>
       x.kind == SyncChangeKind.add || x.kind == SyncChangeKind.update || x.kind == SyncChangeKind.replace);
@@ -44,6 +46,7 @@ Future<void> _recordSyncFailure(
   void Function(SyncRunStatus)? onProgress,
 }) async {
   final raw = error.toString();
+  final cancelled = CancelToken.isCancel(error) || raw.toLowerCase().contains('sync cancelled');
   final lower = raw.toLowerCase();
   final sourceMissing = lower.contains('source folder is no longer available') ||
       lower.contains('source folder is unavailable');
@@ -53,13 +56,15 @@ Future<void> _recordSyncFailure(
       lower.contains('no such file or directory');
   final status = SyncRunStatus(
     running: false,
-    phase: 'Failed',
-    error: sourceMissing
+    phase: cancelled ? 'Cancelled' : 'Failed',
+    error: cancelled ? null : sourceMissing
         ? 'Source folder is unavailable.'
         : destinationMissing
             ? 'Destination folder or data folder is unavailable. $raw'
             : raw,
-    message: sourceMissing
+    message: cancelled
+        ? 'Sync cancelled.'
+        : sourceMissing
         ? 'Sync paused. Choose the source folder again to resume.'
         : destinationMissing
             ? 'Check the selected destination data folder and remote path, then run sync again.'
@@ -75,9 +80,10 @@ Future<SyncPlan> buildSyncPlan(
   SyncProfile profile,
   SharedPreferences prefs, {
   void Function(SyncRunStatus)? onProgress,
+  CancelToken? cancel,
 }) async {
   try {
-    return await _buildSyncPlan(api, profile, prefs, onProgress: onProgress);
+    return await _buildSyncPlan(api, profile, prefs, onProgress: onProgress, cancel: cancel);
   } catch (error) {
     await _recordSyncFailure(prefs, profile, error, onProgress: onProgress);
     rethrow;
@@ -85,7 +91,7 @@ Future<SyncPlan> buildSyncPlan(
 }
 
 Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPreferences prefs,
-    {void Function(SyncRunStatus)? onProgress}) async {
+    {void Function(SyncRunStatus)? onProgress, CancelToken? cancel}) async {
   final source = openSyncSource(SyncSourceInfo(
     kind: profile.sourceKind, location: profile.sourceLocation, label: profile.sourceLabel,
   ));
@@ -95,15 +101,47 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   await status.save(prefs, profile.id);
   onProgress?.call(status);
 
-  final local = await source.scan();
+  final manifest = loadSyncManifest(prefs, profile.id);
+  var scanned = 0;
+  final local = await source.scan(cancel: cancel, onEntry: (entry) {
+    scanned++;
+    status.scannedSource = scanned;
+    status.current = entry.relative;
+    if (scanned % 32 == 0) {
+      onProgress?.call(status);
+      unawaited(status.save(prefs, profile.id));
+    }
+  });
+  _throwIfCancelled(cancel);
+  status.scannedSource = local.length;
+  status.current = null;
   final sourceHashes = <String, String>{};
   if (profile.sourceKind == 'saf') {
-    for (final entry in local.where((entry) => !entry.isDir)) {
-      final stream = await source.openRead(entry);
-      sourceHashes[entry.relative] = (await sha256.bind(stream).first).toString();
+    final files = local.where((entry) => !entry.isDir).toList();
+    status.phase = 'Checking Source Files';
+    for (var i = 0; i < files.length; i++) {
+      _throwIfCancelled(cancel);
+      final entry = files[i];
+      final previous = manifest[entry.relative];
+      if (previous?.hash != null) {
+        if (previous!.size == entry.size && previous.modified == entry.modified.millisecondsSinceEpoch) {
+          sourceHashes[entry.relative] = previous.hash!;
+        } else {
+          status.current = entry.relative;
+          final stream = await source.openRead(entry);
+          sourceHashes[entry.relative] = (await sha256.bind(_cancellable(stream, cancel)).first).toString();
+        }
+      }
+      status.scannedSource = i + 1;
+      if ((i + 1) % 16 == 0 || i + 1 == files.length) {
+        onProgress?.call(status);
+        await status.save(prefs, profile.id);
+      }
     }
   }
+  _throwIfCancelled(cancel);
   status.scannedSource = local.length;
+  status.current = null;
   status.phase = 'Scanning Destination';
   await status.save(prefs, profile.id);
   onProgress?.call(status);
@@ -112,12 +150,14 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   final v = Vaulton(api);
 
   Future<void> validateDestinationRoot() async {
+    _throwIfCancelled(cancel);
     var current = '/';
     final parts = profile.remoteDir.split('/').where((part) => part.isNotEmpty);
     for (final part in parts) {
       String? cursor = '';
       var found = false;
       do {
+        _throwIfCancelled(cancel);
         final page = await v.list(profile.pointId, current, cursor: cursor, limit: 200, order: 'Asc');
         for (final node in page.items) {
           if (node.name == part && node.isDir) {
@@ -138,10 +178,13 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   }
 
   Future<void> walkRemote(String dir, String relBase) async {
+    _throwIfCancelled(cancel);
     String? cursor;
     do {
+      _throwIfCancelled(cancel);
       final page = await v.list(profile.pointId, dir, cursor: cursor, limit: 200, order: 'Asc');
       for (final n in page.items) {
+        _throwIfCancelled(cancel);
         final rel = relBase.isEmpty ? n.name : '$relBase/${n.name}';
         remote.add(SyncSourceEntry(
           relative: rel,
@@ -158,6 +201,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
 
   await validateDestinationRoot();
   await walkRemote(profile.remoteDir, '');
+  _throwIfCancelled(cancel);
   status.scannedDestination = remote.length;
   status.phase = 'Comparing';
   await status.save(prefs, profile.id);
@@ -166,7 +210,6 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   final localBy = {for (final e in local.where((e) => e.relative.isNotEmpty)) e.relative: e};
   final remoteBy = {for (final e in remote.where((e) => e.relative.isNotEmpty)) e.relative: e};
   final changes = <SyncChange>[];
-  final manifest = loadSyncManifest(prefs, profile.id);
 
   for (final e in localBy.values) {
     final r = remoteBy[e.relative];
@@ -236,7 +279,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
 
   await status.save(prefs, profile.id);
   onProgress?.call(status);
-  return SyncPlan(changes, sourceFiles: local.length, destinationFiles: remote.length, sourceHashes: sourceHashes);
+  return SyncPlan(changes, sourceFiles: local.length, destinationFiles: remote.length, sourceEntries: local, sourceHashes: sourceHashes);
 }
 
 Future<void> applySyncPlan(
@@ -284,7 +327,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     ..sort((a, b) => a.path.split('/').length.compareTo(b.path.split('/').length));
 
   for (final x in dirs) {
-    if (cancel?.isCancelled == true) throw Exception('Sync cancelled');
+    _throwIfCancelled(cancel);
     status.phase = 'Creating Folders';
     status.current = x.path;
     final remote = joinPath(profile.remoteDir, x.path);
@@ -301,7 +344,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
       (x.kind == SyncChangeKind.replace && x.source?.isDir == false)).toList();
 
   for (final x in actions) {
-    if (cancel?.isCancelled == true) throw Exception('Sync cancelled');
+    _throwIfCancelled(cancel);
     final src = x.source!;
     status.phase = x.kind == SyncChangeKind.add ? 'Uploading New Files' : 'Updating Files';
     status.current = x.path;
@@ -333,7 +376,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     ..sort((a, b) => b.path.split('/').length.compareTo(a.path.split('/').length));
 
   for (final x in deletes) {
-    if (cancel?.isCancelled == true) throw Exception('Sync cancelled');
+    _throwIfCancelled(cancel);
     status.phase = 'Removing Destination Extras';
     status.current = x.path;
     await v.deleteEntry(profile.pointId, joinPath(profile.remoteDir, x.path));
@@ -343,8 +386,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
   }
 
   final manifest = loadSyncManifest(prefs, profile.id);
-  final sourceEntries = await source.scan();
-  for (final entry in sourceEntries.where((entry) => !entry.isDir)) {
+  for (final entry in plan.sourceEntries.where((entry) => !entry.isDir)) {
     manifest[entry.relative] = SyncManifestEntry(
       size: entry.size,
       modified: entry.modified.millisecondsSinceEpoch,
@@ -361,6 +403,19 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     ..finishedAt = DateTime.now().millisecondsSinceEpoch;
   await status.save(prefs, profile.id);
   onProgress?.call(status);
+}
+
+Stream<List<int>> _cancellable(Stream<List<int>> stream, CancelToken? cancel) async* {
+  await for (final chunk in stream) {
+    _throwIfCancelled(cancel);
+    yield chunk;
+  }
+}
+
+void _throwIfCancelled(CancelToken? cancel) {
+  if (cancel?.isCancelled == true) {
+    throw DioException(requestOptions: RequestOptions(path: ''), type: DioExceptionType.cancel);
+  }
 }
 
 Future<int> calculateNextSyncRun(
