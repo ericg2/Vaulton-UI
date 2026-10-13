@@ -8,6 +8,7 @@ import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import 'job_detail_page.dart';
 import '../../core/timezones.dart';
+import '../../core/cron_picker.dart';
 import '../files/folder_picker.dart';
 import 'backup_flow.dart';
 import 'backup_options.dart';
@@ -317,13 +318,25 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
   }
 
   Future<void> _preview(Schedule s) async {
-    final times = await guarded(context, () => _v.previewCron(s.cron, tz: s.timeZone));
+    final times = await guarded(context, () => _v.previewCronLabels(s.cron, tz: s.timeZone));
     if (times == null || !mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Next Runs'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [for (final t in times) Text(fmtDate(t))]),
+        content: SizedBox(
+          width: 420,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Times shown in ${s.timeZone}.', style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: 8),
+            for (var i = 0; i < times.length; i++)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(radius: 14, child: Text('${i + 1}')),
+                title: Text(times[i]),
+              ),
+          ]),
+        ),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
       ),
     );
@@ -358,7 +371,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                         leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
                         title: Text(s.name),
                         subtitle: Text(
-                          '${kindLabel(s.mode)} · ${s.cron} (${s.timeZone})\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}',
+                          '${kindLabel(s.mode)} · ${describeCron(s.cron, context)} · ${s.timeZone}\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}',
                         ),
                         isThreeLine: true,
                         trailing: PopupMenuButton<String>(
