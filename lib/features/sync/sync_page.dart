@@ -165,6 +165,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final prefs = ref.read(prefsProvider);
     final profiles = SyncProfile.loadAll(prefs);
     try {
+      final localTimeZone = await deviceTimeZone();
+      var schedulesChanged = false;
+      for (final profile in profiles.where((item) => item.timeZone.isEmpty)) {
+        profile.timeZone = localTimeZone ?? 'UTC';
+        profile.nextRun = 0;
+        schedulesChanged = true;
+      }
       final points = <Point>[];
       String? cursor;
       do {
@@ -172,7 +179,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         points.addAll(page.items);
         cursor = page.hasMore ? page.nextCursor : null;
       } while (cursor != null);
-      var schedulesChanged = false;
       for (final profile in profiles.where((item) => item.nextRun <= 0)) {
         try {
           final runs = await ref.read(vaultonProvider).previewCron(
