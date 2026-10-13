@@ -134,27 +134,51 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     status.phase = 'Checking Source Files';
     await status.save(prefs, profile.id);
     onProgress?.call(status);
-    for (var i = 0; i < files.length; i++) {
-      _throwIfCancelled(cancel);
-      final entry = files[i];
-      final previous = manifest[entry.relative];
-      if (previous != null) {
-        final sameMetadata = previous.size == entry.size &&
-            previous.modified == entry.modified.millisecondsSinceEpoch;
-        if (previous.hash != null && sameMetadata) {
-          sourceHashes[entry.relative] = previous.hash!;
-        } else if (!sameMetadata || previous.hash != null) {
-          status.current = entry.relative;
-          final stream = await source.openRead(entry);
-          sourceHashes[entry.relative] = (await sha256.bind(_cancellable(stream, cancel)).first).toString();
+    var nextFile = 0;
+    var checkedFiles = 0;
+    var hashProgressSave = Future<void>.value();
+    Object? hashFailure;
+
+    Future<void> checkWorker() async {
+      while (true) {
+        _throwIfCancelled(cancel);
+        if (hashFailure != null) throw hashFailure!;
+        final i = nextFile++;
+        if (i >= files.length) return;
+        final entry = files[i];
+        try {
+          final previous = manifest[entry.relative];
+          if (previous != null) {
+            final sameMetadata = previous.size == entry.size &&
+                previous.modified == entry.modified.millisecondsSinceEpoch;
+            if (previous.hash != null && sameMetadata) {
+              sourceHashes[entry.relative] = previous.hash!;
+            } else if (!sameMetadata || previous.hash != null) {
+              status.current = entry.relative;
+              final stream = await source.openRead(entry);
+              sourceHashes[entry.relative] =
+                  (await sha256.bind(_cancellable(stream, cancel)).first).toString();
+            }
+          }
+          checkedFiles++;
+          status.scannedSource = checkedFiles;
+          if (checkedFiles == 1 || checkedFiles % 16 == 0 || checkedFiles == files.length) {
+            onProgress?.call(status);
+            hashProgressSave = hashProgressSave.then((_) async {
+              await status.save(prefs, profile.id);
+            });
+          }
+        } catch (error) {
+          hashFailure ??= error;
+          rethrow;
         }
       }
-      status.scannedSource = i + 1;
-      if ((i + 1) % 16 == 0 || i + 1 == files.length) {
-        onProgress?.call(status);
-        await status.save(prefs, profile.id);
-      }
     }
+
+    // Hash only changed files, and overlap a few SAF reads when the provider
+    // supports it. Unchanged files continue to reuse their cached hashes.
+    await Future.wait(List.generate(4, (_) => checkWorker()));
+    await hashProgressSave;
   }
   _throwIfCancelled(cancel);
   status.scannedSource = local.length;
