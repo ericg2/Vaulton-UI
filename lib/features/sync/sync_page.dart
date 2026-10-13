@@ -855,10 +855,12 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         break;
       }
     }
-    if (profile == null || status == null) return null;
+    final selectedProfile = profile;
+    final selectedStatus = status;
+    if (selectedProfile == null || selectedStatus == null) return null;
 
     final cs = Theme.of(context).colorScheme;
-    final checked = status.scannedSource;
+    final checked = selectedStatus.scannedSource;
     final subtitle = checked == 0 ? 'Opening source folder…' : '$checked source items checked';
     return SafeArea(
       top: false,
@@ -884,22 +886,22 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('${profile.name} · ${status.phase}',
+                            Text('${selectedProfile.name} · ${selectedStatus.phase}',
                                 style: Theme.of(context).textTheme.titleSmall),
                             Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
                           ],
                         ),
                       ),
                       TextButton.icon(
-                        onPressed: () => _cancelTokens[profile!.id]?.cancel('Sync cancelled'),
+                        onPressed: () => _cancelTokens[selectedProfile.id]?.cancel('Sync cancelled'),
                         icon: const Icon(Icons.close, size: 18),
                         label: const Text('Cancel'),
                       ),
                     ],
                   ),
-                  if (status.current != null) ...[
+                  if (selectedStatus.current != null) ...[
                     const SizedBox(height: 4),
-                    Text(status.current!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    Text(selectedStatus.current!, maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall),
                   ],
                   const SizedBox(height: 8),
