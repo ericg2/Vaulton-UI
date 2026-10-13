@@ -379,7 +379,9 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
   final previous = SyncRunStatus.load(prefs, profile.id);
   if (previous.running && previous.startedAt > 0 &&
       now - previous.startedAt < const Duration(hours: 3).inMilliseconds) {
-    profile.nextRun = await calculateNextSyncRun(api, profile);
+    profile.nextRun = profile.skipIfRunning
+        ? await calculateNextSyncRun(api, profile)
+        : now + const Duration(minutes: 1).inMilliseconds;
     final profiles = SyncProfile.loadAll(prefs);
     final index = profiles.indexWhere((item) => item.id == profile.id);
     if (index >= 0) {
