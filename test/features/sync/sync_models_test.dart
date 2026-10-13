@@ -18,7 +18,7 @@ void main() {
       final profile = SyncProfile.fromJson(legacyProfile());
 
       expect(profile.cron, '0 */1 * * *');
-      expect(profile.timeZone, 'UTC');
+      expect(profile.timeZone, isEmpty);
       expect(profile.skipIfRunning, isTrue);
     });
 
