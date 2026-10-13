@@ -34,7 +34,7 @@ class SyncProfile {
     enabled: j['enabled'] ?? true, deleteExtras: j['deleteExtras'] ?? true,
     intervalMinutes: j['intervalMinutes'] ?? 60,
     cron: j['cron'] ?? _legacySyncCron(j['intervalMinutes'] ?? 60),
-    timeZone: j['timeZone'] ?? 'UTC', skipIfRunning: j['skipIfRunning'] ?? true,
+    timeZone: j['timeZone'] ?? '', skipIfRunning: j['skipIfRunning'] ?? true,
     wifiOnly: j['wifiOnly'] ?? true, chargingOnly: j['chargingOnly'] ?? false,
     lastRun: j['lastRun'] ?? 0, nextRun: j['nextRun'] ?? 0,
   );
