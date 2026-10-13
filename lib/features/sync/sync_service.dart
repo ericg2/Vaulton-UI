@@ -354,25 +354,38 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
   onProgress?.call(status);
 }
 
-int _nextSyncRun(int scheduledAt, int completedAt, int intervalMinutes) {
-  final intervalMs = (intervalMinutes < 15 ? 15 : intervalMinutes) * 60000;
-  var next = scheduledAt > 0 ? scheduledAt + intervalMs : completedAt + intervalMs;
-  while (next <= completedAt) {
-    next += intervalMs;
-  }
-  return next;
+Future<int> calculateNextSyncRun(
+  ApiClient api,
+  SyncProfile profile, {
+  int fallbackDelayMs = const Duration(hours: 1).inMilliseconds,
+}) async {
+  try {
+    final occurrences = await Vaulton(api).previewCron(
+      profile.cron,
+      tz: profile.timeZone,
+      count: 1,
+    );
+    if (occurrences.isNotEmpty) return occurrences.first.millisecondsSinceEpoch;
+  } catch (_) {}
+  return DateTime.now().millisecondsSinceEpoch + fallbackDelayMs;
 }
 
 Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfile profile) async {
   if (!profile.enabled) return;
   final now = DateTime.now().millisecondsSinceEpoch;
-  final scheduledAt = profile.nextRun > 0 ? profile.nextRun : now;
   if (profile.nextRun > 0 && now < profile.nextRun) return;
 
-  // A previous worker may have been killed. Ignore a live run, but recover stale markers.
+  // Syncs for one profile must never overlap: both runs mutate the same destination.
   final previous = SyncRunStatus.load(prefs, profile.id);
   if (previous.running && previous.startedAt > 0 &&
       now - previous.startedAt < const Duration(hours: 3).inMilliseconds) {
+    profile.nextRun = await calculateNextSyncRun(api, profile);
+    final profiles = SyncProfile.loadAll(prefs);
+    final index = profiles.indexWhere((item) => item.id == profile.id);
+    if (index >= 0) {
+      profiles[index].nextRun = profile.nextRun;
+      await SyncProfile.saveAll(prefs, profiles);
+    }
     return;
   }
 
@@ -384,7 +397,7 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     final plan = await buildSyncPlan(api, profile, prefs);
     await applySyncPlan(api, profile, plan, prefs);
     profile.lastRun = DateTime.now().millisecondsSinceEpoch;
-    profile.nextRun = _nextSyncRun(scheduledAt, profile.lastRun, profile.intervalMinutes);
+    profile.nextRun = await calculateNextSyncRun(api, profile);
   } catch (e) {
     final error = e.toString();
     final lower = error.toLowerCase();
@@ -411,7 +424,7 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     );
     await status.save(prefs, profile.id);
     profile.enabled = !sourceMissing;
-    profile.nextRun = _nextSyncRun(scheduledAt, DateTime.now().millisecondsSinceEpoch, profile.intervalMinutes);
+    profile.nextRun = await calculateNextSyncRun(api, profile);
   }
 
   final profiles = SyncProfile.loadAll(prefs);
