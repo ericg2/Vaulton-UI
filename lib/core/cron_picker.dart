@@ -224,7 +224,7 @@ String describeCron(String cron, BuildContext context) {
   }
   if (minute != null && hourStep != null && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(hourStep.group(1) ?? '');
-    if (n != null && n > 0) return 'Every ${n} hours at :${minute.toString().padLeft(2, '0')}';
+    if (n != null && n > 0) return n == 1 ? 'Every hour at :${minute.toString().padLeft(2, '0')}' : 'Every ${n} hours at :${minute.toString().padLeft(2, '0')}';
   }
   if (minute != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
     return 'Every hour at :${minute.toString().padLeft(2, '0')}';
