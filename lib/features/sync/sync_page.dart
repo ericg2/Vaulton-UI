@@ -6,6 +6,7 @@ import '../../background/background_api.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
+import '../../core/timezones.dart';
 import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
 import 'sync_models.dart';
@@ -233,12 +234,17 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     var name = existing?.name ?? source.label;
     var pointId = existing?.pointId ?? _points.first.id;
     var remoteDir = existing?.remoteDir ?? '/${source.label}';
-    var interval = existing?.intervalMinutes ?? 60;
+    final deviceTz = await deviceTimeZone();
+    if (!mounted) return null;
+    var cron = existing?.cron ?? '0 2 * * *';
+    var timeZone = existing?.timeZone ?? deviceTz ?? 'UTC';
+    var skipIfRunning = existing?.skipIfRunning ?? true;
     var enabled = existing?.enabled ?? true;
     var deleteExtras = existing?.deleteExtras ?? true;
     var wifiOnly = existing?.wifiOnly ?? true;
     var chargingOnly = existing?.chargingOnly ?? false;
     final nameCtl = TextEditingController(text: name);
+    final cronCtl = TextEditingController(text: cron);
 
     final result = await showDialog<SyncProfile>(
       context: context,
@@ -289,19 +295,24 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 const _RootWarning(),
               ],
               const SizedBox(height: 14),
-              DropdownButtonFormField<int>(
-                initialValue: interval,
-                decoration: const InputDecoration(labelText: 'Sync Frequency'),
-                items: const [
-                  DropdownMenuItem(value: 15, child: Text('Every 15 Minutes')),
-                  DropdownMenuItem(value: 30, child: Text('Every 30 Minutes')),
-                  DropdownMenuItem(value: 60, child: Text('Every Hour')),
-                  DropdownMenuItem(value: 180, child: Text('Every 3 Hours')),
-                  DropdownMenuItem(value: 360, child: Text('Every 6 Hours')),
-                  DropdownMenuItem(value: 720, child: Text('Every 12 Hours')),
-                  DropdownMenuItem(value: 1440, child: Text('Daily')),
+              CronField(controller: cronCtl),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: timeZone,
+                decoration: const InputDecoration(labelText: 'Time Zone'),
+                items: [
+                  for (final zone in timeZoneOptions(device: deviceTz, extra: existing?.timeZone))
+                    DropdownMenuItem(value: zone, child: Text(zone)),
                 ],
-                onChanged: (v) => set(() => interval = v!),
+                onChanged: (v) {
+                  if (v != null) set(() => timeZone = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              _SettingSwitch(
+                title: 'Skip if Already Running',
+                value: skipIfRunning,
+                onChanged: (v) => set(() => skipIfRunning = v),
               ),
               const SizedBox(height: 12),
               if (backgroundSupported) ...[
@@ -355,24 +366,40 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   );
                   if (proceed != true) return;
                 }
-                Navigator.pop(ctx, SyncProfile(
-                  id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-                  name: name.trim().isEmpty ? source.label : name.trim(),
-                  sourceKind: source.kind,
-                  sourceLocation: source.location,
-                  sourceLabel: source.label,
-                  pointId: pointId,
-                  remoteDir: remoteDir.trim().isEmpty ? '/' : remoteDir.trim(),
-                  enabled: enabled,
-                  deleteExtras: deleteExtras,
-                  intervalMinutes: interval,
-                  wifiOnly: wifiOnly,
-                  chargingOnly: chargingOnly,
-                  lastRun: existing?.lastRun ?? 0,
-                  nextRun: existing == null || existing.intervalMinutes != interval
-                      ? DateTime.now().millisecondsSinceEpoch + interval * 60000
-                      : existing.nextRun,
-                ));
+                final scheduleCron = cronCtl.text.trim();
+                try {
+                  final occurrences = await ref.read(vaultonProvider).previewCron(
+                    scheduleCron,
+                    tz: timeZone,
+                    count: 1,
+                  );
+                  if (occurrences.isEmpty) throw StateError('No upcoming run could be calculated.');
+                  Navigator.pop(ctx, SyncProfile(
+                    id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+                    name: name.trim().isEmpty ? source.label : name.trim(),
+                    sourceKind: source.kind,
+                    sourceLocation: source.location,
+                    sourceLabel: source.label,
+                    pointId: pointId,
+                    remoteDir: remoteDir.trim().isEmpty ? '/' : remoteDir.trim(),
+                    enabled: enabled,
+                    deleteExtras: deleteExtras,
+                    intervalMinutes: existing?.intervalMinutes ?? 60,
+                    cron: scheduleCron,
+                    timeZone: timeZone,
+                    skipIfRunning: skipIfRunning,
+                    wifiOnly: wifiOnly,
+                    chargingOnly: chargingOnly,
+                    lastRun: existing?.lastRun ?? 0,
+                    nextRun: occurrences.first.millisecondsSinceEpoch,
+                  ));
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Invalid schedule: $e')),
+                    );
+                  }
+                }
               },
               child: const Text('Save'),
             ),
@@ -381,6 +408,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       ),
     );
     nameCtl.dispose();
+    cronCtl.dispose();
     return result;
   }
 
@@ -838,7 +866,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             ),
           ] else ...[
             Wrap(spacing: 8, runSpacing: 8, children: [
-              _chip(_frequencyLabel(p.intervalMinutes)),
+              _chip(p.cron + ' · ' + p.timeZone),
               _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
               if (p.nextRun > 0) _chip('Next Run: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
             ]),
@@ -873,6 +901,29 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               onPressed: running || _activeSyncIds.contains(p.id) ? null : () => _run(p),
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: () async {
+                final times = await guarded(
+                  context,
+                  () => ref.read(vaultonProvider).previewCron(p.cron, tz: p.timeZone, count: 5),
+                );
+                if (times == null || !mounted) return;
+                await showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Next Runs'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [for (final time in times) Text(fmtDate(time))],
+                    ),
+                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+                  ),
+                );
+              },
+              child: const Text('Preview'),
             ),
             const SizedBox(width: 8),
             OutlinedButton(
