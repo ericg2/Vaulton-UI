@@ -22,15 +22,13 @@ void main() {
       expect(profile.skipIfRunning, isTrue);
     });
 
-    test('migrates old minute-based profiles to cron expressions', () {
-      expect(
-        SyncProfile.fromJson(legacyProfile(intervalMinutes: 15)).cron,
-        '*/15 * * * *',
-      );
-      expect(
-        SyncProfile.fromJson(legacyProfile(intervalMinutes: 30)).cron,
-        '*/30 * * * *',
-      );
+    test('migrates old interval profiles to cron expressions', () {
+      expect(SyncProfile.fromJson(legacyProfile(intervalMinutes: 15)).cron, '*/15 * * * *');
+      expect(SyncProfile.fromJson(legacyProfile(intervalMinutes: 30)).cron, '*/30 * * * *');
+      expect(SyncProfile.fromJson(legacyProfile(intervalMinutes: 180)).cron, '0 */3 * * *');
+      expect(SyncProfile.fromJson(legacyProfile(intervalMinutes: 360)).cron, '0 */6 * * *');
+      expect(SyncProfile.fromJson(legacyProfile(intervalMinutes: 720)).cron, '0 */12 * * *');
+      expect(SyncProfile.fromJson(legacyProfile(intervalMinutes: 1440)).cron, '0 2 * * *');
     });
 
     test('round trips the full schedule configuration', () {
