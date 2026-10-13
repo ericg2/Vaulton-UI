@@ -258,7 +258,7 @@ Future<void> _scheduleSyncOccurrence(SyncProfile profile, {bool append = false})
     _kSync,
     initialDelay: Duration(milliseconds: delayMs),
     inputData: {'profileId': profile.id, 'scheduled': true},
-    existingWorkPolicy: append ? ExistingWorkPolicy.appendOrReplace : ExistingWorkPolicy.replace,
+    existingWorkPolicy: append ? ExistingWorkPolicy.update : ExistingWorkPolicy.replace,
     constraints: Constraints(
       networkType: profile.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
       requiresCharging: profile.chargingOnly,
