@@ -107,10 +107,8 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     scanned++;
     status.scannedSource = scanned;
     status.current = entry.relative;
-    if (scanned % 32 == 0) {
-      onProgress?.call(status);
-      unawaited(status.save(prefs, profile.id));
-    }
+    if (scanned == 1 || scanned % 8 == 0) onProgress?.call(status);
+    if (scanned % 32 == 0) unawaited(status.save(prefs, profile.id));
   });
   _throwIfCancelled(cancel);
   status.scannedSource = local.length;
@@ -125,10 +123,12 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
       _throwIfCancelled(cancel);
       final entry = files[i];
       final previous = manifest[entry.relative];
-      if (previous?.hash != null) {
-        if (previous!.size == entry.size && previous.modified == entry.modified.millisecondsSinceEpoch) {
+      if (previous != null) {
+        final sameMetadata = previous.size == entry.size &&
+            previous.modified == entry.modified.millisecondsSinceEpoch;
+        if (previous.hash != null && sameMetadata) {
           sourceHashes[entry.relative] = previous.hash!;
-        } else {
+        } else if (!sameMetadata || previous.hash != null) {
           status.current = entry.relative;
           final stream = await source.openRead(entry);
           sourceHashes[entry.relative] = (await sha256.bind(_cancellable(stream, cancel)).first).toString();
