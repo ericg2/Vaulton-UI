@@ -217,19 +217,19 @@ String describeCron(String cron, BuildContext context) {
   if (p.length != 5) return 'Custom schedule';
   final minute = int.tryParse(p[0]);
   final hour = int.tryParse(p[1]);
-  final step = RegExp(r'^\*/(\d+);
+  final step = RegExp(r'^\*/(\d+)$');
   final hourStep = step.firstMatch(p[1]);
   final minuteStep = step.firstMatch(p[0]);
   if (minuteStep != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(minuteStep.group(1) ?? '');
-    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every $n minutes';
+    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every \${n} minutes';
   }
   if (minute != null && hourStep != null && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(hourStep.group(1) ?? '');
-    if (n != null && n > 0) return 'Every $n hours at :${minute.toString().padLeft(2, '0')}';
+    if (n != null && n > 0) return 'Every \${n} hours at :\${minute.toString().padLeft(2, '0')}';
   }
   if (minute != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
-    return 'Every hour at :${minute.toString().padLeft(2, '0')}';
+    return 'Every hour at :\${minute.toString().padLeft(2, '0')}';
   }
   if (minute == null || hour == null || minute < 0 || minute > 59 || hour < 0 || hour > 23) {
     return 'Custom schedule';
@@ -246,44 +246,8 @@ String describeCron(String cron, BuildContext context) {
     }
     if (days.isEmpty) return 'Custom schedule';
     final labels = [for (final d in _days) if (days.contains(d.$2)) d.$1];
-    return '${days.length == 7 ? 'Every day' : labels.length == 5 && [1, 2, 3, 4, 5].every(days.contains) ? 'Weekdays' : labels.join(', ')} at $time';
-  }
-  final day = int.tryParse(p[2]);
-  if (day != null && day >= 1 && day <= 31 && p[3] == '*' && p[4] == '*') {
-    return 'Monthly on day $day at $time';
-  }
-  return 'Custom schedule';
-}
-);
-  final hourStep = step.firstMatch(p[1]);
-  final minuteStep = step.firstMatch(p[0]);
-  if (minuteStep != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
-    final n = int.tryParse(minuteStep.group(1) ?? '');
-    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every $n minutes';
-  }
-  if (minute != null && hourStep != null && p.skip(2).every((x) => x == '*')) {
-    final n = int.tryParse(hourStep.group(1) ?? '');
-    if (n != null && n > 0) return 'Every $n hours at :${minute.toString().padLeft(2, '0')}';
-  }
-  if (minute != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
-    return 'Every hour at :${minute.toString().padLeft(2, '0')}';
-  }
-  if (minute == null || hour == null || minute < 0 || minute > 59 || hour < 0 || hour > 23) {
-    return 'Custom schedule';
-  }
-  final time = TimeOfDay(hour: hour, minute: minute).format(context);
-  if (p[2] == '*' && p[3] == '*' && p[4] == '*') return 'Every day at $time';
-  if (p[2] == '*' && p[3] == '*') {
-    final days = <int>{};
-    for (final part in p[4].split(',')) {
-      final range = part.split('-');
-      final start = int.tryParse(range.first), end = int.tryParse(range.last);
-      if (start == null || end == null || start < 0 || start > 7 || end < start || end > 7) return 'Custom schedule';
-      for (var day = start; day <= end; day++) days.add(day % 7);
-    }
-    if (days.isEmpty) return 'Custom schedule';
-    final labels = [for (final d in _days) if (days.contains(d.$2)) d.$1];
-    return '${days.length == 7 ? 'Every day' : labels.length == 5 && [1, 2, 3, 4, 5].every(days.contains) ? 'Weekdays' : labels.join(', ')} at $time';
+    final weekdays = [1, 2, 3, 4, 5].every(days.contains) && days.length == 5;
+    return '\${days.length == 7 ? 'Every day' : weekdays ? 'Weekdays' : labels.join(', ')} at $time';
   }
   final day = int.tryParse(p[2]);
   if (day != null && day >= 1 && day <= 31 && p[3] == '*' && p[4] == '*') {
