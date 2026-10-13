@@ -111,7 +111,7 @@ class _SafSource implements SyncSource {
                 ? file.name
                 : '${dir.relative}/${file.name}';
             final entry = SyncSourceEntry(
-              relative: relative.replaceAll('\\\\', '/'),
+              relative: relative,
               size: file.length,
               modified: DateTime.fromMillisecondsSinceEpoch(file.lastModified),
               isDir: file.isDir,
