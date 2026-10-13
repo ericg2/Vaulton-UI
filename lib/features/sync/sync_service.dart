@@ -119,6 +119,8 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   if (profile.sourceKind == 'saf') {
     final files = local.where((entry) => !entry.isDir).toList();
     status.phase = 'Checking Source Files';
+    await status.save(prefs, profile.id);
+    onProgress?.call(status);
     for (var i = 0; i < files.length; i++) {
       _throwIfCancelled(cancel);
       final entry = files[i];
