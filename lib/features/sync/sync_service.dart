@@ -103,13 +103,17 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
 
   final manifest = loadSyncManifest(prefs, profile.id);
   var scanned = 0;
+  var progressSave = Future<void>.value();
   final local = await source.scan(cancel: cancel, onEntry: (entry) {
     scanned++;
     status.scannedSource = scanned;
     status.current = entry.relative;
-    if (scanned == 1 || scanned % 8 == 0) onProgress?.call(status);
-    if (scanned % 32 == 0) unawaited(status.save(prefs, profile.id));
+    if (scanned == 1 || scanned % 8 == 0) {
+      onProgress?.call(status);
+      progressSave = progressSave.then((_) => status.save(prefs, profile.id));
+    }
   });
+  await progressSave;
   _throwIfCancelled(cancel);
   status.scannedSource = local.length;
   status.current = null;
