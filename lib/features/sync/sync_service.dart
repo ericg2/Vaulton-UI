@@ -46,7 +46,7 @@ Future<void> _recordSyncFailure(
   void Function(SyncRunStatus)? onProgress,
 }) async {
   final raw = error.toString();
-  final cancelled = CancelToken.isCancel(error) || raw.toLowerCase().contains('sync cancelled');
+  final cancelled = (error is DioException && CancelToken.isCancel(error)) || raw.toLowerCase().contains('sync cancelled');
   final lower = raw.toLowerCase();
   final sourceMissing = lower.contains('source folder is no longer available') ||
       lower.contains('source folder is unavailable');
