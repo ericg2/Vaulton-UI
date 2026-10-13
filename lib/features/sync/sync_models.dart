@@ -10,16 +10,19 @@ class SyncProfile {
     required this.id, required this.name, required this.sourceKind, required this.sourceLocation,
     required this.sourceLabel, required this.pointId, required this.remoteDir,
     this.enabled = true, this.deleteExtras = true, this.intervalMinutes = 60,
+    this.cron = '0 * * * *', this.timeZone = 'UTC', this.skipIfRunning = true,
     this.wifiOnly = true, this.chargingOnly = false, this.lastRun = 0, this.nextRun = 0,
   });
   final String id, name, sourceKind, sourceLocation, sourceLabel, pointId, remoteDir;
-  bool enabled, deleteExtras, wifiOnly, chargingOnly;
+  bool enabled, deleteExtras, wifiOnly, chargingOnly, skipIfRunning;
   int intervalMinutes, lastRun, nextRun;
+  String cron, timeZone;
 
   Map<String, dynamic> toJson() => {
     'id': id, 'name': name, 'sourceKind': sourceKind, 'sourceLocation': sourceLocation,
     'sourceLabel': sourceLabel, 'pointId': pointId, 'remoteDir': remoteDir,
     'enabled': enabled, 'deleteExtras': deleteExtras, 'intervalMinutes': intervalMinutes,
+    'cron': cron, 'timeZone': timeZone, 'skipIfRunning': skipIfRunning,
     'wifiOnly': wifiOnly, 'chargingOnly': chargingOnly, 'lastRun': lastRun, 'nextRun': nextRun,
   };
 
@@ -29,8 +32,11 @@ class SyncProfile {
     sourceLabel: '${j['sourceLabel'] ?? j['sourceLocation'] ?? 'Source Folder'}',
     pointId: '${j['pointId']}', remoteDir: '${j['remoteDir'] ?? '/'}',
     enabled: j['enabled'] ?? true, deleteExtras: j['deleteExtras'] ?? true,
-    intervalMinutes: j['intervalMinutes'] ?? 60, wifiOnly: j['wifiOnly'] ?? true,
-    chargingOnly: j['chargingOnly'] ?? false, lastRun: j['lastRun'] ?? 0, nextRun: j['nextRun'] ?? 0,
+    intervalMinutes: j['intervalMinutes'] ?? 60,
+    cron: j['cron'] ?? _legacySyncCron(j['intervalMinutes'] ?? 60),
+    timeZone: j['timeZone'] ?? 'UTC', skipIfRunning: j['skipIfRunning'] ?? true,
+    wifiOnly: j['wifiOnly'] ?? true, chargingOnly: j['chargingOnly'] ?? false,
+    lastRun: j['lastRun'] ?? 0, nextRun: j['nextRun'] ?? 0,
   );
 
   static List<SyncProfile> loadAll(SharedPreferences p) {
@@ -42,6 +48,12 @@ class SyncProfile {
 
   static Future<void> saveAll(SharedPreferences p, List<SyncProfile> profiles) =>
       p.setString(kSyncProfiles, jsonEncode([for (final x in profiles) x.toJson()]));
+}
+
+String _legacySyncCron(int minutes) {
+  if (minutes <= 30) return '*/' + minutes.toString() + ' * * * *';
+  if (minutes < 1440) return '0 */' + (minutes / 60).round().toString() + ' * * *';
+  return '0 2 * * *';
 }
 
 class SyncManifestEntry {
