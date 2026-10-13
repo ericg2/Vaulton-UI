@@ -141,7 +141,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   final Map<String, List<SyncSourceEntry>> _safeCleanup = {};
   Timer? _poll;
   Timer? _desktopSchedule;
-  CancelToken? _cancel;
+  final Map<String, CancelToken> _cancelTokens = {};
   final Set<String> _activeSyncIds = {};
 
   @override
@@ -156,7 +156,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   void dispose() {
     _poll?.cancel();
     _desktopSchedule?.cancel();
-    _cancel?.cancel();
+    for (final token in _cancelTokens.values) { token.cancel('Sync cancelled'); }
+    _cancelTokens.clear();
     super.dispose();
   }
 
@@ -449,6 +450,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   }
 
   Future<void> _preview(SyncProfile p) async {
+    final cancel = CancelToken();
+    _cancelTokens[p.id] = cancel;
     try {
       final plan = await buildSyncPlan(
         ref.read(apiClientProvider),
@@ -457,32 +460,40 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         onProgress: (s) {
           if (mounted) setState(() => _status[p.id] = s);
         },
+        cancel: cancel,
       );
       if (!mounted) return;
       setState(() => _plans[p.id] = plan);
       await _showPlan(p, plan);
     } catch (e) {
-      final error = e.toString();
-      if (error.toLowerCase().contains('source folder is no longer available')) {
-        p.enabled = false;
-        final status = SyncRunStatus(
-          phase: 'Failed',
-          error: 'Source folder is unavailable.',
-          message: 'Sync paused. Choose the source folder again to resume.',
-          finishedAt: DateTime.now().millisecondsSinceEpoch,
-        );
-        await status.save(ref.read(prefsProvider), p.id);
-        await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
-        await configureSyncSchedules(_profiles);
-        if (mounted) setState(() => _status[p.id] = status);
-      } else if (mounted) {
-        toast(context, error, error: true);
+      if (CancelToken.isCancel(e)) {
+        if (mounted) toast(context, 'Sync cancelled');
+      } else {
+        final error = e.toString();
+        if (error.toLowerCase().contains('source folder is no longer available')) {
+          p.enabled = false;
+          final status = SyncRunStatus(
+            phase: 'Failed',
+            error: 'Source folder is unavailable.',
+            message: 'Sync paused. Choose the source folder again to resume.',
+            finishedAt: DateTime.now().millisecondsSinceEpoch,
+          );
+          await status.save(ref.read(prefsProvider), p.id);
+          await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+          await configureSyncSchedules(_profiles);
+          if (mounted) setState(() => _status[p.id] = status);
+        } else if (mounted) {
+          toast(context, error, error: true);
+        }
       }
+    } finally {
+      if (identical(_cancelTokens[p.id], cancel)) _cancelTokens.remove(p.id);
     }
   }
 
   Future<void> _apply(SyncProfile p, SyncPlan plan) async {
-    _cancel = CancelToken();
+    final cancel = CancelToken();
+    _cancelTokens[p.id] = cancel;
     try {
       await applySyncPlan(
         ref.read(apiClientProvider),
@@ -492,21 +503,26 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         onProgress: (s) {
           if (mounted) setState(() => _status[p.id] = s);
         },
-        cancel: _cancel,
+        cancel: cancel,
       );
       p.lastRun = DateTime.now().millisecondsSinceEpoch;
       p.nextRun = await calculateNextSyncRun(ref.read(apiClientProvider), p);
       await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
       await configureSyncSchedules(_profiles);
       if (mounted) toast(context, 'Sync complete');
-      final source = openSyncSource(SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel));
-      final safe = (await source.scan()).where((x) => !x.isDir).toList();
+      final safe = plan.sourceEntries.where((x) => !x.isDir).toList();
       if (mounted) setState(() => _safeCleanup[p.id] = safe);
       await _refreshStatus();
     } catch (e) {
-      if (mounted) toast(context, e is DioException && CancelToken.isCancel(e) ? 'Sync cancelled' : e.toString(), error: true);
+      if (mounted) {
+        if (CancelToken.isCancel(e)) {
+          toast(context, 'Sync cancelled');
+        } else {
+          toast(context, e.toString(), error: true);
+        }
+      }
     } finally {
-      _cancel = null;
+      if (identical(_cancelTokens[p.id], cancel)) _cancelTokens.remove(p.id);
     }
   }
 
@@ -874,18 +890,28 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               ]),
             ),
           if (running) ...[
-            Padding(padding: const EdgeInsets.only(right: 8), child: Text(st.phase, style: Theme.of(context).textTheme.labelLarge)),
+            Row(children: [
+              Expanded(child: Text(st.phase, style: Theme.of(context).textTheme.labelLarge)),
+              TextButton.icon(
+                onPressed: _cancelTokens[p.id] == null ? null : () => _cancelTokens[p.id]?.cancel('Sync cancelled'),
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('Cancel'),
+              ),
+            ]),
             if (st.current != null) Text(st.current!, maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
-            LinearProgressIndicator(value: progress),
+            const LinearProgressIndicator(),
             const SizedBox(height: 8),
             Text(
-              '${fmtBytes(st.bytesDone)} of ${fmtBytes(st.bytesTotal)} · ${st.completed} completed · ${st.failed} failed',
+              st.phase.startsWith('Scanning Source') || st.phase == 'Checking Source Files'
+                  ? '${st.scannedSource} source items checked'
+                  : '${fmtBytes(st.bytesDone)} of ${fmtBytes(st.bytesTotal)} · ${st.completed} completed · ${st.failed} failed',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ] else ...[
             Wrap(spacing: 8, runSpacing: 8, children: [
-              _chip(p.cron + ' · ' + p.timeZone),
+              _chip(describeCron(p.cron, context)),
+              _chip(p.timeZone),
               _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
               if (p.skipIfRunning) _chip('Skip if Running'),
               if (p.nextRun > 0) _chip('Next Run: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
@@ -927,17 +953,29 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               onPressed: () async {
                 final times = await guarded(
                   context,
-                  () => ref.read(vaultonProvider).previewCron(p.cron, tz: p.timeZone, count: 5),
+                  () => ref.read(vaultonProvider).previewCronLabels(p.cron, tz: p.timeZone, count: 5),
                 );
                 if (times == null || !mounted) return;
                 await showDialog<void>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Next Runs'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [for (final time in times) Text(fmtDate(time))],
+                    content: SizedBox(
+                      width: 420,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Times shown in ${p.timeZone}.', style: Theme.of(ctx).textTheme.bodySmall),
+                          const SizedBox(height: 8),
+                          for (var i = 0; i < times.length; i++)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: CircleAvatar(radius: 14, child: Text('${i + 1}')),
+                              title: Text(times[i]),
+                            ),
+                        ],
+                      ),
                     ),
                     actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
                   ),
