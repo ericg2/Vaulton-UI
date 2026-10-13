@@ -216,7 +216,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     if (!mounted) return;
     setState(() {
       _profiles = SyncProfile.loadAll(prefs);
-      for (final p of _profiles) {
+      for (final p in _profiles) {
         final live = _status[p.id];
         // Keep in-memory progress; periodic refresh must not roll back a live scan.
         if (_cancelTokens.containsKey(p.id) && live?.running == true) continue;
