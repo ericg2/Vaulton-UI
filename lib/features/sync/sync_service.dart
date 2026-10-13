@@ -103,16 +103,27 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
 
   final manifest = loadSyncManifest(prefs, profile.id);
   var scanned = 0;
+  var scannedDirectories = 0;
   var progressSave = Future<void>.value();
-  final local = await source.scan(cancel: cancel, onEntry: (entry) {
-    scanned++;
-    status.scannedSource = scanned;
-    status.current = entry.relative;
-    if (scanned == 1 || scanned % 8 == 0) {
-      onProgress?.call(status);
-      progressSave = progressSave.then((_) async { await status.save(prefs, profile.id); });
-    }
-  });
+  final local = await source.scan(
+    cancel: cancel,
+    onDirectory: (relative) {
+      scannedDirectories++;
+      status.current = relative.isEmpty ? profile.sourceLabel : relative;
+      if (scannedDirectories == 1 || scannedDirectories % 8 == 0) {
+        onProgress?.call(status);
+      }
+    },
+    onEntry: (entry) {
+      scanned++;
+      status.scannedSource = scanned;
+      status.current = entry.relative;
+      if (scanned == 1 || scanned % 8 == 0) {
+        onProgress?.call(status);
+        progressSave = progressSave.then((_) async { await status.save(prefs, profile.id); });
+      }
+    },
+  );
   await progressSave;
   _throwIfCancelled(cancel);
   status.scannedSource = local.length;
