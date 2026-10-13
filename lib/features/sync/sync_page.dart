@@ -6,6 +6,7 @@ import '../../background/background_api.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
+import '../../core/cron_picker.dart';
 import '../../core/timezones.dart';
 import '../../core/widgets.dart';
 import '../../platform/desktop_window.dart';
@@ -178,6 +179,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           _status[p.id] = SyncRunStatus.load(prefs, p.id);
         }
       });
+      await configureSyncSchedules(profiles);
       await _openRequestedSettings(profiles);
     } catch (_) {
       if (mounted) setState(() => _profiles = profiles);
@@ -476,7 +478,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         cancel: _cancel,
       );
       p.lastRun = DateTime.now().millisecondsSinceEpoch;
-      p.nextRun = p.lastRun + p.intervalMinutes * 60000;
+      p.nextRun = await calculateNextSyncRun(ref.read(apiClientProvider), p);
       await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
       await configureSyncSchedules(_profiles);
       if (mounted) toast(context, 'Sync complete');
