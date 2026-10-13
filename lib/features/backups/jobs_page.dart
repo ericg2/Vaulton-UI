@@ -371,7 +371,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                         leading: Icon(s.enabled ? Icons.schedule : Icons.pause_circle_outline),
                         title: Text(s.name),
                         subtitle: Text(
-                          '${kindLabel(s.mode)} · ${describeCron(s.cron, context)} · ${s.timeZone}\nNext: ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}',
+                          '${kindLabel(s.mode)} · ${describeCron(s.cron, context)} · ${s.timeZone}\nNext (local): ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}',
                         ),
                         isThreeLine: true,
                         trailing: PopupMenuButton<String>(
