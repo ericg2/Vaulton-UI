@@ -255,7 +255,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     var remoteDir = existing?.remoteDir ?? '/${source.label}';
     final deviceTz = await deviceTimeZone();
     if (!mounted) return null;
-    var cron = existing?.cron ?? '0 2 * * *';
+    final cron = existing?.cron ?? '0 2 * * *';
     var timeZone = existing?.timeZone ?? deviceTz ?? 'UTC';
     var skipIfRunning = existing?.skipIfRunning ?? true;
     var enabled = existing?.enabled ?? true;
@@ -887,6 +887,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(p.cron + ' · ' + p.timeZone),
               _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
+              if (p.skipIfRunning) _chip('Skip if Running'),
               if (p.nextRun > 0) _chip('Next Run: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
             ]),
             const SizedBox(height: 8),
@@ -969,12 +970,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         ]),
       ),
     );
-  }
-
-  String _frequencyLabel(int minutes) {
-    if (minutes < 60) return 'Every $minutes minutes';
-    if (minutes % 60 == 0) return 'Every ${minutes ~/ 60} hours';
-    return 'Every $minutes minutes';
   }
 
   Widget _chip(String text) => chip(context, text);
