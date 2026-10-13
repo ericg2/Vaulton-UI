@@ -472,7 +472,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       setState(() => _plans[p.id] = plan);
       await _showPlan(p, plan);
     } catch (e) {
-      if (CancelToken.isCancel(e)) {
+      if (e is DioException && CancelToken.isCancel(e)) {
         if (mounted) toast(context, 'Sync cancelled');
       } else {
         final error = e.toString();
