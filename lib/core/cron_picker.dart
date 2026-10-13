@@ -220,14 +220,14 @@ String describeCron(String cron, BuildContext context) {
   final minuteStep = step.firstMatch(p[0]);
   if (minuteStep != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(minuteStep.group(1) ?? '');
-    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every \${n} minutes';
+    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every ${n} minutes';
   }
   if (minute != null && hourStep != null && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(hourStep.group(1) ?? '');
-    if (n != null && n > 0) return 'Every \${n} hours at :\${minute.toString().padLeft(2, '0')}';
+    if (n != null && n > 0) return 'Every ${n} hours at :${minute.toString().padLeft(2, '0')}';
   }
   if (minute != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
-    return 'Every hour at :\${minute.toString().padLeft(2, '0')}';
+    return 'Every hour at :${minute.toString().padLeft(2, '0')}';
   }
   if (minute == null || hour == null || minute < 0 || minute > 59 || hour < 0 || hour > 23) {
     return 'Custom schedule';
@@ -245,7 +245,7 @@ String describeCron(String cron, BuildContext context) {
     if (days.isEmpty) return 'Custom schedule';
     final labels = [for (final d in _days) if (days.contains(d.$2)) d.$1];
     final weekdays = [1, 2, 3, 4, 5].every(days.contains) && days.length == 5;
-    return '\${days.length == 7 ? 'Every day' : weekdays ? 'Weekdays' : labels.join(', ')} at $time';
+    return '${days.length == 7 ? 'Every day' : weekdays ? 'Weekdays' : labels.join(', ')} at $time';
   }
   final day = int.tryParse(p[2]);
   if (day != null && day >= 1 && day <= 31 && p[3] == '*' && p[4] == '*') {
