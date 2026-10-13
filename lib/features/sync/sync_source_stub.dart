@@ -12,7 +12,7 @@ class SyncSourceEntry {
   final bool isDir;
 }
 abstract class SyncSource {
-  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry});
+  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry, void Function(String relative)? onDirectory});
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry);
   Future<void> delete(SyncSourceEntry entry);
 }
