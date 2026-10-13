@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 class SyncSourceInfo {
   const SyncSourceInfo({required this.kind, required this.location, required this.label});
   final String kind, location, label;
@@ -10,7 +12,7 @@ class SyncSourceEntry {
   final bool isDir;
 }
 abstract class SyncSource {
-  Future<List<SyncSourceEntry>> scan({dynamic cancel, void Function(SyncSourceEntry)? onEntry});
+  Future<List<SyncSourceEntry>> scan({CancelToken? cancel, void Function(SyncSourceEntry)? onEntry});
   Future<Stream<List<int>>> openRead(SyncSourceEntry entry);
   Future<void> delete(SyncSourceEntry entry);
 }
