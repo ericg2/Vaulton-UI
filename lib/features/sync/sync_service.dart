@@ -357,7 +357,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
 Future<int> calculateNextSyncRun(
   ApiClient api,
   SyncProfile profile, {
-  int fallbackDelayMs = const Duration(hours: 1).inMilliseconds,
+  int fallbackDelayMs = 3600000,
 }) async {
   try {
     final occurrences = await Vaulton(api).previewCron(
