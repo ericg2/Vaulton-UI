@@ -137,7 +137,6 @@ class _CronFieldState extends State<CronField> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final cron = widget.controller.text;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       DropdownButtonFormField<_Freq>(
         initialValue: _f,
@@ -202,7 +201,6 @@ class _CronFieldState extends State<CronField> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(_describe(context), style: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w600)),
-                Text(cron, style: TextStyle(color: cs.onSecondaryContainer, fontFamily: 'monospace', fontSize: 12)),
               ]),
             ),
           ]),
