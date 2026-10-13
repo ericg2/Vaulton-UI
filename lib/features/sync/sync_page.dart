@@ -216,7 +216,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     if (!mounted) return;
     setState(() {
       _profiles = SyncProfile.loadAll(prefs);
-      for (final p in _profiles) {
+      for (final p of _profiles) {
+        final live = _status[p.id];
+        // Keep in-memory progress; periodic refresh must not roll back a live scan.
+        if (_cancelTokens.containsKey(p.id) && live?.running == true) continue;
         _status[p.id] = SyncRunStatus.load(prefs, p.id);
       }
     });
@@ -768,6 +771,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           if (desktop) IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
+      bottomNavigationBar: _sourceScanBanner(),
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: desktop ? 1180 : 720),
@@ -832,6 +836,77 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
               for (final p in _profiles) _profileCard(p),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget? _sourceScanBanner() {
+    SyncProfile? profile;
+    SyncRunStatus? status;
+    for (final p in _profiles) {
+      final candidate = _status[p.id];
+      if (_cancelTokens.containsKey(p.id) &&
+          candidate?.running == true &&
+          (candidate!.phase == 'Scanning Source' || candidate.phase == 'Checking Source Files')) {
+        profile = p;
+        status = candidate;
+        break;
+      }
+    }
+    if (profile == null || status == null) return null;
+
+    final cs = Theme.of(context).colorScheme;
+    final checked = status.scannedSource;
+    final subtitle = checked == 0 ? 'Opening source folder…' : '$checked source items checked';
+    return SafeArea(
+      top: false,
+      child: Material(
+        elevation: 8,
+        color: cs.surfaceContainer,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const SizedBox(width: 18, height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('${profile.name} · ${status.phase}',
+                                style: Theme.of(context).textTheme.titleSmall),
+                            Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _cancelTokens[profile!.id]?.cancel('Sync cancelled'),
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text('Cancel'),
+                      ),
+                    ],
+                  ),
+                  if (status.current != null) ...[
+                    const SizedBox(height: 4),
+                    Text(status.current!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                  const SizedBox(height: 8),
+                  const LinearProgressIndicator(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
