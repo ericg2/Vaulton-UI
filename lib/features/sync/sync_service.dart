@@ -433,6 +433,7 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
   final i = profiles.indexWhere((x) => x.id == profile.id);
   if (i >= 0) {
     profiles[i]
+      ..enabled = profile.enabled
       ..lastRun = profile.lastRun
       ..nextRun = profile.nextRun;
   }
