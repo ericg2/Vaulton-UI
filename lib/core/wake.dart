@@ -70,7 +70,7 @@ class WakeService {
     }
   }
 
-  static Future<bool> ensureReady(ApiClient api, {CancelToken? cancelToken}) async {
+  static Future<bool> ensureReady(ApiClient api, {CancelToken? cancelToken, bool allowWake = true}) async {
     final ready = Dio(
       BaseOptions(
         baseUrl: api.session.baseUrl,
@@ -90,6 +90,7 @@ class WakeService {
     }
 
     if (cancelToken?.isCancelled == true) throw ApiException('Cancelled');
+    if (!allowWake) return false;
     if (!api.session.hasWakeConfigFor(api.session.baseUrl)) return false;
 
     try {

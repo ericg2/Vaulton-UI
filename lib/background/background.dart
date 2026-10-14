@@ -20,13 +20,109 @@ import '../features/transfers/transfer_models.dart';
 const _kSync = 'vaulton.sync.periodic';
 const _kScheduledSyncIds = 'vaulton.sync.scheduled_ids';
 const _kDrain = 'vaulton.drain';
-const _kUpdateDownload = 'vaulton.update.download';
-const _updateStatusKey = 'vaulton.update.status';
-const _updatePathKey = 'vaulton.update.path';
-const _updateMessageKey = 'vaulton.update.message';
-const _updateProgressKey = 'vaulton.update.progress';
-const _updateVersionKey = 'vaulton.update.version';
-const _updateErrorKey = 'vaulton.update.error';
+const _kSyncChannel = 'vaulton_sync';
+
+int _syncNotificationId(String id) => 7302 + (id.hashCode & 0x3fffffff);
+
+Future<FlutterLocalNotificationsPlugin> _syncNotifier() async {
+  final n = FlutterLocalNotificationsPlugin();
+  await n.initialize(settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  await n.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(
+    const AndroidNotificationChannel(_kSyncChannel, 'Folder sync',
+        description: 'Progress and results of folder syncs.', importance: Importance.low),
+  );
+  return n;
+}
+
+Future<void> _showSyncProgress(FlutterLocalNotificationsPlugin n, SyncProfile profile, SyncRunStatus s) async {
+  final total = s.bytesTotal;
+  final percent = total > 0 ? (s.bytesDone * 100 / total).floor().clamp(0, 100) : null;
+  final detail = s.current == null ? s.phase : '${s.phase} · ${s.current}';
+  await n.show(
+    id: _syncNotificationId(profile.id),
+    title: 'Syncing ${profile.name}',
+    body: percent == null ? detail : '$detail ($percent%)',
+    notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
+      _kSyncChannel, 'Folder sync',
+      channelDescription: 'Progress and results of folder syncs.',
+      importance: Importance.low, priority: Priority.low, onlyAlertOnce: true,
+      ongoing: true, showProgress: true, maxProgress: 100,
+      progress: percent ?? 0, indeterminate: percent == null,
+    )),
+  );
+}
+
+/// Ongoing + result notifications for a sync, usable from both the background
+/// worker and user-initiated runs inside the app.
+class SyncNotification {
+  SyncNotification._(this._n, this._profile);
+  final FlutterLocalNotificationsPlugin? _n;
+  final SyncProfile _profile;
+  DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static Future<SyncNotification> start(SyncProfile profile) async {
+    if (!backgroundSupported) return SyncNotification._(null, profile);
+    try {
+      final n = await _syncNotifier();
+      final x = SyncNotification._(n, profile);
+      await _showSyncProgress(n, profile, SyncRunStatus(running: true, phase: 'Starting'));
+      return x;
+    } catch (_) {
+      return SyncNotification._(null, profile);
+    }
+  }
+
+  void progress(SyncRunStatus s) {
+    final n = _n;
+    if (n == null) return;
+    final now = DateTime.now();
+    if (now.difference(_last) < const Duration(seconds: 1)) return;
+    _last = now;
+    unawaited(_showSyncProgress(n, _profile, s).catchError((_) {}));
+  }
+
+  /// Removes the ongoing notification and posts a result if there is one worth showing.
+  Future<void> finish(SharedPreferences prefs, {bool cancelled = false}) async {
+    final n = _n;
+    if (n == null) return;
+    try {
+      await n.cancel(id: _syncNotificationId(_profile.id));
+      if (cancelled) return;
+      final result = SyncRunStatus.load(prefs, _profile.id);
+      final changed = result.newFiles + result.updatedFiles + result.deletedFiles;
+      String? title, body;
+      if (result.error != null) {
+        title = 'Sync failed: ${_profile.name}';
+        body = result.message ?? result.error;
+      } else if (result.completed > 0 || changed > 0) {
+        title = 'Sync complete: ${_profile.name}';
+        body = '${result.newFiles} new, ${result.updatedFiles} updated, ${result.deletedFiles} removed.';
+      } else if (result.message != null && result.message!.contains('Skipped')) {
+        title = 'Sync skipped: ${_profile.name}';
+        body = result.message;
+      }
+      if (title != null) {
+        await n.show(
+          id: _syncNotificationId(_profile.id) + 1,
+          title: title,
+          body: body,
+          notificationDetails: const NotificationDetails(android: AndroidNotificationDetails(
+            _kSyncChannel, 'Folder sync', importance: Importance.defaultImportance, priority: Priority.defaultPriority,
+          )),
+        );
+      }
+    } catch (_) {}
+  }
+}
+
+Future<void> _runSyncWithNotification(ApiClient api, SharedPreferences prefs, SyncProfile profile, {bool force = false}) async {
+  final note = await SyncNotification.start(profile);
+  try {
+    await runScheduledSync(api, prefs, profile, onProgress: note.progress, force: force);
+  } finally {
+    await note.finish(prefs);
+  }
+}
 
 Future<void> startBackgroundUpdateDownload({required String packageUrl, required String checksumUrl, required String fileName, required String version}) async {
   if (!backgroundSupported) throw StateError('Background updates are only supported on Android.');
@@ -77,7 +173,7 @@ void backgroundDispatcher() {
           if (profileId == null) return true;
           final selected = profiles.where((profile) => profile.id == profileId).toList();
           for (final profile in selected) {
-            await runScheduledSync(api, prefs, profile);
+            await _runSyncWithNotification(api, prefs, profile, force: input?['scheduled'] != true);
             if (input?['scheduled'] == true) {
               final updated = SyncProfile.loadAll(prefs)
                   .where((item) => item.id == profile.id)
@@ -235,8 +331,11 @@ Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     ),
   );
-  await notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
+  final androidNotifications = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await androidNotifications?.requestNotificationsPermission();
+  await androidNotifications?.createNotificationChannel(const AndroidNotificationChannel(
+    _kSyncChannel, 'Folder sync',
+    description: 'Progress and results of folder syncs.', importance: Importance.low));
 
   for (final profile in profiles) {
     final unique = 'vaulton-sync-' + profile.id;
@@ -276,33 +375,54 @@ Future<void> _scheduleSyncOccurrence(SyncProfile profile, {bool append = false})
   );
 }
 
+/// Runs a user-requested sync in the background worker (foreground service),
+/// so it keeps going after the app is closed.
 Future<void> triggerSyncNow({String? profileId}) async {
   if (!backgroundSupported) return;
   final prefs = await SharedPreferences.getInstance();
   final profiles = SyncProfile.loadAll(prefs);
-  final selected = profiles.where((profile) =>
-      profile.enabled && (profileId == null || profile.id == profileId));
+  final selected = profiles.where((profile) => profileId == null ? profile.enabled : profile.id == profileId);
   for (final profile in selected) {
+    await SyncRunStatus(
+      phase: 'Queued',
+      message: 'Waiting for the background worker to start.',
+      startedAt: 0,
+    ).save(prefs, profile.id);
     await Workmanager().registerOneOffTask(
       'vaulton-sync-now-${profile.id}',
       _kSync,
       inputData: {'profileId': profile.id},
-      existingWorkPolicy: ExistingWorkPolicy.keep,
-      constraints: Constraints(
-        networkType: profile.wifiOnly ? NetworkType.unmetered : NetworkType.connected,
-        requiresCharging: profile.chargingOnly,
-        requiresBatteryNotLow: true,
-      ),
+      existingWorkPolicy: ExistingWorkPolicy.replace,
+      // The user asked for this run explicitly, so ignore Wi-Fi/charging limits.
+      constraints: Constraints(networkType: NetworkType.connected),
       outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
       foregroundServiceConfig: ForegroundServiceConfig(
         notificationTitle: 'Vaulton folder sync',
         notificationText: 'A folder sync is running.',
-        notificationChannelId: 'vaulton_sync',
+        notificationChannelId: _kSyncChannel,
         notificationChannelName: 'Folder sync',
-        notificationId: 7302 + (profile.id.hashCode & 0x3fffffff),
+        notificationId: _syncNotificationId(profile.id),
         foregroundServiceType: ForegroundServiceType.dataSync,
       ),
     );
+  }
+}
+
+Future<void> cancelSyncNow(String profileId) async {
+  if (!backgroundSupported) return;
+  final prefs = await SharedPreferences.getInstance();
+  await Workmanager().cancelByUniqueName('vaulton-sync-now-$profileId');
+  await Workmanager().cancelByUniqueName('vaulton-sync-$profileId');
+  await SyncRunStatus(
+    phase: 'Cancelled',
+    message: 'Sync cancelled.',
+    finishedAt: DateTime.now().millisecondsSinceEpoch,
+  ).save(prefs, profileId);
+  final profile = SyncProfile.loadAll(prefs).where((p) => p.id == profileId).firstOrNull;
+  if (profile != null) {
+    final n = FlutterLocalNotificationsPlugin();
+    await n.cancel(id: _syncNotificationId(profileId));
+    await _scheduleSyncOccurrence(profile);
   }
 }
 

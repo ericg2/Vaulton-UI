@@ -272,6 +272,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     var deleteExtras = existing?.deleteExtras ?? true;
     var wifiOnly = existing?.wifiOnly ?? true;
     var chargingOnly = existing?.chargingOnly ?? false;
+    var wakeServer = existing?.wakeServer ?? true;
     final nameCtl = TextEditingController(text: name);
     final cronCtl = TextEditingController(text: cron);
 
@@ -357,6 +358,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
               ],
               _SettingSwitch(
+                title: 'Wake Server if Asleep',
+                value: wakeServer,
+                onChanged: (v) => set(() => wakeServer = v),
+              ),
+              _SettingSwitch(
                 title: 'Match Destination to Source',
                 value: deleteExtras,
                 onChanged: (v) => set(() => deleteExtras = v),
@@ -419,6 +425,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     skipIfRunning: skipIfRunning,
                     wifiOnly: wifiOnly,
                     chargingOnly: chargingOnly,
+                    wakeServer: wakeServer,
                     lastRun: existing?.lastRun ?? 0,
                     nextRun: occurrences.first.millisecondsSinceEpoch,
                   ));
@@ -458,15 +465,27 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     await _refreshStatus();
   }
 
+  Future<void> _cancelRun(String id) async {
+    final token = _cancelTokens[id];
+    if (token != null) {
+      token.cancel('Sync cancelled');
+    } else {
+      await cancelSyncNow(id);
+      await _refreshStatus();
+    }
+  }
+
   Future<void> _preview(SyncProfile p) async {
     final cancel = CancelToken();
     _cancelTokens[p.id] = cancel;
+    final note = await SyncNotification.start(p);
     try {
       final plan = await buildSyncPlan(
         ref.read(apiClientProvider),
         p,
         ref.read(prefsProvider),
         onProgress: (s) {
+          note.progress(s);
           if (mounted) setState(() => _status[p.id] = s);
         },
         cancel: cancel,
@@ -496,6 +515,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         }
       }
     } finally {
+      await note.finish(ref.read(prefsProvider), cancelled: true);
       if (identical(_cancelTokens[p.id], cancel)) _cancelTokens.remove(p.id);
     }
   }
@@ -503,6 +523,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   Future<void> _apply(SyncProfile p, SyncPlan plan) async {
     final cancel = CancelToken();
     _cancelTokens[p.id] = cancel;
+    final note = await SyncNotification.start(p);
     try {
       await applySyncPlan(
         ref.read(apiClientProvider),
@@ -510,6 +531,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         plan,
         ref.read(prefsProvider),
         onProgress: (s) {
+          note.progress(s);
           if (mounted) setState(() => _status[p.id] = s);
         },
         cancel: cancel,
@@ -531,6 +553,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         }
       }
     } finally {
+      await note.finish(ref.read(prefsProvider), cancelled: cancel.isCancelled);
       if (identical(_cancelTokens[p.id], cancel)) _cancelTokens.remove(p.id);
     }
   }
@@ -653,7 +676,15 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     );
                     if (!ok) return;
                   }
-                  await _apply(p, plan);
+                  if (backgroundSupported) {
+                    await triggerSyncNow(profileId: p.id);
+                    if (mounted) {
+                      toast(context, 'Sync started. It will keep running if you close the app.');
+                      await _refreshStatus();
+                    }
+                  } else {
+                    await _apply(p, plan);
+                  }
                 },
                 child: Text(plan.deletedFiles > 0 ? 'Sync & Delete Extras' : 'Start Sync'),
               ),
@@ -893,7 +924,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         ),
                       ),
                       TextButton.icon(
-                        onPressed: () => _cancelTokens[selectedProfile.id]?.cancel('Sync cancelled'),
+                        onPressed: () => _cancelRun(selectedProfile.id),
                         icon: const Icon(Icons.close, size: 18),
                         label: const Text('Cancel'),
                       ),
@@ -976,7 +1007,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             Row(children: [
               Expanded(child: Text(st.phase, style: Theme.of(context).textTheme.labelLarge)),
               TextButton.icon(
-                onPressed: _cancelTokens[p.id] == null ? null : () => _cancelTokens[p.id]?.cancel('Sync cancelled'),
+                onPressed: () => _cancelRun(p.id),
                 icon: const Icon(Icons.close, size: 18),
                 label: const Text('Cancel'),
               ),

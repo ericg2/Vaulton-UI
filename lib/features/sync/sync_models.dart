@@ -11,10 +11,10 @@ class SyncProfile {
     required this.sourceLabel, required this.pointId, required this.remoteDir,
     this.enabled = true, this.deleteExtras = true, this.intervalMinutes = 60,
     this.cron = '0 * * * *', this.timeZone = 'UTC', this.skipIfRunning = true,
-    this.wifiOnly = true, this.chargingOnly = false, this.lastRun = 0, this.nextRun = 0,
+    this.wifiOnly = true, this.chargingOnly = false, this.wakeServer = true, this.lastRun = 0, this.nextRun = 0,
   });
   final String id, name, sourceKind, sourceLocation, sourceLabel, pointId, remoteDir;
-  bool enabled, deleteExtras, wifiOnly, chargingOnly, skipIfRunning;
+  bool enabled, deleteExtras, wifiOnly, chargingOnly, skipIfRunning, wakeServer;
   int intervalMinutes, lastRun, nextRun;
   String cron, timeZone;
 
@@ -23,7 +23,7 @@ class SyncProfile {
     'sourceLabel': sourceLabel, 'pointId': pointId, 'remoteDir': remoteDir,
     'enabled': enabled, 'deleteExtras': deleteExtras, 'intervalMinutes': intervalMinutes,
     'cron': cron, 'timeZone': timeZone, 'skipIfRunning': skipIfRunning,
-    'wifiOnly': wifiOnly, 'chargingOnly': chargingOnly, 'lastRun': lastRun, 'nextRun': nextRun,
+    'wifiOnly': wifiOnly, 'chargingOnly': chargingOnly, 'wakeServer': wakeServer, 'lastRun': lastRun, 'nextRun': nextRun,
   };
 
   factory SyncProfile.fromJson(Map<String, dynamic> j) => SyncProfile(
@@ -35,7 +35,7 @@ class SyncProfile {
     intervalMinutes: j['intervalMinutes'] ?? 60,
     cron: j['cron'] ?? _legacySyncCron(j['intervalMinutes'] ?? 60),
     timeZone: j['timeZone'] ?? '', skipIfRunning: j['skipIfRunning'] ?? true,
-    wifiOnly: j['wifiOnly'] ?? true, chargingOnly: j['chargingOnly'] ?? false,
+    wifiOnly: j['wifiOnly'] ?? true, chargingOnly: j['chargingOnly'] ?? false, wakeServer: j['wakeServer'] ?? true,
     lastRun: j['lastRun'] ?? 0, nextRun: j['nextRun'] ?? 0,
   );
 
