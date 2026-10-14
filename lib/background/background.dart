@@ -165,6 +165,14 @@ Future<void> _runSyncWithNotification(ApiClient api, SharedPreferences prefs, Sy
   }
 }
 
+const _kUpdateDownload = 'vaulton.update.download';
+const _updateStatusKey = 'vaulton.update.status';
+const _updatePathKey = 'vaulton.update.path';
+const _updateMessageKey = 'vaulton.update.message';
+const _updateProgressKey = 'vaulton.update.progress';
+const _updateVersionKey = 'vaulton.update.version';
+const _updateErrorKey = 'vaulton.update.error';
+
 Future<void> startBackgroundUpdateDownload({required String packageUrl, required String checksumUrl, required String fileName, required String version}) async {
   if (!backgroundSupported) throw StateError('Background updates are only supported on Android.');
   final notifications = FlutterLocalNotificationsPlugin();
