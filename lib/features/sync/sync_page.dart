@@ -284,8 +284,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           content: SizedBox(
             width: 520,
+            height: MediaQuery.sizeOf(ctx).height * 0.68,
             child: ListView(
-              shrinkWrap: true,
               children: [
               TextField(
                 controller: nameCtl,
@@ -698,10 +698,12 @@ class _SyncPageState extends ConsumerState<SyncPage> {
 
   Future<void> _run(SyncProfile p) async {
     if (!_activeSyncIds.add(p.id)) return;
+    if (mounted) setState(() {});
     try {
       await _preview(p);
     } finally {
       _activeSyncIds.remove(p.id);
+      if (mounted) setState(() {});
     }
   }
 
@@ -950,7 +952,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final st = _status[p.id] ?? SyncRunStatus();
     final point = _points.where((x) => x.id == p.pointId).firstOrNull;
     final plan = _plans[p.id];
-    final running = st.running || st.phase == 'Queued';
+    final previewing = _activeSyncIds.contains(p.id);
+    final running = st.running || st.phase == 'Queued' || previewing;
     final progress = st.bytesTotal > 0 ? (st.bytesDone / st.bytesTotal).clamp(0, 1).toDouble() : null;
 
     return Card(
@@ -1004,7 +1007,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             ),
           if (running) ...[
             Row(children: [
-              Expanded(child: Text(st.phase, style: Theme.of(context).textTheme.labelLarge)),
+              Expanded(child: Text(previewing && !st.running ? 'Preparing Review' : st.phase, style: Theme.of(context).textTheme.labelLarge)),
               TextButton.icon(
                 onPressed: () => _cancelRun(p.id),
                 icon: const Icon(Icons.close, size: 18),
@@ -1027,7 +1030,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               _chip(p.timeZone),
               _chip(p.deleteExtras ? 'Mirror' : 'Keep Extras'),
               if (p.skipIfRunning) _chip('Skip if Running'),
-              if (p.nextRun > 0) _chip('Next Run (local): ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
+              if (p.nextRun > 0) _chip('Next Run: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(p.nextRun))}'),
             ]),
             const SizedBox(height: 8),
             if (st.finishedAt > 0)
@@ -1060,41 +1063,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               onPressed: running || _activeSyncIds.contains(p.id) ? null : () => _run(p),
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton(
-              onPressed: () async {
-                final times = await guarded(
-                  context,
-                  () => ref.read(vaultonProvider).previewCronLabels(p.cron, tz: p.timeZone, count: 5),
-                );
-                if (times == null || !mounted) return;
-                await showDialog<void>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Next Runs'),
-                    content: SizedBox(
-                      width: 420,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Times shown in ${p.timeZone}.', style: Theme.of(ctx).textTheme.bodySmall),
-                          const SizedBox(height: 8),
-                          for (var i = 0; i < times.length; i++)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: CircleAvatar(radius: 14, child: Text('${i + 1}')),
-                              title: Text(times[i]),
-                            ),
-                        ],
-                      ),
-                    ),
-                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
-                  ),
-                );
-              },
-              child: const Text('Next Runs'),
             ),
             const SizedBox(width: 8),
             OutlinedButton(
