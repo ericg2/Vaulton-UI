@@ -13,6 +13,26 @@
 - `dart format lib test` formats Dart source.
 - Run the relevant checks after changes and report exactly which commands succeeded, failed, or could not be run. Never claim that a build, test, install, or runtime behavior was verified unless it was actually verified.
 
+### Verified Sync and Platform Behavior
+
+- Folder Sync requires access to a local filesystem directory through the platform file picker. Flutter Web cannot provide the native directory access required by this feature, so do not offer a working-looking Add Folder, Sync Now, Preview, Settings, or enabled-profile toggle in a browser. Explain briefly that local folder sync is available in the desktop and mobile apps.
+- Native folder sync runs on supported desktop/mobile platforms. Background sync is platform-dependent; inspect `backgroundSupported` and the relevant adapters before changing behavior. A foreground sync should review its plan before applying changes, and mirror deletion must remain explicit and accurately described.
+- Keep sync phases understandable: scan/plan, transfer, completion, and failure. Show determinate byte progress when known, permit safe cancellation, and never hide the source, destination, or delete scope.
+- Sync profile cards need responsive actions. At narrow widths, wrap actions instead of forcing a single row; expand long dropdowns and ensure dialogs scroll within the available height.
+- The Sync layout suite covers 320×568, 390×844, 768×900, and 1280×900 logical-pixel viewports, as well as an active transfer at 320×700. Extend this coverage when responsive behavior changes.
+- `test/features/sync/sync_live_backend_test.dart` is an opt-in integration test. It requires `VAULTON_TEST_PASSWORD` and `VAULTON_TEST_POINT_ID`, creates isolated temporary source files, and exercises plan/apply against a running local Vaulton API. Use only a confirmed disposable test backend. The ordinary `flutter test` intentionally skips it when credentials are absent.
+- A clean widget test of the root app needs `ProviderScope` overrides for `prefsProvider` and `sessionProvider`; directly pumping `VaultonApp` without providers is not a valid smoke test.
+- Windows can be build-verified with `flutter build windows`; widget tests can check desktop-size layouts. A successful build does not establish native visual correctness, so inspect the running native window when Windows visual QA is requested and computer-use access is available.
+- During this task, actual browser inspection showed the web Sync page. Native Windows UI automation was not available in that run; only its Windows release build and responsive widget coverage were verified. Do not treat this historical limitation as a current tool limitation without checking.
+
+### Responsive UI Review
+
+- For UI fixes, inspect the whole flow and its loading, empty, success, unavailable, and failure states, not just the main screen.
+- Exercise small phone width (320 logical pixels), common mobile width (390), tablet width (768), and desktop width (1280); check text scaling where the layout contains dense controls.
+- In Flutter widget tests, use `tester.view.physicalSize` and `devicePixelRatio` deliberately, settle animations, and fail on `tester.takeException()` so RenderFlex overflows are caught.
+- Use runtime browser/native inspection for visual issues that widget structure alone cannot prove. If inspecting Windows, first read and follow the `computer-use` skill workflow.
+- Re-run `flutter test`, `flutter analyze`, and the relevant platform build. Report pre-existing analyzer findings separately from issues introduced by the change. Do not claim platform visual verification from a compile or widget test alone.
+
 ## Style and Testing
 
 Use Dart’s standard formatter (two-space indentation) and follow the configured Flutter lints. Keep UI code in the relevant feature folder and shared API/session behavior in `lib/core/`. Name tests with the `_test.dart` suffix and group them by feature when practical; add focused tests for changed behavior.

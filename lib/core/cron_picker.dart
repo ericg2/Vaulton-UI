@@ -114,6 +114,7 @@ class _CronFieldState extends State<CronField> {
   Widget _numberDropdown(String label, int value, List<int> options, void Function(int) onChanged, {String Function(int)? fmt}) =>
       DropdownButtonFormField<int>(
         initialValue: options.contains(value) ? value : options.first,
+        isExpanded: true,
         decoration: InputDecoration(labelText: label),
         items: [for (final o in options) DropdownMenuItem(value: o, child: Text(fmt?.call(o) ?? '$o'))],
         onChanged: (v) {
@@ -140,6 +141,7 @@ class _CronFieldState extends State<CronField> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       DropdownButtonFormField<_Freq>(
         initialValue: _f,
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Frequency'),
         items: [for (final f in _Freq.values) DropdownMenuItem(value: f, child: Text(_freqLabels[f]!))],
         onChanged: (v) {

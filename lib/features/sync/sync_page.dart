@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../background/background_api.dart';
@@ -284,7 +285,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           content: SizedBox(
             width: 520,
-            height: MediaQuery.sizeOf(ctx).height * 0.68,
+            height: MediaQuery.sizeOf(ctx).height *
+                (MediaQuery.sizeOf(ctx).height < 620 ? 0.52 : 0.68),
             child: ListView(
               children: [
               TextField(
@@ -329,6 +331,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: timeZone,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Time Zone'),
                 items: [
                   for (final zone in timeZoneOptions(device: deviceTz, extra: existing?.timeZone))
@@ -587,6 +590,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           content: SizedBox(
             width: 560,
+            height: MediaQuery.sizeOf(ctx).height * 0.68,
             child: ListView(shrinkWrap: true, children: [
               Text(
                 '${p.sourceLabel} → ${_pointName(p.pointId)}${p.remoteDir}',
@@ -707,16 +711,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     if (mounted) setState(() {});
     try {
       if (backgroundSupported) {
-        // One scan only: the background worker scans and uploads in a single pass.
-        if (p.deleteExtras) {
-          final ok = await confirm(
-            context,
-            'Start Sync?',
-            'This sync mirrors the source exactly, so anything in the destination that is not in the source will be permanently removed.',
-          );
-          if (!ok) return;
-        }
-        await _startBackground(p);
+        await _preview(p);
       } else {
         await _preview(p);
       }
@@ -854,9 +849,18 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Folder Sync', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 2),
-                      Text('Keep folders in sync automatically.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                      Text(
+                        kIsWeb
+                            ? 'Local folder sync is available in the desktop and mobile apps.'
+                            : 'Keep folders in sync automatically.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
                     ]);
-                    final add = FilledButton.icon(onPressed: _add, icon: const Icon(Icons.add), label: const Text('Add Folder'));
+                    final add = FilledButton.icon(
+                      onPressed: kIsWeb ? null : _add,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Folder'),
+                    );
                     if (narrow) {
                       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1007,7 +1011,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             ),
             Switch(
               value: p.enabled,
-              onChanged: (v) async {
+              onChanged: kIsWeb ? null : (v) async {
                 p.enabled = v;
                 await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
                 await configureSyncSchedules(_profiles);
@@ -1056,7 +1060,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             ]),
             if (st.current != null) Text(st.current!, maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
-            const LinearProgressIndicator(),
+            LinearProgressIndicator(value: progress),
             const SizedBox(height: 8),
             Text(
               st.phase.startsWith('Scanning Source') || st.phase == 'Checking Source Files'
@@ -1100,41 +1104,51 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Row(children: [
-            FilledButton.tonalIcon(
-              onPressed: running || _activeSyncIds.contains(p.id) ? null : () => _run(p),
-              icon: const Icon(Icons.sync),
-              label: const Text('Sync Now'),
-            ),
-            if (backgroundSupported) ...[
+          LayoutBuilder(builder: (context, constraints) {
+            final compact = constraints.maxWidth < 470;
+            final actions = <Widget>[
+              FilledButton.tonalIcon(
+                onPressed: kIsWeb || running || _activeSyncIds.contains(p.id) ? null : () => _run(p),
+                icon: const Icon(Icons.sync),
+                label: const Text('Sync Now'),
+              ),
+              if (backgroundSupported) ...[
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: kIsWeb || running || _activeSyncIds.contains(p.id) ? null : () => _previewOnly(p),
+                  child: const Text('Preview'),
+                ),
+              ],
               const SizedBox(width: 8),
               OutlinedButton(
-                onPressed: running || _activeSyncIds.contains(p.id) ? null : () => _previewOnly(p),
-                child: const Text('Preview'),
+                onPressed: kIsWeb ? null : () async {
+                  final source = SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel);
+                  final updated = await _configure(p, source);
+                  if (updated == null) return;
+                  final i = _profiles.indexWhere((x) => x.id == p.id);
+                  if (i < 0) return;
+                  _profiles[i] = updated;
+                  await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
+                  await configureSyncSchedules(_profiles);
+                  if (mounted) setState(() {});
+                },
+                child: const Text('Settings'),
               ),
-            ],
-            const SizedBox(width: 8),
-            OutlinedButton(
-              onPressed: () async {
-                final source = SyncSourceInfo(kind: p.sourceKind, location: p.sourceLocation, label: p.sourceLabel);
-                final updated = await _configure(p, source);
-                if (updated == null) return;
-                final i = _profiles.indexWhere((x) => x.id == p.id);
-                if (i < 0) return;
-                _profiles[i] = updated;
-                await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
-                await configureSyncSchedules(_profiles);
-                if (mounted) setState(() {});
-              },
-              child: const Text('Settings'),
-            ),
-            const Spacer(),
-            IconButton(
-              tooltip: 'Remove',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _delete(p),
-            ),
-          ]),
+              IconButton(
+                tooltip: 'Remove',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _delete(p),
+              ),
+            ];
+            if (compact) {
+              return Wrap(spacing: 8, runSpacing: 8, children: actions);
+            }
+            return Row(children: [
+              ...actions.take(actions.length - 1),
+              const Spacer(),
+              actions.last,
+            ]);
+          }),
         ]),
       ),
     );
