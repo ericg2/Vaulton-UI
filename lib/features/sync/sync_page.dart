@@ -515,7 +515,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         }
       }
     } finally {
-      await note.finish(ref.read(prefsProvider), cancelled: true);
+      await note.finish(ref.read(prefsProvider), cancelled: cancel.isCancelled);
       if (identical(_cancelTokens[p.id], cancel)) _cancelTokens.remove(p.id);
     }
   }
@@ -698,29 +698,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
 
   Future<void> _run(SyncProfile p) async {
     if (!_activeSyncIds.add(p.id)) return;
-    if (mounted) setState(() {});
     try {
-      if (backgroundSupported) {
-        // One scan only: the background worker scans and uploads in a single pass.
-        if (p.deleteExtras) {
-          final ok = await confirm(
-            context,
-            'Start Sync?',
-            'This sync mirrors the source exactly, so anything in the destination that is not in the source will be permanently removed.',
-          );
-          if (!ok) return;
-        }
-        await triggerSyncNow(profileId: p.id);
-        if (mounted) {
-          toast(context, 'Sync started. It will keep running if you close the app.');
-          await _refreshStatus();
-        }
-      } else {
-        await _preview(p);
-      }
+      await _preview(p);
     } finally {
       _activeSyncIds.remove(p.id);
-      if (mounted) setState(() {});
     }
   }
 
@@ -1080,24 +1061,6 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
-            if (backgroundSupported) ...[
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: running || _activeSyncIds.contains(p.id)
-                    ? null
-                    : () async {
-                        if (!_activeSyncIds.add(p.id)) return;
-                        setState(() {});
-                        try {
-                          await _preview(p);
-                        } finally {
-                          _activeSyncIds.remove(p.id);
-                          if (mounted) setState(() {});
-                        }
-                      },
-                child: const Text('Preview'),
-              ),
-            ],
             const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () async {
