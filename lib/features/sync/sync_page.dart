@@ -1131,7 +1131,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   ),
                 );
               },
-              child: const Text('Preview'),
+              child: const Text('Next Runs'),
             ),
             const SizedBox(width: 8),
             OutlinedButton(
