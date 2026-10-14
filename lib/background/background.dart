@@ -24,9 +24,23 @@ const _kSyncChannel = 'vaulton_sync';
 
 int _syncNotificationId(String id) => 7302 + (id.hashCode & 0x3fffffff);
 
+const _kCancelAction = 'cancel_sync';
+
+/// Handles taps on the notification's Cancel button, also while the app is closed.
+@pragma('vm:entry-point')
+void syncNotificationResponse(NotificationResponse response) {
+  if (response.actionId == _kCancelAction && response.payload != null) {
+    unawaited(cancelSyncNow(response.payload!));
+  }
+}
+
 Future<FlutterLocalNotificationsPlugin> _syncNotifier() async {
   final n = FlutterLocalNotificationsPlugin();
-  await n.initialize(settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  await n.initialize(
+    settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+    onDidReceiveNotificationResponse: syncNotificationResponse,
+    onDidReceiveBackgroundNotificationResponse: syncNotificationResponse,
+  );
   await n.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(
     const AndroidNotificationChannel(_kSyncChannel, 'Folder sync',
         description: 'Progress and results of folder syncs.', importance: Importance.low),
@@ -34,20 +48,45 @@ Future<FlutterLocalNotificationsPlugin> _syncNotifier() async {
   return n;
 }
 
-Future<void> _showSyncProgress(FlutterLocalNotificationsPlugin n, SyncProfile profile, SyncRunStatus s) async {
+String _fmtBytes(int b) {
+  if (b < 1024) return '$b B';
+  const u = ['KB', 'MB', 'GB', 'TB'];
+  var v = b / 1024.0;
+  var i = 0;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return '${v.toStringAsFixed(v < 10 ? 1 : 0)} ${u[i]}';
+}
+
+Future<void> _showSyncProgress(FlutterLocalNotificationsPlugin n, SyncProfile profile, SyncRunStatus s,
+    {bool cancelAction = false}) async {
   final total = s.bytesTotal;
   final percent = total > 0 ? (s.bytesDone * 100 / total).floor().clamp(0, 100) : null;
-  final detail = s.current == null ? s.phase : '${s.phase} · ${s.current}';
+  final lines = <String>[];
+  if (s.phase == 'Scanning Source') {
+    lines.add('Scanning source · ${s.scannedSource} items');
+  } else if (s.phase == 'Scanning Destination') {
+    lines.add('Scanning destination · ${s.scannedDestination} items');
+  } else if (total > 0) {
+    lines.add('${s.phase} · ${_fmtBytes(s.bytesDone)} of ${_fmtBytes(total)}');
+  } else {
+    lines.add(s.phase);
+  }
+  if (s.current != null && s.current!.isNotEmpty) lines.add(s.current!);
   await n.show(
     id: _syncNotificationId(profile.id),
-    title: 'Syncing ${profile.name}',
-    body: percent == null ? detail : '$detail ($percent%)',
+    title: percent == null ? 'Syncing ${profile.name}' : 'Syncing ${profile.name} · $percent%',
+    body: lines.first,
+    payload: profile.id,
     notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
       _kSyncChannel, 'Folder sync',
       channelDescription: 'Progress and results of folder syncs.',
       importance: Importance.low, priority: Priority.low, onlyAlertOnce: true,
       ongoing: true, showProgress: true, maxProgress: 100,
       progress: percent ?? 0, indeterminate: percent == null,
+      styleInformation: BigTextStyleInformation(lines.join('\n')),
+      actions: cancelAction
+          ? const [AndroidNotificationAction(_kCancelAction, 'Cancel', cancelNotification: false, showsUserInterface: false)]
+          : null,
     )),
   );
 }
@@ -55,17 +94,19 @@ Future<void> _showSyncProgress(FlutterLocalNotificationsPlugin n, SyncProfile pr
 /// Ongoing + result notifications for a sync, usable from both the background
 /// worker and user-initiated runs inside the app.
 class SyncNotification {
-  SyncNotification._(this._n, this._profile);
+  SyncNotification._(this._n, this._profile, [this._cancelAction = false]);
   final FlutterLocalNotificationsPlugin? _n;
   final SyncProfile _profile;
+  final bool _cancelAction;
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
 
-  static Future<SyncNotification> start(SyncProfile profile) async {
+  /// [cancelAction] adds a Cancel button; only valid for runs hosted by the background worker.
+  static Future<SyncNotification> start(SyncProfile profile, {bool cancelAction = false}) async {
     if (!backgroundSupported) return SyncNotification._(null, profile);
     try {
       final n = await _syncNotifier();
-      final x = SyncNotification._(n, profile);
-      await _showSyncProgress(n, profile, SyncRunStatus(running: true, phase: 'Starting'));
+      final x = SyncNotification._(n, profile, cancelAction);
+      await _showSyncProgress(n, profile, SyncRunStatus(running: true, phase: 'Starting'), cancelAction: cancelAction);
       return x;
     } catch (_) {
       return SyncNotification._(null, profile);
@@ -78,7 +119,7 @@ class SyncNotification {
     final now = DateTime.now();
     if (now.difference(_last) < const Duration(seconds: 1)) return;
     _last = now;
-    unawaited(_showSyncProgress(n, _profile, s).catchError((_) {}));
+    unawaited(_showSyncProgress(n, _profile, s, cancelAction: _cancelAction).catchError((_) {}));
   }
 
   /// Removes the ongoing notification and posts a result if there is one worth showing.
@@ -116,7 +157,7 @@ class SyncNotification {
 }
 
 Future<void> _runSyncWithNotification(ApiClient api, SharedPreferences prefs, SyncProfile profile, {bool force = false}) async {
-  final note = await SyncNotification.start(profile);
+  final note = await SyncNotification.start(profile, cancelAction: true);
   try {
     await runScheduledSync(api, prefs, profile, onProgress: note.progress, force: force);
   } finally {

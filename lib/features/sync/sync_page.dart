@@ -255,7 +255,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     await SyncProfile.saveAll(prefs, _profiles);
     await configureSyncSchedules(_profiles);
     await _load();
-    await _preview(cfg);
+    await _run(cfg);
   }
 
   Future<SyncProfile?> _configure(SyncProfile? existing, SyncSourceInfo initialSource) async {
@@ -700,7 +700,24 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     if (!_activeSyncIds.add(p.id)) return;
     if (mounted) setState(() {});
     try {
-      await _preview(p);
+      if (backgroundSupported) {
+        // One scan only: the background worker scans and uploads in a single pass.
+        if (p.deleteExtras) {
+          final ok = await confirm(
+            context,
+            'Start Sync?',
+            'This sync mirrors the source exactly, so anything in the destination that is not in the source will be permanently removed.',
+          );
+          if (!ok) return;
+        }
+        await triggerSyncNow(profileId: p.id);
+        if (mounted) {
+          toast(context, 'Sync started. It will keep running if you close the app.');
+          await _refreshStatus();
+        }
+      } else {
+        await _preview(p);
+      }
     } finally {
       _activeSyncIds.remove(p.id);
       if (mounted) setState(() {});
@@ -785,6 +802,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   Future<void> _delete(SyncProfile p) async {
     if (!await confirm(context, 'Remove Sync?', 'This removes the sync configuration. Destination files are left untouched.')) return;
     _profiles.remove(p);
+    await deleteSyncManifest(ref.read(prefsProvider), p.id);
     await SyncProfile.saveAll(ref.read(prefsProvider), _profiles);
     await configureSyncSchedules(_profiles);
     if (mounted) setState(() {});
@@ -951,7 +969,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final st = _status[p.id] ?? SyncRunStatus();
     final point = _points.where((x) => x.id == p.pointId).firstOrNull;
     final plan = _plans[p.id];
-    final running = st.running;
+    final running = st.running || st.phase == 'Queued';
     final progress = st.bytesTotal > 0 ? (st.bytesDone / st.bytesTotal).clamp(0, 1).toDouble() : null;
 
     return Card(
@@ -1062,6 +1080,24 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
+            if (backgroundSupported) ...[
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: running || _activeSyncIds.contains(p.id)
+                    ? null
+                    : () async {
+                        if (!_activeSyncIds.add(p.id)) return;
+                        setState(() {});
+                        try {
+                          await _preview(p);
+                        } finally {
+                          _activeSyncIds.remove(p.id);
+                          if (mounted) setState(() {});
+                        }
+                      },
+                child: const Text('Preview'),
+              ),
+            ],
             const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () async {

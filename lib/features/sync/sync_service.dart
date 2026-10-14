@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api_client.dart';
@@ -39,15 +43,16 @@ class SyncPlan {
   int get deleteBytes => deletes.fold(0, (a, x) => a + x.bytes);
 }
 
-Future<void> _recordSyncFailure(
-  SharedPreferences prefs,
-  SyncProfile profile,
-  Object error, {
-  void Function(SyncRunStatus)? onProgress,
-}) async {
+class _SyncFailure {
+  _SyncFailure(this.cancelled, this.sourceMissing, this.status);
+  final bool cancelled, sourceMissing;
+  final SyncRunStatus status;
+}
+
+_SyncFailure _classifySyncError(Object error) {
   final raw = error.toString();
-  final cancelled = (error is DioException && CancelToken.isCancel(error)) || raw.toLowerCase().contains('sync cancelled');
   final lower = raw.toLowerCase();
+  final cancelled = (error is DioException && CancelToken.isCancel(error)) || lower.contains('sync cancelled');
   final sourceMissing = lower.contains('source folder is no longer available') ||
       lower.contains('source folder is unavailable');
   final destinationMissing = lower.contains('404') ||
@@ -57,22 +62,77 @@ Future<void> _recordSyncFailure(
   final status = SyncRunStatus(
     running: false,
     phase: cancelled ? 'Cancelled' : 'Failed',
-    error: cancelled ? null : sourceMissing
-        ? 'Source folder is unavailable.'
-        : destinationMissing
-            ? 'Destination folder or data folder is unavailable. $raw'
-            : raw,
+    error: cancelled
+        ? null
+        : sourceMissing
+            ? 'Source folder is unavailable.'
+            : destinationMissing
+                ? 'Destination folder or data folder is unavailable. $raw'
+                : raw,
     message: cancelled
         ? 'Sync cancelled.'
         : sourceMissing
-        ? 'Sync paused. Choose the source folder again to resume.'
-        : destinationMissing
-            ? 'Check the selected destination data folder and remote path, then run sync again.'
-            : 'Sync failed. Review the error details and try again.',
+            ? 'Sync paused. Choose the source folder again to resume.'
+            : destinationMissing
+                ? 'Check the selected destination data folder and remote path, then run sync again.'
+                : 'Sync failed. Review the error details and try again.',
     finishedAt: DateTime.now().millisecondsSinceEpoch,
   );
+  return _SyncFailure(cancelled, sourceMissing, status);
+}
+
+Future<void> _recordSyncFailure(
+  SharedPreferences prefs,
+  SyncProfile profile,
+  Object error, {
+  void Function(SyncRunStatus)? onProgress,
+}) async {
+  final status = _classifySyncError(error).status;
   await status.save(prefs, profile.id);
   onProgress?.call(status);
+}
+
+// ---- Sync manifest storage -------------------------------------------------
+// Kept in a file rather than SharedPreferences: the manifest can hold one entry
+// per source file, and preferences rewrite their whole store on every change.
+Future<File> _manifestFile(String id) async {
+  final dir = await getApplicationSupportDirectory();
+  return File(p.join(dir.path, 'sync_manifest_$id.json'));
+}
+
+Future<Map<String, SyncManifestEntry>> _loadManifest(SharedPreferences prefs, String id) async {
+  try {
+    final file = await _manifestFile(id);
+    if (await file.exists()) {
+      final data = Map<String, dynamic>.from(jsonDecode(await file.readAsString()));
+      return {
+        for (final e in data.entries) e.key: SyncManifestEntry.fromJson(Map<String, dynamic>.from(e.value)),
+      };
+    }
+  } catch (_) {}
+  // Older versions kept the manifest in preferences; migrate on first save.
+  return loadSyncManifest(prefs, id);
+}
+
+/// Removes a sync's stored file record (call when the sync is deleted).
+Future<void> deleteSyncManifest(SharedPreferences prefs, String id) async {
+  try {
+    final file = await _manifestFile(id);
+    if (await file.exists()) await file.delete();
+  } catch (_) {}
+  await prefs.remove('$kSyncManifestPrefix$id');
+}
+
+Future<void> _saveManifest(SharedPreferences prefs, String id, Map<String, SyncManifestEntry> manifest) async {
+  try {
+    final file = await _manifestFile(id);
+    final tmp = File('${file.path}.tmp');
+    await tmp.writeAsString(jsonEncode({for (final e in manifest.entries) e.key: e.value.toJson()}), flush: true);
+    await tmp.rename(file.path);
+    if (prefs.containsKey('$kSyncManifestPrefix$id')) await prefs.remove('$kSyncManifestPrefix$id');
+  } catch (_) {
+    await saveSyncManifest(prefs, id, manifest);
+  }
 }
 
 Future<SyncPlan> buildSyncPlan(
@@ -102,7 +162,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   await status.save(prefs, profile.id);
   onProgress?.call(status);
 
-  final manifest = loadSyncManifest(prefs, profile.id);
+  final manifest = await _loadManifest(prefs, profile.id);
   var scanned = 0;
   var scannedDirectories = 0;
   var progressSave = Future<void>.value();
@@ -195,14 +255,15 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     }
   }
 
-  Future<void> walkRemote(String dir, String relBase) async {
-    _throwIfCancelled(cancel);
+  // Lists one remote folder; returns its sub-folders so the walk can go level by
+  // level with several folders in flight instead of strictly one at a time.
+  Future<List<({String dir, String rel})>> listRemote(String dir, String relBase) async {
+    final subs = <({String dir, String rel})>[];
     String? cursor;
     do {
       _throwIfCancelled(cancel);
       final page = await v.list(profile.pointId, dir, cursor: cursor, limit: 200, order: 'Asc');
       for (final n in page.items) {
-        _throwIfCancelled(cancel);
         final rel = relBase.isEmpty ? n.name : '$relBase/${n.name}';
         remote.add(SyncSourceEntry(
           relative: rel,
@@ -211,10 +272,27 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
           isDir: n.isDir,
           location: joinPath(dir, n.name),
         ));
-        if (n.isDir) await walkRemote(joinPath(dir, n.name), rel);
+        if (n.isDir) subs.add((dir: joinPath(dir, n.name), rel: rel));
       }
       cursor = page.hasMore ? page.nextCursor : null;
     } while (cursor != null);
+    return subs;
+  }
+
+  Future<void> walkRemote(String rootDir, String rootRel) async {
+    var level = [(dir: rootDir, rel: rootRel)];
+    while (level.isNotEmpty) {
+      final next = <({String dir, String rel})>[];
+      for (var i = 0; i < level.length; i += 4) {
+        _throwIfCancelled(cancel);
+        final chunk = level.skip(i).take(4);
+        final results = await Future.wait(chunk.map((d) => listRemote(d.dir, d.rel)));
+        for (final r in results) { next.addAll(r); }
+        status.scannedDestination = remote.length;
+        onProgress?.call(status);
+      }
+      level = next;
+    }
   }
 
   await validateDestinationRoot();
@@ -353,7 +431,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     onProgress?.call(status);
   }
 
-  final manifest = loadSyncManifest(prefs, profile.id);
+  final manifest = await _loadManifest(prefs, profile.id);
   final changedPaths = {for (final x in plan.changes) x.path};
   // Files verified unchanged are recorded up front so an interrupted run
   // never has to re-check them.
@@ -365,7 +443,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
   Future<void> flushManifest({bool force = false}) async {
     if (!force && DateTime.now().difference(lastManifestSave) < const Duration(seconds: 3)) return;
     lastManifestSave = DateTime.now();
-    await saveSyncManifest(prefs, profile.id, manifest);
+    await _saveManifest(prefs, profile.id, manifest);
   }
   Future<void> flushStatus({bool force = false}) async {
     onProgress?.call(status);
@@ -373,7 +451,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     lastStatusSave = DateTime.now();
     await status.save(prefs, profile.id);
   }
-  await saveSyncManifest(prefs, profile.id, manifest);
+  await _saveManifest(prefs, profile.id, manifest);
 
   final actions = plan.changes.where((x) =>
       x.kind == SyncChangeKind.add ||
@@ -429,7 +507,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     if (failure != null) throw failure!;
   } finally {
     // Persist whatever finished, even on failure or cancel.
-    await saveSyncManifest(prefs, profile.id, manifest);
+    await _saveManifest(prefs, profile.id, manifest);
   }
 
   final deletes = plan.deletes.toList()
@@ -446,7 +524,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
   }
 
   manifest.removeWhere((k, _) => !plan.sourceEntries.any((e) => e.relative == k && !e.isDir));
-  await saveSyncManifest(prefs, profile.id, manifest);
+  await _saveManifest(prefs, profile.id, manifest);
 
   status
     ..running = false
@@ -526,31 +604,9 @@ Future<void> runScheduledSync(ApiClient api, SharedPreferences prefs, SyncProfil
     }
     profile.nextRun = await calculateNextSyncRun(api, profile);
   } catch (e) {
-    final error = e.toString();
-    final lower = error.toLowerCase();
-    final sourceMissing = lower.contains('source folder is no longer available') ||
-        lower.contains('source folder is unavailable');
-    final destinationMissing = lower.contains('404') ||
-        lower.contains('not found') ||
-        lower.contains('does not exist') ||
-        lower.contains('no such file or directory');
-    final status = SyncRunStatus(
-      running: false,
-      phase: 'Failed',
-      error: sourceMissing
-          ? 'Source folder is unavailable.'
-          : destinationMissing
-              ? 'Destination folder or data folder is unavailable. $error'
-              : error,
-      message: sourceMissing
-          ? 'Sync paused. Choose the source folder again to resume.'
-          : destinationMissing
-              ? 'Check the selected destination data folder and remote path, then run sync again.'
-              : 'Sync failed. Review the error details and try again.',
-      finishedAt: now,
-    );
-    await status.save(prefs, profile.id);
-    profile.enabled = profile.enabled && !sourceMissing;
+    final failure = _classifySyncError(e);
+    await failure.status.save(prefs, profile.id);
+    profile.enabled = profile.enabled && !failure.sourceMissing;
     profile.nextRun = await calculateNextSyncRun(api, profile);
   }
 

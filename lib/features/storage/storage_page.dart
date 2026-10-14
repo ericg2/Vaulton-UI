@@ -38,29 +38,70 @@ class StoragePage extends StatelessWidget {
       );
 }
 
+/// Height of the fixed Storage header (status bar + toolbar + tab strip).
+double storageHeaderHeight(BuildContext context) => MediaQuery.paddingOf(context).top + kToolbarHeight + 48;
+
 /// Phone layout: each storage tab is its own page in the shell's PageView, so one
 /// continuous swipe moves Dashboard > Files > Transfers > Data Folders > Backup Vaults >
-/// Locations > More with no nested scrolling to fight.
+/// Locations > More. The header is NOT part of the page: the shell draws one shared
+/// [StorageHeader] that stays put while the three tab bodies slide underneath it.
 class StorageSection extends StatelessWidget {
-  const StorageSection({super.key, required this.index, required this.pages, required this.basePage, required this.onSelect});
-  final int index, basePage;
-  final PageController pages;
-  final ValueChanged<int> onSelect;
+  const StorageSection({super.key, required this.index});
+  final int index;
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Storage'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: StorageTabStrip(pages: pages, basePage: basePage, onSelect: onSelect),
+  Widget build(BuildContext context) => MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
+        child: Padding(
+          padding: EdgeInsets.only(top: storageHeaderHeight(context)),
+          child: switch (index) {
+            0 => const PointsTab(repo: false),
+            1 => const PointsTab(repo: true),
+            _ => const RootsTab(),
+          },
+        ),
+      );
+}
+
+/// Shared header for the three storage pages. It slides in/out with the page swipe
+/// while moving between the storage pages and the neighbouring pages, but stays fixed
+/// while swiping between the storage tabs themselves.
+class StorageHeader extends StatelessWidget {
+  const StorageHeader({super.key, required this.pages, required this.basePage, required this.onSelect});
+  final PageController pages;
+  final int basePage;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final height = storageHeaderHeight(context);
+    return AnimatedBuilder(
+      animation: pages,
+      builder: (context, child) {
+        var p = pages.initialPage.toDouble();
+        if (pages.hasClients && pages.position.haveDimensions) p = pages.page ?? p;
+        final first = basePage.toDouble(), last = basePage + 2.0;
+        final dx = p < first ? (first - p) * width : (p > last ? -(p - last) * width : 0.0);
+        if (dx.abs() >= width) return const SizedBox.shrink();
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: AppBar(
+            title: const Text('Storage'),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(48),
+              child: StorageTabStrip(pages: pages, basePage: basePage, onSelect: onSelect),
+            ),
           ),
         ),
-        body: switch (index) {
-          0 => const PointsTab(repo: false),
-          1 => const PointsTab(repo: true),
-          _ => const RootsTab(),
-        },
-      );
+      ),
+    );
+  }
 }
 
 /// Tab strip whose indicator follows the finger while the shell's pages are swiped.

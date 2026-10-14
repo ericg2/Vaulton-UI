@@ -235,7 +235,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final rest = dests.skip(4).toList();
     final onMore = effectiveIndex == 4;
     return _withAndroidBack(Scaffold(
-      body: PageView(
+      body: Stack(children: [
+        Positioned.fill(child: PageView(
         controller: _pages,
         onPageChanged: (page) {
           final nav = _navForPage(page);
@@ -249,10 +250,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         children: [
           for (var i = 0; i < 3; i++) _KeepAlive(child: dests[i].build()),
           for (var i = 0; i < 3; i++)
-            _KeepAlive(child: StorageSection(index: i, pages: _pages, basePage: 3, onSelect: _selectStorageTab)),
+            _KeepAlive(child: StorageSection(index: i)),
           _KeepAlive(child: _MorePage(items: rest, onSignOut: () => signOutFlow(context, ref), onOpen: _openMoreDestination)),
         ],
-      ),
+      )),
+        Positioned(top: 0, left: 0, right: 0, child: StorageHeader(pages: _pages, basePage: 3, onSelect: _selectStorageTab)),
+      ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: effectiveIndex,
         onDestinationSelected: (i) => _select(i, label: i < primary.length ? primary[i].label : null, isMore: i == 4),
