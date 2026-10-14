@@ -18,6 +18,9 @@ Require-Command 'gh'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $root
 try {
+    if (-not (Test-Path (Join-Path $root 'android/key.properties'))) {
+        throw 'No android/key.properties. Releases would be signed with a throwaway debug key and fail to update over installed apps. Run .\tool\setup-signing.ps1 first.'
+    }
     $branch = (git branch --show-current).Trim()
     if ($branch -ne 'main') {
         throw "Switch to the main branch before publishing (current branch: '$branch')."

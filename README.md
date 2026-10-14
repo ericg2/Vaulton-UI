@@ -30,6 +30,7 @@ To pick up newer package releases later: `flutter pub upgrade --major-versions`.
 * `res/xml/network_security_config.xml` allows plain `http://` servers (typical for a home server on your LAN) and
   certificates from a private CA that you installed on the phone. Tighten it there if you only use public HTTPS.
 * Release signing: create `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`).
+  Easiest: run `.\tool\setup-signing.ps1` once (it creates a persistent key outside the repo). Back that folder up.
   Without it the release build is signed with the debug key so `flutter run --release` still works.
 * `gradle.properties` keeps `android.builtInKotlin=false` (Flutter's default while plugins migrate to AGP 9), so the app
   module applies the Kotlin plugin itself. Once every plugin supports built-in Kotlin, set it to `true` and remove

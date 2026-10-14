@@ -677,11 +677,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     if (!ok) return;
                   }
                   if (backgroundSupported) {
-                    await triggerSyncNow(profileId: p.id);
-                    if (mounted) {
-                      toast(context, 'Sync started. It will keep running if you close the app.');
-                      await _refreshStatus();
-                    }
+                    await _startBackground(p);
                   } else {
                     await _apply(p, plan);
                   }
@@ -696,7 +692,41 @@ class _SyncPageState extends ConsumerState<SyncPage> {
 
   String _pointName(String id) => _points.where((p) => p.id == id).firstOrNull?.name ?? 'Data Folder';
 
+  /// Hands the sync to the background worker. The card flips to "Queued" at once,
+  /// so there is no gap where it looks idle before the worker reports in.
+  Future<void> _startBackground(SyncProfile p) async {
+    if (mounted) {
+      setState(() => _status[p.id] = SyncRunStatus(phase: 'Queued', message: 'Waiting for the background worker to start.'));
+    }
+    await triggerSyncNow(profileId: p.id);
+    if (mounted) toast(context, 'Sync started. It keeps running if you close the app.');
+  }
+
   Future<void> _run(SyncProfile p) async {
+    if (!_activeSyncIds.add(p.id)) return;
+    if (mounted) setState(() {});
+    try {
+      if (backgroundSupported) {
+        // One scan only: the background worker scans and uploads in a single pass.
+        if (p.deleteExtras) {
+          final ok = await confirm(
+            context,
+            'Start Sync?',
+            'This sync mirrors the source exactly, so anything in the destination that is not in the source will be permanently removed.',
+          );
+          if (!ok) return;
+        }
+        await _startBackground(p);
+      } else {
+        await _preview(p);
+      }
+    } finally {
+      _activeSyncIds.remove(p.id);
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _previewOnly(SyncProfile p) async {
     if (!_activeSyncIds.add(p.id)) return;
     if (mounted) setState(() {});
     try {
@@ -1005,7 +1035,17 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ])),
               ]),
             ),
-          if (running) ...[
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Column(
+                key: ValueKey(running),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: running ? [
             Row(children: [
               Expanded(child: Text(previewing && !st.running ? 'Preparing Review' : st.phase, style: Theme.of(context).textTheme.labelLarge)),
               TextButton.icon(
@@ -1024,7 +1064,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   : '${fmtBytes(st.bytesDone)} of ${fmtBytes(st.bytesTotal)} · ${st.completed} completed · ${st.failed} failed',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-          ] else ...[
+          ] : [
             Wrap(spacing: 8, runSpacing: 8, children: [
               _chip(describeCron(p.cron, context)),
               _chip(p.timeZone),
@@ -1056,7 +1096,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   TextButton(onPressed: () => _reviewSourceCleanup(p), child: const Text('Review')),
                 ]),
               ),
-          ],
+          ]),
+            ),
+          ),
           const SizedBox(height: 8),
           Row(children: [
             FilledButton.tonalIcon(
@@ -1064,6 +1106,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
+            if (backgroundSupported) ...[
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: running || _activeSyncIds.contains(p.id) ? null : () => _previewOnly(p),
+                child: const Text('Preview'),
+              ),
+            ],
             const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () async {
