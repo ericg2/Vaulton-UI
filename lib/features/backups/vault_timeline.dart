@@ -236,7 +236,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
       setState(() => _locking.add(s.id));
       try {
         final r = await guarded(context, () => _v.lockSnapshot(widget.repoId, s.id, !s.locked));
-        if (r != null && mounted) toast(context, toStr(r['message']) ?? (s.locked ? 'Snapshot unlocked' : 'Snapshot locked'));
+        if (r != null && mounted) toast(context, toStr(r['message']) ?? (s.locked ? 'Snapshot unlocked.' : 'Snapshot locked.'));
         await _load(replace: true);
       } finally {
         if (mounted) setState(() => _locking.remove(s.id));

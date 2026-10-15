@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/providers.dart';
 import '../../core/models.dart';
 import '../../core/vaulton.dart';
@@ -27,35 +29,57 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   int _powerScheduleProtectionMinutes = 120;
   bool _hasPowerAgentKey = false;
   Json? _powerAgentStatus;
+  Object? _loadError;
 
   Vaulton get _v => ref.read(vaultonProvider);
 
   Future<void> _load() async {
-    final data = await guarded(context, _v.wolSettings);
-    if (data == null || !mounted) return;
-    final power = await guarded(context, _v.powerSettings);
-    if (power == null || !mounted) return;
-    setState(() {
-      _enabled = toBool(data['enabled']);
-      _brokerUrl = toStr(data['brokerUrl']) ?? '';
-      _wakeBeforeMinutes = toInt(data['wakeBeforeMinutes']);
-      _hasAdminToken = toBool(data['hasAdminToken']);
-      _hasWakeToken = toBool(data['hasWakeToken']);
-      _powerEnabled = toBool(power['enabled']);
-      _powerAction = toStr(power['action']) ?? 'Sleep';
-      _powerIdleMinutes = toInt(power['idleMinutes']);
-      _powerScheduleProtectionMinutes = toInt(power['scheduleProtectionMinutes']);
-      _hasPowerAgentKey = toBool(power['hasAgentKey']);
-      _loaded = true;
-    });
-    final status = await guarded(context, _v.powerAgentStatus);
-    if (!mounted) return;
-    setState(() => _powerAgentStatus = status);
+    try {
+      final data = await _v.wolSettings();
+      final power = await _v.powerSettings();
+      if (!mounted) return;
+      setState(() {
+        _enabled = toBool(data['enabled']);
+        _brokerUrl = toStr(data['brokerUrl']) ?? '';
+        _wakeBeforeMinutes = toInt(data['wakeBeforeMinutes']);
+        _hasAdminToken = toBool(data['hasAdminToken']);
+        _hasWakeToken = toBool(data['hasWakeToken']);
+        _powerEnabled = toBool(power['enabled']);
+        _powerAction = toStr(power['action']) ?? 'Sleep';
+        _powerIdleMinutes = toInt(power['idleMinutes']);
+        _powerScheduleProtectionMinutes = toInt(
+          power['scheduleProtectionMinutes'],
+        );
+        _hasPowerAgentKey = toBool(power['hasAgentKey']);
+        _loaded = true;
+        _loadError = null;
+      });
+      try {
+        final status = await _v.powerAgentStatus();
+        if (mounted) setState(() => _powerAgentStatus = status);
+      } catch (_) {
+        // Best-effort: the page explains an unreachable agent inline.
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loadError = e);
+      toastError(context, e);
+    }
+  }
+
+  void _retry() {
+    setState(() => _loadError = null);
+    _load();
   }
 
   Future<void> _editWake() async {
     final f = await formDialog(context, 'Wake-on-LAN', [
-      FieldSpec('enabled', 'Enable Wake-on-LAN', kind: 'bool', initial: '$_enabled'),
+      FieldSpec(
+        'enabled',
+        'Enable Wake-on-LAN',
+        kind: 'bool',
+        initial: '$_enabled',
+      ),
       FieldSpec('url', 'Cloudflare Worker URL', initial: _brokerUrl),
       FieldSpec(
         'admin',
@@ -69,32 +93,45 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         kind: 'secret',
         hint: 'Leave blank to keep the current token. Tokens are encrypted.',
       ),
-      FieldSpec('minutes', 'Wake Before Job (Minutes)', initial: '$_wakeBeforeMinutes'),
+      FieldSpec(
+        'minutes',
+        'Wake Before Job (Minutes)',
+        initial: '$_wakeBeforeMinutes',
+      ),
     ], ok: 'Save');
 
     if (f == null || !mounted) return;
     final minutes = int.tryParse(f['minutes'] ?? '');
     if (minutes == null || minutes < 0 || minutes > 1440) {
-      toast(context, 'Wake-before time must be between 0 and 1440 minutes', error: true);
+      toast(
+        context,
+        'Wake-before time must be between 0 and 1440 minutes.',
+        error: true,
+      );
       return;
     }
 
-    final result = await guarded(context, () => _v.saveWolSettings({
-      'enabled': f['enabled'] == 'true',
-      'brokerUrl': f['url'],
-      'adminToken': f['admin'],
-      'wakeToken': f['wake'],
-      'wakeBeforeMinutes': minutes,
-    }));
+    final result = await guarded(
+      context,
+      () => _v.saveWolSettings({
+        'enabled': f['enabled'] == 'true',
+        'brokerUrl': f['url'],
+        'adminToken': f['admin'],
+        'wakeToken': f['wake'],
+        'wakeBeforeMinutes': minutes,
+      }),
+    );
     if (result == null || !mounted) return;
     await _load();
-    if (mounted) toast(context, 'Wake-on-LAN settings saved');
+    if (mounted) toast(context, 'Wake-on-LAN settings saved.');
   }
 
   Future<void> _editPower() async {
     final key = TextEditingController();
     final idle = TextEditingController(text: '$_powerIdleMinutes');
-    final protection = TextEditingController(text: '$_powerScheduleProtectionMinutes');
+    final protection = TextEditingController(
+      text: '$_powerScheduleProtectionMinutes',
+    );
     String action = _powerAction;
     bool powerEnabled = _powerEnabled;
 
@@ -119,13 +156,21 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: action,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Action'),
                     items: const [
                       DropdownMenuItem(value: 'Sleep', child: Text('Sleep')),
-                      DropdownMenuItem(value: 'Hibernate', child: Text('Hibernate')),
-                      DropdownMenuItem(value: 'Shutdown', child: Text('Shutdown')),
+                      DropdownMenuItem(
+                        value: 'Hibernate',
+                        child: Text('Hibernate'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Shutdown',
+                        child: Text('Shutdown'),
+                      ),
                     ],
-                    onChanged: (v) => setDialogState(() => action = v ?? 'Sleep'),
+                    onChanged: (v) =>
+                        setDialogState(() => action = v ?? 'Sleep'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -148,10 +193,10 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final narrow = c.maxWidth < 360;
+                      final keyField = Expanded(
                         child: TextField(
                           controller: key,
                           obscureText: true,
@@ -162,19 +207,51 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                                 : 'Use at least 32 random characters.',
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
+                      );
+                      final generateButton = Padding(
+                        padding: EdgeInsets.only(top: narrow ? 0 : 8),
                         child: OutlinedButton(
                           onPressed: () {
-                            final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
+                            final bytes = List<int>.generate(
+                              32,
+                              (_) => Random.secure().nextInt(256),
+                            );
                             key.text = base64UrlEncode(bytes);
                           },
                           child: const Text('Generate'),
                         ),
-                      ),
-                    ],
+                      );
+                      if (narrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextField(
+                              controller: key,
+                              obscureText: true,
+                              decoration: InputDecoration(
+                                labelText: 'Host Agent Key',
+                                helperText: _hasPowerAgentKey
+                                    ? 'Leave blank to keep the existing key.'
+                                    : 'Use at least 32 random characters.',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: generateButton,
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          keyField,
+                          const SizedBox(width: 8),
+                          generateButton,
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -185,17 +262,35 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () {
                 final i = int.tryParse(idle.text);
                 final p = int.tryParse(protection.text);
-                if (i == null || i < 5 || i > 10080 || p == null || p < 0 || p > 10080) {
-                  toast(context, 'Idle time must be 5–10080 minutes. Schedule protection must be 0–10080.', error: true);
+                if (i == null ||
+                    i < 5 ||
+                    i > 10080 ||
+                    p == null ||
+                    p < 0 ||
+                    p > 10080) {
+                  toast(
+                    context,
+                    'Idle time must be 5–10080 minutes. Schedule protection must be 0–10080.',
+                    error: true,
+                  );
                   return;
                 }
-                if (powerEnabled && !_hasPowerAgentKey && key.text.trim().length < 32) {
-                  toast(context, 'Enter a host agent key with at least 32 characters.', error: true);
+                if (powerEnabled &&
+                    !_hasPowerAgentKey &&
+                    key.text.trim().length < 32) {
+                  toast(
+                    context,
+                    'Enter a host agent key with at least 32 characters.',
+                    error: true,
+                  );
                   return;
                 }
                 Navigator.pop(dialogContext, {
@@ -221,14 +316,16 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     final saved = await guarded(context, () => _v.savePowerSettings(result));
     if (saved == null || !mounted) return;
     await _load();
-    if (mounted) toast(context, 'Automatic power settings saved');
+    if (mounted) toast(context, 'Automatic power settings saved.');
   }
 
   String _lastPowerActionLabel() {
     final action = toStr(_powerAgentStatus?['lastAction']);
     if (action == null || action.isEmpty) return 'No power action recorded';
     final rawTimestamp = toStr(_powerAgentStatus?['lastActionAt']);
-    final timestamp = rawTimestamp == null ? null : DateTime.tryParse(rawTimestamp)?.toLocal();
+    final timestamp = rawTimestamp == null
+        ? null
+        : DateTime.tryParse(rawTimestamp)?.toLocal();
     return '${pretty(action)} · ${fmtDate(timestamp)}';
   }
 
@@ -246,6 +343,10 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
 
   @override
   Widget build(BuildContext context) {
+    final loadError = _loadError;
+    if (loadError != null) {
+      return Center(child: ErrorView(loadError, onRetry: _retry));
+    }
     if (!_loaded) return const Center(child: CircularProgressIndicator());
     final cs = Theme.of(context).colorScheme;
     return RefreshIndicator(
@@ -254,118 +355,178 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         padding: const EdgeInsets.only(top: 8, bottom: 24),
         children: [
           Card(
-            child: Column(children: [
-              ListTile(
-                leading: Icon(_enabled ? Icons.wifi_tethering : Icons.wifi_tethering_off, color: _enabled ? cs.primary : null),
-                title: const Text('Wake-on-LAN'),
-                subtitle: Text(_enabled ? 'Enabled · ${_brokerUrl.isEmpty ? 'Worker URL not set' : _brokerUrl}' : 'Disabled'),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.tonalIcon(onPressed: _editWake, icon: const Icon(Icons.settings_outlined), label: const Text('Configure')),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    _enabled ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+                    color: _enabled ? cs.primary : null,
+                  ),
+                  title: const Text('Wake-on-LAN'),
+                  subtitle: Text(
+                    _enabled
+                        ? 'Enabled · ${_brokerUrl.isEmpty ? 'Worker URL not set' : _brokerUrl}'
+                        : 'Disabled',
+                  ),
                 ),
-              ),
-            ]),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.tonalIcon(
+                      onPressed: _editWake,
+                      icon: const Icon(Icons.settings_outlined),
+                      label: const Text('Configure'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           Card(
-            child: Column(children: [
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    _powerEnabled
+                        ? Icons.power_settings_new
+                        : Icons.power_off_outlined,
+                    color: _powerEnabled ? cs.primary : null,
+                  ),
+                  title: const Text('Power Management'),
+                  subtitle: Text(
+                    _powerEnabled
+                        ? '$_powerAction after $_powerIdleMinutes minutes idle'
+                        : 'Disabled',
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.tonalIcon(
+                          onPressed: _editPower,
+                          icon: const Icon(Icons.settings_outlined),
+                          label: const Text('Configure'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Section(
+            'Wake-on-LAN',
+            children: [
               ListTile(
-                leading: Icon(_powerEnabled ? Icons.power_settings_new : Icons.power_off_outlined, color: _powerEnabled ? cs.primary : null),
-                title: const Text('Power Management'),
-                subtitle: Text(_powerEnabled
-                    ? '$_powerAction after $_powerIdleMinutes minutes idle'
-                    : 'Disabled'),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Wrap(spacing: 8, runSpacing: 8, children: [
-                    FilledButton.tonalIcon(onPressed: _editPower, icon: const Icon(Icons.settings_outlined), label: const Text('Configure')),
-                  ]),
+                leading: const Icon(Icons.schedule),
+                title: const Text('Automatic Wake'),
+                subtitle: Text(
+                  _enabled
+                      ? (_wakeBeforeMinutes == 0
+                            ? 'Wakes when a scheduled job needs it.'
+                            : 'Wakes $_wakeBeforeMinutes minutes before a scheduled job.')
+                      : 'Enable Wake-on-LAN to wake the server for jobs.',
                 ),
               ),
-            ]),
+              ListTile(
+                leading: Icon(
+                  _hasAdminToken
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber_outlined,
+                ),
+                title: const Text('Broker Admin Token'),
+                subtitle: Text(
+                  _hasAdminToken ? 'Configured' : 'Not configured',
+                ),
+              ),
+              ListTile(
+                leading: Icon(
+                  _hasWakeToken
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber_outlined,
+                ),
+                title: const Text('Broker Wake Token'),
+                subtitle: Text(_hasWakeToken ? 'Configured' : 'Not configured'),
+              ),
+            ],
           ),
-          Section('Wake-on-LAN', children: [
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('Automatic Wake'),
-              subtitle: Text(_enabled
-                  ? (_wakeBeforeMinutes == 0
-                      ? 'Wakes when a scheduled job needs it.'
-                      : 'Wakes $_wakeBeforeMinutes minutes before a scheduled job.')
-                  : 'Enable Wake-on-LAN to wake the server for jobs.'),
-            ),
-            ListTile(
-              leading: Icon(_hasAdminToken ? Icons.check_circle_outline : Icons.warning_amber_outlined),
-              title: const Text('Broker Admin Token'),
-              subtitle: Text(_hasAdminToken ? 'Configured' : 'Not configured'),
-            ),
-            ListTile(
-              leading: Icon(_hasWakeToken ? Icons.check_circle_outline : Icons.warning_amber_outlined),
-              title: const Text('Broker Wake Token'),
-              subtitle: Text(_hasWakeToken ? 'Configured' : 'Not configured'),
-            ),
-          ]),
           if (_powerEnabled)
             Card(
               child: ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: const Text('Scheduled Jobs'),
-                subtitle: Text(_enabled
-                    ? 'Wake-on-LAN is set up for scheduled jobs.'
-                    : 'Set up Wake-on-LAN so the server can wake for scheduled jobs.'),
-              ),
-            ),
-          Section('Automatic Power Management', children: [
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('Schedule Protection'),
-              subtitle: Text(_powerEnabled
-                  ? 'Blocks power down when a job is due within $_powerScheduleProtectionMinutes minutes.'
-                  : 'Enable to power down an idle server.'),
-            ),
-            ListTile(
-              leading: Icon(_hasPowerAgentKey ? Icons.check_circle_outline : Icons.warning_amber_outlined),
-              title: const Text('Host Agent Key'),
-              subtitle: Text(_hasPowerAgentKey ? 'Configured' : 'Not configured'),
-            ),
-            ListTile(
-              leading: Icon(
-                _powerAgentStatus != null ? Icons.check_circle_outline : Icons.warning_amber_outlined,
-                color: _powerAgentStatus != null ? cs.primary : cs.error,
-              ),
-              title: const Text('Host Agent'),
-              subtitle: Text(_powerAgentStatus != null
-                  ? 'Reachable · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'} · Version ${toStr(_powerAgentStatus?['version']) ?? 'Unknown'}'
-                  : 'Not responding · Check the agent service, URL, firewall, and shared key'),
-              trailing: IconButton(
-                tooltip: 'Refresh Agent Status',
-                onPressed: _refreshPowerStatus,
-                icon: const Icon(Icons.refresh),
-              ),
-            ),
-            if (_powerAgentStatus != null) ...[
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('Last Power Action'),
-                subtitle: Text(_lastPowerActionLabel()),
-              ),
-              if ((toStr(_powerAgentStatus?['lastError']) ?? '').isNotEmpty)
-                ListTile(
-                  leading: Icon(Icons.error_outline, color: cs.error),
-                  title: const Text('Last Agent Error'),
-                  subtitle: Text(
-                    toStr(_powerAgentStatus?['lastError'])!,
-                    style: TextStyle(color: cs.error),
-                  ),
-                  isThreeLine: true,
+                subtitle: Text(
+                  _enabled ? 'Wake-on-LAN is set up for scheduled jobs.' : 'Set up Wake-on-LAN so the server can wake for scheduled jobs.',
                 ),
+              ),
+            ),
+          Section(
+            'Automatic Power Management',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.schedule),
+                title: const Text('Schedule Protection'),
+                subtitle: Text(
+                  _powerEnabled
+                      ? 'Blocks power down when a job is due within $_powerScheduleProtectionMinutes minutes.'
+                      : 'Enable to power down an idle server.',
+                ),
+              ),
+              ListTile(
+                leading: Icon(
+                  _hasPowerAgentKey
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber_outlined,
+                ),
+                title: const Text('Host Agent Key'),
+                subtitle: Text(
+                  _hasPowerAgentKey ? 'Configured' : 'Not configured',
+                ),
+              ),
+              ListTile(
+                leading: Icon(
+                  _powerAgentStatus != null
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber_outlined,
+                  color: _powerAgentStatus != null ? cs.primary : cs.error,
+                ),
+                title: const Text('Host Agent'),
+                subtitle: Text(
+                  _powerAgentStatus != null
+                      ? 'Reachable · ${toStr(_powerAgentStatus?['platform']) ?? 'Unknown'} · Version ${toStr(_powerAgentStatus?['version']) ?? 'Unknown'}'
+                      : 'Not responding · Check the agent service, URL, firewall, and shared key',
+                ),
+                trailing: IconButton(
+                  tooltip: 'Refresh Agent Status',
+                  onPressed: _refreshPowerStatus,
+                  icon: const Icon(Icons.refresh),
+                ),
+              ),
+              if (_powerAgentStatus != null) ...[
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('Last Power Action'),
+                  subtitle: Text(_lastPowerActionLabel()),
+                ),
+                if ((toStr(_powerAgentStatus?['lastError']) ?? '').isNotEmpty)
+                  ListTile(
+                    leading: Icon(Icons.error_outline, color: cs.error),
+                    title: const Text('Last Agent Error'),
+                    subtitle: Text(
+                      toStr(_powerAgentStatus?['lastError'])!,
+                      style: TextStyle(color: cs.error),
+                    ),
+                    isThreeLine: true,
+                  ),
+              ],
             ],
-          ]),
+          ),
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
@@ -22,24 +23,29 @@ class StoragePage extends StatelessWidget {
   final int initialTab;
   @override
   Widget build(BuildContext context) => DefaultTabController(
-        length: 3,
-        initialIndex: initialTab.clamp(0, 2).toInt(),
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Storage'),
-            bottom: const TabBar(tabs: [
-              Tab(text: 'Data Folders'),
-              Tab(text: 'Backup Vaults'),
-              Tab(text: 'Locations'),
-            ]),
-          ),
-          body: const TabBarView(children: [PointsTab(repo: false), PointsTab(repo: true), RootsTab()]),
+    length: 3,
+    initialIndex: initialTab.clamp(0, 2).toInt(),
+    child: Scaffold(
+      appBar: AppBar(
+        title: const Text('Storage'),
+        bottom: const TabBar(
+          tabs: [
+            Tab(text: 'Data Folders'),
+            Tab(text: 'Backup Vaults'),
+            Tab(text: 'Locations'),
+          ],
         ),
-      );
+      ),
+      body: const TabBarView(
+        children: [PointsTab(repo: false), PointsTab(repo: true), RootsTab()],
+      ),
+    ),
+  );
 }
 
 /// Height of the fixed Storage header (status bar + toolbar + tab strip).
-double storageHeaderHeight(BuildContext context) => MediaQuery.paddingOf(context).top + kToolbarHeight + 48;
+double storageHeaderHeight(BuildContext context) =>
+    MediaQuery.paddingOf(context).top + kToolbarHeight + 48;
 
 /// Phone layout: each storage tab is its own page in the shell's PageView, so one
 /// continuous swipe moves Dashboard > Files > Transfers > Data Folders > Backup Vaults >
@@ -50,24 +56,29 @@ class StorageSection extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) => MediaQuery.removePadding(
-        context: context,
-        removeTop: true,
-        child: Padding(
-          padding: EdgeInsets.only(top: storageHeaderHeight(context)),
-          child: switch (index) {
-            0 => const PointsTab(repo: false),
-            1 => const PointsTab(repo: true),
-            _ => const RootsTab(),
-          },
-        ),
-      );
+    context: context,
+    removeTop: true,
+    child: Padding(
+      padding: EdgeInsets.only(top: storageHeaderHeight(context)),
+      child: switch (index) {
+        0 => const PointsTab(repo: false),
+        1 => const PointsTab(repo: true),
+        _ => const RootsTab(),
+      },
+    ),
+  );
 }
 
 /// Shared header for the three storage pages. It slides in/out with the page swipe
 /// while moving between the storage pages and the neighbouring pages, but stays fixed
 /// while swiping between the storage tabs themselves.
 class StorageHeader extends StatelessWidget {
-  const StorageHeader({super.key, required this.pages, required this.basePage, required this.onSelect});
+  const StorageHeader({
+    super.key,
+    required this.pages,
+    required this.basePage,
+    required this.onSelect,
+  });
   final PageController pages;
   final int basePage;
   final ValueChanged<int> onSelect;
@@ -80,9 +91,12 @@ class StorageHeader extends StatelessWidget {
       animation: pages,
       builder: (context, child) {
         var p = pages.initialPage.toDouble();
-        if (pages.hasClients && pages.position.haveDimensions) p = pages.page ?? p;
+        if (pages.hasClients && pages.position.haveDimensions)
+          p = pages.page ?? p;
         final first = basePage.toDouble(), last = basePage + 2.0;
-        final dx = p < first ? (first - p) * width : (p > last ? -(p - last) * width : 0.0);
+        final dx = p < first
+            ? (first - p) * width
+            : (p > last ? -(p - last) * width : 0.0);
         if (dx.abs() >= width) return const SizedBox.shrink();
         return Transform.translate(offset: Offset(dx, 0), child: child);
       },
@@ -95,7 +109,11 @@ class StorageHeader extends StatelessWidget {
             title: const Text('Storage'),
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(48),
-              child: StorageTabStrip(pages: pages, basePage: basePage, onSelect: onSelect),
+              child: StorageTabStrip(
+                pages: pages,
+                basePage: basePage,
+                onSelect: onSelect,
+              ),
             ),
           ),
         ),
@@ -106,14 +124,20 @@ class StorageHeader extends StatelessWidget {
 
 /// Tab strip whose indicator follows the finger while the shell's pages are swiped.
 class StorageTabStrip extends StatelessWidget {
-  const StorageTabStrip({super.key, required this.pages, required this.basePage, required this.onSelect});
+  const StorageTabStrip({
+    super.key,
+    required this.pages,
+    required this.basePage,
+    required this.onSelect,
+  });
   final PageController pages;
   final int basePage;
   final ValueChanged<int> onSelect;
   static const _labels = ['Data Folders', 'Backup Vaults', 'Locations'];
 
   double _position() {
-    if (!pages.hasClients || !pages.position.haveDimensions) return pages.initialPage.toDouble();
+    if (!pages.hasClients || !pages.position.haveDimensions)
+      return pages.initialPage.toDouble();
     return pages.page ?? pages.initialPage.toDouble();
   }
 
@@ -126,40 +150,56 @@ class StorageTabStrip extends StatelessWidget {
         animation: pages,
         builder: (context, _) {
           final t = (_position() - basePage).clamp(0.0, 2.0);
-          return LayoutBuilder(builder: (context, box) {
-            final w = box.maxWidth / 3;
-            const barW = 56.0;
-            return Stack(children: [
-              Row(children: [
-                for (var i = 0; i < 3; i++)
-                  SizedBox(
-                    width: w,
-                    child: InkWell(
-                      onTap: () => onSelect(i),
-                      child: Center(
-                        child: Text(
-                          _labels[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: Color.lerp(cs.onSurfaceVariant, cs.primary, (1 - (t - i).abs()).clamp(0.0, 1.0)),
+          return LayoutBuilder(
+            builder: (context, box) {
+              final w = box.maxWidth / 3;
+              const barW = 56.0;
+              return Stack(
+                children: [
+                  Row(
+                    children: [
+                      for (var i = 0; i < 3; i++)
+                        SizedBox(
+                          width: w,
+                          child: InkWell(
+                            onTap: () => onSelect(i),
+                            child: Center(
+                              child: Text(
+                                _labels[i],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(
+                                      color: Color.lerp(
+                                        cs.onSurfaceVariant,
+                                        cs.primary,
+                                        (1 - (t - i).abs()).clamp(0.0, 1.0),
+                                      ),
+                                    ),
                               ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  Positioned(
+                    left: t * w + (w - barW) / 2,
+                    bottom: 0,
+                    child: Container(
+                      width: barW,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(3),
                         ),
                       ),
                     ),
                   ),
-              ]),
-              Positioned(
-                left: t * w + (w - barW) / 2,
-                bottom: 0,
-                child: Container(
-                  width: barW,
-                  height: 3,
-                  decoration: BoxDecoration(color: cs.primary, borderRadius: const BorderRadius.vertical(top: Radius.circular(3))),
-                ),
-              ),
-            ]);
-          });
+                ],
+              );
+            },
+          );
         },
       ),
     );
@@ -184,13 +224,25 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     String? error;
     final startPath = initialPath?.trim() ?? '';
 
-    Future<void> load(String? path, void Function(void Function()) update) async {
-      update(() { loading = true; error = null; });
+    Future<void> load(
+      String? path,
+      void Function(void Function()) update,
+    ) async {
+      update(() {
+        loading = true;
+        error = null;
+      });
       try {
         final result = await _v.browseLocal(path);
-        update(() { current = result; loading = false; });
+        update(() {
+          current = result;
+          loading = false;
+        });
       } catch (e) {
-        update(() { error = e.toString(); loading = false; });
+        update(() {
+          error = e.toString();
+          loading = false;
+        });
       }
     }
 
@@ -206,83 +258,128 @@ class _RootsTabState extends ConsumerState<RootsTab> {
               }
             });
           }
-          final dirs = (current?['directories'] as List? ?? const []).map(toJson).toList();
+          final dirs = (current?['directories'] as List? ?? const [])
+              .map(toJson)
+              .toList();
           final path = '${current?['currentPath'] ?? ''}';
           final parent = toStr(current?['parentPath']);
           final available = toInt(current?['availableBytes']);
           final total = toInt(current?['capacityBytes']);
           return AlertDialog(
+            insetPadding: const EdgeInsets.all(16),
             title: const Text('Choose Directory'),
             content: SizedBox(
-              width: 520,
-              height: 420,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(path.isEmpty ? 'Drives' : path, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: Theme.of(ctx).textTheme.titleSmall),
-                if (available > 0) Padding(
-                  padding: const EdgeInsets.only(top: 6, bottom: 8),
-                  child: Text('${fmtBytes(available)} available of ${fmtBytes(total)}',
-                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
-                ),
-                const Divider(),
-                Expanded(child: loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : error != null
-                        ? Center(child: Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)))
-                        : dirs.isEmpty
-                            ? const Center(child: Text('No subdirectories found.'))
-                            : ListView.builder(
-                                itemCount: dirs.length,
-                                itemBuilder: (_, i) {
-                                  final d = dirs[i];
-                                  return ListTile(
-                                    dense: true,
-                                    leading: const Icon(Icons.folder_outlined),
-                                    title: Text('${d['name']}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    onTap: () => load('${d['path']}', update),
-                                  );
-                                },
-                              )),
-                if (!loading && error == null)
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      TextButton.icon(
-                        onPressed: parent == null || parent.isEmpty ? null : () => load(parent, update),
-                        icon: const Icon(Icons.arrow_upward),
-                        label: const Text('Parent Folder'),
-                      ),
-                      TextButton.icon(
-                        onPressed: path.isEmpty
-                            ? null
-                            : () async {
-                                final name = await promptText(
-                                  ctx,
-                                  'New Folder',
-                                  'Folder Name',
-                                  ok: 'Create Folder',
-                                );
-                                if (name == null || name.trim().isEmpty || !ctx.mounted) return;
-                                try {
-                                  await _v.createLocalDirectory(path, name.trim());
-                                  await load(path, update);
-                                } catch (_) {
-                                  if (ctx.mounted) {
-                                    toast(ctx, 'Could not create folder. Check the path and permissions.', error: true);
-                                  }
-                                }
-                              },
-                        icon: const Icon(Icons.create_new_folder_outlined),
-                        label: const Text('New Folder'),
-                      ),
-                    ],
+              width: double.maxFinite,
+              height: MediaQuery.sizeOf(context).height * 0.6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    path.isEmpty ? 'Drives' : path,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(ctx).textTheme.titleSmall,
                   ),
-              ]),
+                  if (available > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, bottom: 8),
+                      child: Text(
+                        '${fmtBytes(available)} available of ${fmtBytes(total)}',
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  const Divider(),
+                  Expanded(
+                    child: loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : error != null
+                        ? Center(
+                            child: Text(
+                              error!,
+                              style: TextStyle(
+                                color: Theme.of(ctx).colorScheme.error,
+                              ),
+                            ),
+                          )
+                        : dirs.isEmpty
+                        ? const Center(child: Text('No subdirectories found.'))
+                        : ListView.builder(
+                            itemCount: dirs.length,
+                            itemBuilder: (_, i) {
+                              final d = dirs[i];
+                              return ListTile(
+                                dense: true,
+                                leading: const Icon(Icons.folder_outlined),
+                                title: Text(
+                                  '${d['name']}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () => load('${d['path']}', update),
+                              );
+                            },
+                          ),
+                  ),
+                  if (!loading && error == null)
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        TextButton.icon(
+                          onPressed: parent == null || parent.isEmpty
+                              ? null
+                              : () => load(parent, update),
+                          icon: const Icon(Icons.arrow_upward),
+                          label: const Text('Parent Folder'),
+                        ),
+                        TextButton.icon(
+                          onPressed: path.isEmpty
+                              ? null
+                              : () async {
+                                  final name = await promptText(
+                                    ctx,
+                                    'New Folder',
+                                    'Folder Name',
+                                    ok: 'Create Folder',
+                                  );
+                                  if (name == null ||
+                                      name.trim().isEmpty ||
+                                      !ctx.mounted)
+                                    return;
+                                  try {
+                                    await _v.createLocalDirectory(
+                                      path,
+                                      name.trim(),
+                                    );
+                                    await load(path, update);
+                                  } catch (_) {
+                                    if (ctx.mounted) {
+                                      toast(
+                                        ctx,
+                                        'Could not create folder. Check the path and permissions.',
+                                        error: true,
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: const Icon(Icons.create_new_folder_outlined),
+                          label: const Text('New Folder'),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
               FilledButton.icon(
-                onPressed: path.isEmpty ? null : () => Navigator.pop(dialogContext, path),
+                onPressed: path.isEmpty
+                    ? null
+                    : () => Navigator.pop(dialogContext, path),
                 icon: const Icon(Icons.check),
                 label: const Text('Select Folder'),
               ),
@@ -293,20 +390,35 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     );
   }
 
-  Future<Map<String, dynamic>?> _sourceForm(String scheme, Map<String, dynamic>? existing) async {
+  Future<Map<String, dynamic>?> _sourceForm(
+    String scheme,
+    Map<String, dynamic>? existing,
+  ) async {
     final fields = kSourceSchemas[scheme]!;
     final r = await formDialog(
       context,
       '${scheme.toUpperCase()} Connection',
       [
         for (final f in fields)
-          FieldSpec(f.key, pretty(f.key),
-              kind: scheme == 'fs' && f.key == 'root' ? 'path' : (f.kind == 'b' ? 'bool' : (f.kind == 'k' ? 'secret' : 'text')),
-              required: f.required && f.kind != 'k' || (f.required && existing == null),
-              initial: existing?[f.key] == null || f.kind == 'k' ? '' : '${existing![f.key]}'),
+          FieldSpec(
+            f.key,
+            pretty(f.key),
+            kind: scheme == 'fs' && f.key == 'root'
+                ? 'path'
+                : (f.kind == 'b'
+                      ? 'bool'
+                      : (f.kind == 'k' ? 'secret' : 'text')),
+            required:
+                f.required && f.kind != 'k' || (f.required && existing == null),
+            initial: existing?[f.key] == null || f.kind == 'k'
+                ? ''
+                : '${existing![f.key]}',
+          ),
       ],
       ok: 'Continue',
-      intro: existing != null ? 'Re-enter secret fields unless the server keeps existing values.' : null,
+      intro: existing != null
+          ? 'Re-enter secret fields unless the server keeps existing values.'
+          : null,
       pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
@@ -323,29 +435,62 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _create() async {
-    final details = await formDialog(context, 'New Location', [
-      const FieldSpec('name', 'Name', required: true),
-      FieldSpec('scheme', 'Storage Type', kind: 'choice', options: kSourceSchemas.keys.toList(), initial: 'fs'),
-      const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
-      const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
-    ], ok: 'Continue', intro: 'A location is a storage area. Data folders and backup vaults each receive a limit from its capacity.');
+    final details = await formDialog(
+      context,
+      'New Location',
+      [
+        const FieldSpec('name', 'Name', required: true),
+        FieldSpec(
+          'scheme',
+          'Storage Type',
+          kind: 'choice',
+          options: kSourceSchemas.keys.toList(),
+          initial: 'fs',
+        ),
+        const FieldSpec(
+          'data',
+          'Allow Data Folders',
+          kind: 'bool',
+          initial: 'true',
+        ),
+        const FieldSpec(
+          'repo',
+          'Allow Backup Vaults',
+          kind: 'bool',
+          initial: 'true',
+        ),
+      ],
+      ok: 'Continue',
+      intro: 'A location is a storage area. Data folders and backup vaults each receive a limit from its capacity.',
+    );
     if (details == null || !mounted) return;
     final src = await _sourceForm(details['scheme']!, null);
     if (src == null || !mounted) return;
     Json? detected;
     if (details['scheme'] == 'fs') {
-      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
+      detected = await guarded(
+        context,
+        () => _v.browseLocal(src['root'] as String?),
+      );
       if (detected == null || !mounted) return;
     }
     final available = toInt(detected?['availableBytes']);
     final total = toInt(detected?['capacityBytes']);
-    final initialCapacity = available > 0 ? bytesToCapacity(available, 'GiB') : '';
+    final initialCapacity = available > 0
+        ? bytesToCapacity(available, 'GiB')
+        : '';
     final capacity = await formDialog(
       context,
       'Location Capacity',
       [
-        FieldSpec('capacity', 'Location Capacity', kind: 'capacity', initial: initialCapacity, required: true,
-          initialUnit: 'GiB'),
+        FieldSpec(
+          'capacity',
+          'Location Capacity',
+          kind: 'capacity',
+          initial: initialCapacity,
+          required: true,
+          initialUnit: 'GiB',
+        ),
       ],
       ok: 'Create Location',
       intro: detected == null
@@ -354,36 +499,65 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     );
     if (capacity == null || !mounted) return;
     final maxBytes = int.tryParse(capacity['capacity'] ?? '');
-    if (maxBytes == null || maxBytes <= 0) return toast(context, 'Enter a valid capacity.', error: true);
-    final created = await guarded(context, () => _v.createRoot({
-      'name': details['name'],
-      'source': src,
-      'maxBytes': maxBytes,
-      'isDataAllowed': details['data'] == 'true',
-      'isRepoAllowed': details['repo'] == 'true',
-    }));
+    if (maxBytes == null || maxBytes <= 0)
+      return toast(context, 'Enter a valid capacity.', error: true);
+    final created = await guarded(
+      context,
+      () => _v.createRoot({
+        'name': details['name'],
+        'source': src,
+        'maxBytes': maxBytes,
+        'isDataAllowed': details['data'] == 'true',
+        'isRepoAllowed': details['repo'] == 'true',
+      }),
+    );
     if (created != null) {
       _key.currentState?.refresh();
-      if (mounted) toast(context, 'Location created');
+      if (mounted) toast(context, 'Location created.');
     }
   }
 
   Future<void> _edit(Root root) async {
     final r = await formDialog(context, 'Edit ${root.name}', [
       FieldSpec('name', 'Name', initial: root.name, required: true),
-      FieldSpec('capacity', 'Capacity', kind: 'capacity', initial: bytesToGb(root.maxBytes), required: true, initialBytes: root.maxBytes),
-      FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: '${root.isDataAllowed}'),
-      FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
+      FieldSpec(
+        'capacity',
+        'Capacity',
+        kind: 'capacity',
+        initial: bytesToGb(root.maxBytes),
+        required: true,
+        initialBytes: root.maxBytes,
+      ),
+      FieldSpec(
+        'data',
+        'Allow Data Folders',
+        kind: 'bool',
+        initial: '${root.isDataAllowed}',
+      ),
+      FieldSpec(
+        'repo',
+        'Allow Backup Vaults',
+        kind: 'bool',
+        initial: '${root.isRepoAllowed}',
+      ),
     ]);
     if (r == null) return;
-    await guarded(context, () => _v.patchRoot(root.id, {
-          'name': r['name'], 'maxBytes': int.tryParse(r['capacity'] ?? '') ?? 0, 'isDataAllowed': r['data'] == 'true', 'isRepoAllowed': r['repo'] == 'true'}));
+    await guarded(
+      context,
+      () => _v.patchRoot(root.id, {
+        'name': r['name'],
+        'maxBytes': int.tryParse(r['capacity'] ?? '') ?? 0,
+        'isDataAllowed': r['data'] == 'true',
+        'isRepoAllowed': r['repo'] == 'true',
+      }),
+    );
     _key.currentState?.refresh();
   }
 
   Future<void> _editSource(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
-    if (!kSourceSchemas.containsKey(scheme)) return toast(context, 'Unknown connection type', error: true);
+    if (!kSourceSchemas.containsKey(scheme))
+      return toast(context, 'Unknown connection type.', error: true);
     final src = await _sourceForm(scheme, root.source);
     if (src == null) return;
     await guarded(context, () => _v.patchRoot(root.id, {'source': src}));
@@ -391,7 +565,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _shares(Root root) async {
-    await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => RootSharesPage(root: root)));
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => RootSharesPage(root: root)),
+    );
     _key.currentState?.silentRefresh(force: true);
   }
 
@@ -422,22 +599,40 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _delete(Root root) async {
-    if (!await confirm(context, 'Delete location “${root.name}”?', 'Not allowed while it still holds data folders or backup vaults. Files in the underlying storage are kept.', ok: 'Delete', danger: true)) return;
+    if (!await confirm(
+      context,
+      'Delete Location “${root.name}”?',
+      'Not allowed while it still holds data folders or backup vaults. Files in the underlying storage are kept.',
+      ok: 'Delete',
+      danger: true,
+    ))
+      return;
     await guarded(context, () => _v.deleteRoot(root.id));
     _key.currentState?.refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(epochProvider, (_, _) => _key.currentState?.silentRefresh(force: true));
+    ref.listen(
+      epochProvider,
+      (_, _) => _key.currentState?.silentRefresh(force: true),
+    );
     final u = ref.watch(userProvider)!;
     final canCreate = u.has(Scopes.rootsManage);
     return Scaffold(
-      floatingActionButton: canCreate ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('New Location')) : null,
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              onPressed: _create,
+              icon: const Icon(Icons.add),
+              label: const Text('New Location'),
+            )
+          : null,
       body: CursorList<Root>(
         key: _key,
-        empty: 'No locations yet',
-        emptyHint: canCreate ? 'A location is where your data lives: a disk, network share or cloud account.' : 'Ask an administrator to share a location with you.',
+        empty: 'No locations yet.',
+        emptyHint: canCreate
+            ? 'A location is where your data lives: a disk, network share or cloud account.'
+            : 'Ask an administrator to share a location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
         fetch: (c) => _v.roots(cursor: c),
@@ -448,60 +643,113 @@ class _RootsTabState extends ConsumerState<RootsTab> {
             child: InkWell(
               onTap: () => _openRoot(r),
               child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 4, 14),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Icon(Icons.dns_outlined, color: Theme.of(ctx).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 16),
-                  Expanded(child: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(ctx).textTheme.titleMedium)),
-                  if (r.isOwner)
-                    PopupMenuButton<String>(
-                      onSelected: (a) {
-                        switch (a) {
-                          case 'edit': _edit(r);
-                          case 'src': _editSource(r);
-                          case 'share': _shares(r);
-                          case 'del': _delete(r);
-                        }
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'edit', child: Text('Edit')),
-                        PopupMenuItem(value: 'src', child: Text('Edit Connection')),
-                        PopupMenuItem(value: 'share', child: Text('Share')),
-                        PopupMenuDivider(),
-                        PopupMenuItem(value: 'del', child: Text('Delete')),
+                padding: const EdgeInsets.fromLTRB(16, 12, 4, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.dns_outlined,
+                          color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            r.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(ctx).textTheme.titleMedium,
+                          ),
+                        ),
+                        if (r.isOwner)
+                          PopupMenuButton<String>(
+                            onSelected: (a) {
+                              switch (a) {
+                                case 'edit':
+                                  _edit(r);
+                                case 'src':
+                                  _editSource(r);
+                                case 'share':
+                                  _shares(r);
+                                case 'del':
+                                  _delete(r);
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(
+                                value: 'src',
+                                child: Text('Edit Connection'),
+                              ),
+                              PopupMenuItem(
+                                value: 'share',
+                                child: Text('Share'),
+                              ),
+                              PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'del',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
-                ]),
-                Padding(padding: const EdgeInsets.only(right: 12), child: Wrap(children: [
-                  if (scheme.isNotEmpty) chip(ctx, scheme.toUpperCase()),
-                  chip(ctx, r.isOwner ? 'Owner' : 'Shared by ${r.userName}'),
-                  if (r.isDataAllowed) chip(ctx, 'Data Folders'),
-                  if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
-                ])),
-                const SizedBox(height: 10),
-                if (r.isOwner) ...[
-                  Padding(padding: const EdgeInsets.only(right: 12), child: UsageBar(used: allocated, max: r.maxBytes)),
-                  const SizedBox(height: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
-                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
-                  ),
-                ] else ...[
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: UsageBar(used: r.freeBytes, max: r.maxBytes),
-                  ),
-                  const SizedBox(height: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 34, right: 12),
-                    child: Text('Available to you: ${fmtBytes(r.freeBytes)}',
-                        style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
-                  ),
-                ],
-              ]),
-            ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Wrap(
+                        children: [
+                          if (scheme.isNotEmpty)
+                            chip(ctx, scheme.toUpperCase()),
+                          chip(
+                            ctx,
+                            r.isOwner ? 'Owner' : 'Shared by ${r.userName}',
+                          ),
+                          if (r.isDataAllowed) chip(ctx, 'Data Folders'),
+                          if (r.isRepoAllowed) chip(ctx, 'Backup Vaults'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (r.isOwner) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: UsageBar(used: allocated, max: r.maxBytes),
+                      ),
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Text(
+                          '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      // Non-owners only see their own share: the bar shows the
+                      // consumed portion (max minus free), not the free space.
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: UsageBar(
+                          used: (r.maxBytes - r.freeBytes).clamp(0, r.maxBytes),
+                          max: r.maxBytes,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 34, right: 12),
+                        child: Text(
+                          'Available to you: ${fmtBytes(r.freeBytes)}',
+                          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           );
         },
@@ -539,10 +787,29 @@ class _PointsTabState extends ConsumerState<PointsTab> {
   Future<void> _create() async {
     final roots = await guarded(context, () => _v.roots(limit: 200));
     if (roots == null || !mounted) return;
-    final usable = roots.items.where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed).toList();
-    if (usable.isEmpty) return toast(context, 'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Add or share one first.', error: true);
-    final created = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, showDragHandle: true, constraints: const BoxConstraints(maxWidth: 640), builder: (_) => _NewPointSheet(repo: widget.repo, roots: usable, vaulton: _v));
-    if (created == true && mounted) { _key.currentState?.refresh(); ref.invalidate(pointNamesProvider); ref.read(epochProvider.notifier).bump(); }
+    final usable = roots.items
+        .where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed)
+        .toList();
+    if (usable.isEmpty)
+      return toast(
+        context,
+        'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Add or share one first.',
+        error: true,
+      );
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      constraints: const BoxConstraints(maxWidth: 640),
+      builder: (_) =>
+          _NewPointSheet(repo: widget.repo, roots: usable, vaulton: _v),
+    );
+    if (created == true && mounted) {
+      _key.currentState?.refresh();
+      ref.invalidate(pointNamesProvider);
+      ref.read(epochProvider.notifier).bump();
+    }
   }
 
   Future<void> _edit(Point p) async {
@@ -557,22 +824,36 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       builder: (_) => _EditPointSheet(point: p, root: root, repo: widget.repo),
     );
     if (result == null || !mounted) return;
-    final saved = await guarded(context, () => widget.repo
-        ? _v.patchRepo(p.id, result)
-        : _v.patchData(p.id, result));
+    final saved = await guarded(
+      context,
+      () =>
+          widget.repo ? _v.patchRepo(p.id, result) : _v.patchData(p.id, result),
+    );
     if (saved != null && mounted) {
       _key.currentState?.refresh();
-      toast(context, '${widget.repo ? 'Backup vault' : 'Data folder'} updated');
+      toast(
+        context,
+        '${widget.repo ? 'Backup vault' : 'Data folder'} updated.',
+      );
     }
   }
 
   Future<void> _delete(Point p) async {
-    if (!await confirm(context, 'Delete “${p.name}”?',
-        widget.repo ? 'Its schedules and job history are removed. Stored backups are kept.' : 'Its schedules are removed. Files in the underlying storage are kept.',
-        ok: 'Delete', danger: true)) {
+    if (!await confirm(
+      context,
+      'Delete “${p.name}”?',
+      widget.repo
+          ? 'Its schedules and job history are removed. Stored backups are kept.'
+          : 'Its schedules are removed. Files in the underlying storage are kept.',
+      ok: 'Delete',
+      danger: true,
+    )) {
       return;
     }
-    await guarded(context, () => widget.repo ? _v.deleteRepo(p.id) : _v.deleteData(p.id));
+    await guarded(
+      context,
+      () => widget.repo ? _v.deleteRepo(p.id) : _v.deleteData(p.id),
+    );
     if (!widget.repo) ref.read(transferProvider.notifier).clearForPoint(p.id);
     _key.currentState?.refresh();
     ref.invalidate(pointNamesProvider);
@@ -587,12 +868,20 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       _loadRoots();
     });
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: Text('New ${widget.repo ? 'Backup Vault' : 'Data Folder'}')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _create,
+        icon: const Icon(Icons.add),
+        label: Text('New ${widget.repo ? 'Backup Vault' : 'Data Folder'}'),
+      ),
       body: CursorList<Point>(
         key: _key,
-        empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet',
-        emptyHint: widget.repo ? 'A backup vault stores your backups.' : 'A data folder stores your files.',
-        emptyIcon: widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined,
+        empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet.',
+        emptyHint: widget.repo
+            ? 'A backup vault stores your backups.'
+            : 'A data folder stores your files.',
+        emptyIcon: widget.repo
+            ? Icons.inventory_2_outlined
+            : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 5),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
         itemBuilder: (ctx, p, i) => _pointCard(ctx, p),
@@ -600,29 +889,51 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     );
   }
 
-  void _openRepo(Point p, {int tab = 0}) =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => RepoPage(repoId: p.id, repo: p, initialTab: tab)));
+  void _openRepo(Point p, {int tab = 0}) => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => RepoPage(repoId: p.id, repo: p, initialTab: tab),
+    ),
+  );
 
   Widget _pointCard(BuildContext ctx, Point p) {
     final cs = Theme.of(ctx).colorScheme;
     final tt = Theme.of(ctx).textTheme;
-    final locationName = _roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ?? (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId);
+    final locationName =
+        _roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ??
+        (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId);
     final actions = widget.repo
         ? <Widget>[
             FilledButton.tonalIcon(
-              onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => SnapshotBrowserPage(repo: p))),
+              onPressed: () => Navigator.push(
+                ctx,
+                MaterialPageRoute(builder: (_) => SnapshotBrowserPage(repo: p)),
+              ),
               icon: const Icon(Icons.folder_open_outlined),
               label: const Text('Browse'),
             ),
-            FilledButton.icon(onPressed: () => startBackup(ctx, ref, repo: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup')),
+            FilledButton.icon(
+              onPressed: () => startBackup(ctx, ref, repo: p),
+              icon: const Icon(Icons.backup_outlined),
+              label: const Text('Backup'),
+            ),
           ]
         : <Widget>[
             FilledButton.tonalIcon(
-              onPressed: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id))),
+              onPressed: () => Navigator.push(
+                ctx,
+                MaterialPageRoute(
+                  builder: (_) => FilesPage(initialPointId: p.id),
+                ),
+              ),
               icon: const Icon(Icons.folder_open_outlined),
               label: const Text('Open'),
             ),
-            FilledButton.icon(onPressed: () => startBackup(ctx, ref, data: p), icon: const Icon(Icons.backup_outlined), label: const Text('Backup')),
+            FilledButton.icon(
+              onPressed: () => startBackup(ctx, ref, data: p),
+              icon: const Icon(Icons.backup_outlined),
+              label: const Text('Backup'),
+            ),
           ];
     return Card(
       child: InkWell(
@@ -630,73 +941,157 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           if (widget.repo) {
             _openRepo(p);
           } else {
-            Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)));
+            Navigator.push(
+              ctx,
+              MaterialPageRoute(
+                builder: (_) => FilesPage(initialPointId: p.id),
+              ),
+            );
           }
         },
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 4, 14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(widget.repo ? Icons.inventory_2_outlined : Icons.folder_outlined, color: cs.onSurfaceVariant),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: tt.titleMedium),
-                  Text(locationName, maxLines: 1, overflow: TextOverflow.ellipsis, style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                ]),
-              ),
-              chip(ctx, p.healthLabel, color: p.isError ? cs.errorContainer : null, inline: true),
-              PopupMenuButton<String>(
-                onSelected: (a) {
-                  switch (a) {
-                    case 'edit': _edit(p);
-                    case 'jobs':
-                      if (widget.repo) {
-                        _openRepo(p, tab: 1);
-                      } else {
-                        Navigator.push(ctx, MaterialPageRoute(builder: (_) => DataJobsPage(data: p)));
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    widget.repo
+                        ? Icons.inventory_2_outlined
+                        : Icons.folder_outlined,
+                    color: cs.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.titleMedium,
+                        ),
+                        Text(
+                          locationName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  chip(
+                    ctx,
+                    p.healthLabel,
+                    color: p.isError ? cs.errorContainer : null,
+                    inline: true,
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (a) {
+                      switch (a) {
+                        case 'edit':
+                          _edit(p);
+                        case 'jobs':
+                          if (widget.repo) {
+                            _openRepo(p, tab: 1);
+                          } else {
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => DataJobsPage(data: p),
+                              ),
+                            );
+                          }
+                        case 'snaps':
+                          _openRepo(p, tab: 0);
+                        case 'sched':
+                          _openRepo(p, tab: 2);
+                        case 'del':
+                          _delete(p);
                       }
-                    case 'snaps': _openRepo(p, tab: 0);
-                    case 'sched': _openRepo(p, tab: 2);
-                    case 'del': _delete(p);
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  if (widget.repo) const PopupMenuItem(value: 'snaps', child: Text('Snapshots')),
-                  const PopupMenuItem(value: 'jobs', child: Text('Jobs')),
-                  if (widget.repo) const PopupMenuItem(value: 'sched', child: Text('Schedules')),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(value: 'del', child: Text('Delete')),
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      if (widget.repo)
+                        const PopupMenuItem(
+                          value: 'snaps',
+                          child: Text('Snapshots'),
+                        ),
+                      const PopupMenuItem(value: 'jobs', child: Text('Jobs')),
+                      if (widget.repo)
+                        const PopupMenuItem(
+                          value: 'sched',
+                          child: Text('Schedules'),
+                        ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(value: 'del', child: Text('Delete')),
+                    ],
+                  ),
                 ],
               ),
-            ]),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                UsageBar(used: p.usedBytes, max: p.maxBytes),
-                const SizedBox(height: 6),
-                Text('${fmtBytes(p.usedBytes)} of ${fmtBytes(p.maxBytes)}', style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                if (p.error != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(p.error!, style: TextStyle(color: cs.error, fontSize: 12))),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: actions[0]),
-                  const SizedBox(width: 8),
-                  Expanded(child: actions[1]),
-                ]),
-              ]),
-            ),
-          ]),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    UsageBar(used: p.usedBytes, max: p.maxBytes),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${fmtBytes(p.usedBytes)} of ${fmtBytes(p.maxBytes)}',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    if (p.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          p.error!,
+                          style: TextStyle(color: cs.error, fontSize: 12),
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    LayoutBuilder(
+                      builder: (context, box) {
+                        if (box.maxWidth < 320) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              actions[0],
+                              const SizedBox(height: 8),
+                              actions[1],
+                            ],
+                          );
+                        }
+                        return Row(
+                          children: [
+                            Expanded(child: actions[0]),
+                            const SizedBox(width: 8),
+                            Expanded(child: actions[1]),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-
 class _EditPointSheet extends StatefulWidget {
-  const _EditPointSheet({required this.point, required this.root, required this.repo});
+  const _EditPointSheet({
+    required this.point,
+    required this.root,
+    required this.repo,
+  });
   final Point point;
   final Root root;
   final bool repo;
@@ -719,7 +1114,9 @@ class _EditPointSheetState extends State<_EditPointSheet> {
     super.initState();
     _name = TextEditingController(text: widget.point.name);
     _availableBytes = widget.root.freeBytes + widget.point.maxBytes;
-    _capacity = TextEditingController(text: bytesToCapacity(widget.point.maxBytes, _unit));
+    _capacity = TextEditingController(
+      text: bytesToCapacity(widget.point.maxBytes, _unit),
+    );
     _rememberExact(widget.point.maxBytes);
   }
 
@@ -731,7 +1128,9 @@ class _EditPointSheetState extends State<_EditPointSheet> {
   }
 
   int get _bytes {
-    if (_exactBytes != null && _capacity.text.trim() == _exactText && _unit == _exactUnit) {
+    if (_exactBytes != null &&
+        _capacity.text.trim() == _exactText &&
+        _unit == _exactUnit) {
       return _exactBytes!;
     }
     final n = double.tryParse(_capacity.text.trim().replaceAll(',', '.'));
@@ -752,8 +1151,10 @@ class _EditPointSheetState extends State<_EditPointSheet> {
 
   String get _error {
     if (_name.text.trim().isEmpty) return 'Enter a name.';
-    if (_capacity.text.trim().isEmpty || _bytes < 4096) return 'Enter a valid space limit.';
-    if (_bytes > _availableBytes) return 'Limit exceeds the capacity available to you.';
+    if (_capacity.text.trim().isEmpty || _bytes < 4096)
+      return 'Enter a valid space limit.';
+    if (_bytes > _availableBytes)
+      return 'Limit exceeds the capacity available to you.';
     return '';
   }
 
@@ -772,92 +1173,178 @@ class _EditPointSheetState extends State<_EditPointSheet> {
     final max = _availableBytes > 0 ? _availableBytes : widget.point.maxBytes;
     final fraction = (_bytes / max).clamp(0.0, 1.0).toDouble();
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 4, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        4,
+        20,
+        MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
       child: SingleChildScrollView(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Edit ${widget.repo ? 'Backup Vault' : 'Data Folder'}', style: t.headlineSmall),
-          const SizedBox(height: 4),
-          Text('Change the name or space limit.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _name,
-            enabled: !_saving,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 18),
-          Text('Space Limit', style: t.titleSmall),
-          const SizedBox(height: 8),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: TextField(
-              controller: _capacity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Edit ${widget.repo ? 'Backup Vault' : 'Data Folder'}',
+              style: t.headlineSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Change the name or space limit.',
+              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _name,
               enabled: !_saving,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                border: const OutlineInputBorder(),
-                errorText: _capacity.text.isNotEmpty && (_bytes < 4096 || _bytes > max) ? 'Outside available capacity' : null,
-                helperText: null,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
               ),
-              onChanged: (_) => setState(() { _exactBytes = null; _exactText = null; _exactUnit = null; }),
-            )),
-            const SizedBox(width: 10),
-            SizedBox(width: 105, child: DropdownButtonFormField<String>(
-              initialValue: _unit,
-              decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(value: 'B', child: Text('B')),
-                DropdownMenuItem(value: 'GiB', child: Text('GiB')),
-                DropdownMenuItem(value: 'TiB', child: Text('TiB')),
-              ],
-              onChanged: _saving ? null : (value) {
-                if (value == null) return;
-                final bytes = _bytes;
-                setState(() { _unit = value; _setBytes(bytes); });
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 18),
+            Text('Space Limit', style: t.titleSmall),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, box) {
+                final amount = Expanded(
+                  child: TextField(
+                    controller: _capacity,
+                    enabled: !_saving,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Amount',
+                      border: const OutlineInputBorder(),
+                      errorText:
+                          _capacity.text.isNotEmpty &&
+                              (_bytes < 4096 || _bytes > max)
+                          ? 'Outside available capacity'
+                          : null,
+                      helperText: null,
+                    ),
+                    onChanged: (_) => setState(() {
+                      _exactBytes = null;
+                      _exactText = null;
+                      _exactUnit = null;
+                    }),
+                  ),
+                );
+                final unit = SizedBox(
+                  width: 96,
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: _unit,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'B', child: Text('B')),
+                      DropdownMenuItem(value: 'GiB', child: Text('GiB')),
+                      DropdownMenuItem(value: 'TiB', child: Text('TiB')),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            final bytes = _bytes;
+                            setState(() {
+                              _unit = value;
+                              _setBytes(bytes);
+                            });
+                          },
+                  ),
+                );
+                if (box.maxWidth < 360) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [amount, const SizedBox(height: 10), unit],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [amount, const SizedBox(width: 10), unit],
+                );
               },
-            )),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: Text('Allocation', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant))),
-            Text('${(fraction * 100).round()}%', style: t.titleSmall),
-          ]),
-          Slider(
-            value: fraction,
-            min: 0,
-            max: 1,
-            divisions: 100,
-            label: '${(fraction * 100).round()}%',
-            onChanged: _saving || max <= 0 ? null : (value) => setState(() => _setBytes((value * max).round())),
-          ),
-          Text('Available to this folder: ${fmtBytes(max)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-          const SizedBox(height: 20),
-          Row(children: [
-            Expanded(child: OutlinedButton(onPressed: _saving ? null : () => Navigator.pop(context), child: const Text('Cancel'))),
-            const SizedBox(width: 10),
-            Expanded(child: FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: const Icon(Icons.check),
-              label: const Text('Save Changes'),
-            )),
-          ]),
-        ]),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Allocation',
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ),
+                Text('${(fraction * 100).round()}%', style: t.titleSmall),
+              ],
+            ),
+            Slider(
+              value: fraction,
+              min: 0,
+              max: 1,
+              divisions: 100,
+              label: '${(fraction * 100).round()}%',
+              onChanged: _saving || max <= 0
+                  ? null
+                  : (value) => setState(() => _setBytes((value * max).round())),
+            ),
+            Text(
+              'Available to this folder: ${fmtBytes(max)}.',
+              style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _saving ? null : _save,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Save Changes'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _NewPointSheet extends StatefulWidget {
-  const _NewPointSheet({required this.repo, required this.roots, required this.vaulton});
-  final bool repo; final List<Root> roots; final Vaulton vaulton;
-  @override State<_NewPointSheet> createState() => _NewPointSheetState();
+  const _NewPointSheet({
+    required this.repo,
+    required this.roots,
+    required this.vaulton,
+  });
+  final bool repo;
+  final List<Root> roots;
+  final Vaulton vaulton;
+  @override
+  State<_NewPointSheet> createState() => _NewPointSheetState();
 }
+
 class _NewPointSheetState extends State<_NewPointSheet> {
   late Root _root;
-  final _name = TextEditingController(), _capacity = TextEditingController(), _password = TextEditingController();
+  final _name = TextEditingController(),
+      _capacity = TextEditingController(),
+      _password = TextEditingController();
   String _unit = 'GiB';
-  bool _showPassword = false, _saving = false, _capacityTouched = false, _passwordTouched = false;
+  bool _showPassword = false,
+      _saving = false,
+      _capacityTouched = false,
+      _passwordTouched = false;
   int? _exactCapacityBytes;
   String? _exactCapacityText, _exactCapacityUnit;
 
@@ -906,108 +1393,316 @@ class _NewPointSheetState extends State<_NewPointSheet> {
     if (n == null || !n.isFinite || n < 0 || _capacityBytesValue < 4096) {
       return 'Enter a valid space limit.';
     }
-    if (_root.freeBytes <= 0) return 'No allocatable capacity remains for you on this location.';
+    if (_root.freeBytes <= 0)
+      return 'No allocatable capacity remains for you on this location.';
     if (_capacityBytesValue > _root.freeBytes) {
       return 'The limit exceeds the capacity available to you on this location.';
     }
     return '';
   }
-  String get _passwordError=>widget.repo&&_password.text.length<8?'Use at least 8 characters.':'';
+
+  String get _passwordError => widget.repo && _password.text.length < 8
+      ? 'Use at least 8 characters.'
+      : '';
   Future<void> _save() async {
     final name = _name.text.trim();
-    setState(() { _capacityTouched = true; _passwordTouched = true; });
-    if (name.isEmpty || _capacityError.isNotEmpty || _passwordError.isNotEmpty) return;
+    setState(() {
+      _capacityTouched = true;
+      _passwordTouched = true;
+    });
+    if (name.isEmpty || _capacityError.isNotEmpty || _passwordError.isNotEmpty)
+      return;
     final maxBytes = _capacityBytesValue;
     setState(() => _saving = true);
-    try { await (widget.repo?widget.vaulton.createRepo({'rootId':_root.id,'name':name,'maxBytes':maxBytes,'password':_password.text}):widget.vaulton.createData({'rootId':_root.id,'name':name,'maxBytes':maxBytes})); if(mounted)Navigator.pop(context,true); }
-    catch(e){if(mounted){setState(()=>_saving=false);toast(context,e.toString(),error:true);}}
+    try {
+      await (widget.repo
+          ? widget.vaulton.createRepo({
+              'rootId': _root.id,
+              'name': name,
+              'maxBytes': maxBytes,
+              'password': _password.text,
+            })
+          : widget.vaulton.createData({
+              'rootId': _root.id,
+              'name': name,
+              'maxBytes': maxBytes,
+            }));
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        toast(context, e.toString(), error: true);
+      }
+    }
   }
-  @override Widget build(BuildContext context){
-    final cs=Theme.of(context).colorScheme,t=Theme.of(context).textTheme;
-    return Padding(padding:EdgeInsets.fromLTRB(20,4,20,MediaQuery.viewInsetsOf(context).bottom+20),child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[CircleAvatar(radius:25,backgroundColor:widget.repo?cs.secondaryContainer:cs.primaryContainer,child:Icon(widget.repo?Icons.inventory_2_outlined:Icons.folder_outlined,color:widget.repo?cs.onSecondaryContainer:cs.onPrimaryContainer)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.repo?'New Backup Vault':'New Data Folder',style:t.headlineSmall),const SizedBox(height:2),Text(widget.repo?'An encrypted place for your backups.':'A dedicated space for your files.',style:t.bodyMedium?.copyWith(color:cs.onSurfaceVariant))]))]),
-      const SizedBox(height:20),Text('Location',style:t.titleSmall),const SizedBox(height:8),
-      DropdownButtonFormField<Root>(initialValue:_root,isExpanded:true,decoration:const InputDecoration(border:OutlineInputBorder(),prefixIcon:Icon(Icons.dns_outlined)),items:[for(final r in widget.roots)DropdownMenuItem(value:r,child:Text(r.name,overflow:TextOverflow.ellipsis))],onChanged:_saving?null:(r)=>setState(()=>_root=r!)),
-      const SizedBox(height:6),
-      Text(
-        _root.isOwner
-            ? '${fmtBytes(_root.freeBytes)} available to allocate of ${fmtBytes(_root.maxBytes)}'
-            : '${fmtBytes(_root.freeBytes)} available to you on this shared location',
-        style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme, t = Theme.of(context).textTheme;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        4,
+        20,
+        MediaQuery.viewInsetsOf(context).bottom + 20,
       ),
-      const SizedBox(height:18),TextField(controller:_name,enabled:!_saving,textCapitalization:TextCapitalization.words,decoration:const InputDecoration(labelText:'Name',hintText:'e.g. Documents',border:OutlineInputBorder())),
-      const SizedBox(height:16),Text('Space Limit',style:t.titleSmall),const SizedBox(height:8),
-      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: TextField(
-            controller: _capacity,
-            enabled: !_saving,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => setState(() {
-              _clearExactCapacity();
-              _capacityTouched = true;
-            }),
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              border: const OutlineInputBorder(),
-              errorText: (!_capacityTouched || _capacityError.isEmpty) ? null : _capacityError,
-              helperText: null,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: widget.repo
+                      ? cs.secondaryContainer
+                      : cs.primaryContainer,
+                  child: Icon(
+                    widget.repo
+                        ? Icons.inventory_2_outlined
+                        : Icons.folder_outlined,
+                    color: widget.repo
+                        ? cs.onSecondaryContainer
+                        : cs.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.repo ? 'New Backup Vault' : 'New Data Folder',
+                        style: t.headlineSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.repo
+                            ? 'An encrypted place for your backups.'
+                            : 'A dedicated space for your files.',
+                        style: t.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        SizedBox(
-          width: 105,
-          child: DropdownButtonFormField<String>(
-            initialValue: _unit,
-            decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Unit'),
-            items: const [
-              DropdownMenuItem(value: 'B', child: Text('B')),
-              DropdownMenuItem(value: 'GiB', child: Text('GiB')),
-              DropdownMenuItem(value: 'TiB', child: Text('TiB')),
-            ],
-            onChanged: _saving ? null : (v) {
-              if (v == null) return;
-              final raw = double.tryParse(_capacity.text.trim().replaceAll(',', '.'));
-              final valid = _capacity.text.trim().isEmpty ||
-                  (raw != null && raw.isFinite && raw >= 0);
-              final bytes = _capacityBytesValue;
-              setState(() {
-                _unit = v;
-                if (valid) {
-                  _setExactCapacity(bytes);
-                } else {
-                  _clearExactCapacity();
+            const SizedBox(height: 20),
+            Text('Location', style: t.titleSmall),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<Root>(
+              initialValue: _root,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.dns_outlined),
+              ),
+              items: [
+                for (final r in widget.roots)
+                  DropdownMenuItem(
+                    value: r,
+                    child: Text(r.name, overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: _saving ? null : (r) => setState(() => _root = r!),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _root.isOwner
+                  ? '${fmtBytes(_root.freeBytes)} available to allocate of ${fmtBytes(_root.maxBytes)}.'
+                  : '${fmtBytes(_root.freeBytes)} available to you on this shared location.',
+              style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _name,
+              enabled: !_saving,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                hintText: 'e.g. Documents',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Space Limit', style: t.titleSmall),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, box) {
+                final amount = Expanded(
+                  child: TextField(
+                    controller: _capacity,
+                    enabled: !_saving,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => setState(() {
+                      _clearExactCapacity();
+                      _capacityTouched = true;
+                    }),
+                    decoration: InputDecoration(
+                      labelText: 'Amount',
+                      border: const OutlineInputBorder(),
+                      errorText: (!_capacityTouched || _capacityError.isEmpty)
+                          ? null
+                          : _capacityError,
+                      helperText: null,
+                    ),
+                  ),
+                );
+                final unit = SizedBox(
+                  width: 96,
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: _unit,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Unit',
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'B', child: Text('B')),
+                      DropdownMenuItem(value: 'GiB', child: Text('GiB')),
+                      DropdownMenuItem(value: 'TiB', child: Text('TiB')),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (v) {
+                            if (v == null) return;
+                            final raw = double.tryParse(
+                              _capacity.text.trim().replaceAll(',', '.'),
+                            );
+                            final valid =
+                                _capacity.text.trim().isEmpty ||
+                                (raw != null && raw.isFinite && raw >= 0);
+                            final bytes = _capacityBytesValue;
+                            setState(() {
+                              _unit = v;
+                              if (valid) {
+                                _setExactCapacity(bytes);
+                              } else {
+                                _clearExactCapacity();
+                              }
+                            });
+                          },
+                  ),
+                );
+                if (box.maxWidth < 360) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [amount, const SizedBox(height: 10), unit],
+                  );
                 }
-              });
-            },
-          ),
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [amount, const SizedBox(width: 10), unit],
+                );
+              },
+            ),
+            if (_root.freeBytes > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'Allocation',
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${((_capacityBytesValue / _root.freeBytes) * 100).clamp(0, 100).round()}%',
+                    style: t.titleSmall,
+                  ),
+                ],
+              ),
+              Slider(
+                value: (_capacityBytesValue / _root.freeBytes)
+                    .clamp(0, 1)
+                    .toDouble(),
+                min: 0,
+                max: 1,
+                divisions: 100,
+                label:
+                    '${((_capacityBytesValue / _root.freeBytes) * 100).clamp(0, 100).round()}%',
+                onChanged: _saving
+                    ? null
+                    : (v) {
+                        final bytes = (v * _root.freeBytes).round();
+                        setState(() {
+                          _capacityTouched = true;
+                          _setExactCapacity(bytes);
+                        });
+                      },
+              ),
+              Text(
+                'Available to allocate: ${fmtBytes(_root.freeBytes)}.',
+                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+            if (widget.repo) ...[
+              const SizedBox(height: 18),
+              TextField(
+                controller: _password,
+                enabled: !_saving,
+                obscureText: !_showPassword,
+                onChanged: (_) => setState(() {
+                  _passwordTouched = true;
+                }),
+                decoration: InputDecoration(
+                  labelText: 'Vault Password',
+                  hintText: 'At least 8 characters.',
+                  border: const OutlineInputBorder(),
+                  errorText: (!_passwordTouched || _passwordError.isEmpty)
+                      ? null
+                      : _passwordError,
+                  suffixIcon: IconButton(
+                    tooltip: _showPassword ? 'Hide Password' : 'Show Password',
+                    icon: Icon(
+                      _showPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: _saving
+                        ? null
+                        : () => setState(() => _showPassword = !_showPassword),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'This password is required to open the backup vault.',
+                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _saving ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: Text(_saving ? 'Creating…' : 'Create'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ]),
-      if(_root.freeBytes>0)...[
-        const SizedBox(height:8),
-        Row(children:[
-          Text('Allocation',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
-          const Spacer(),
-          Text('${((_capacityBytesValue/_root.freeBytes)*100).clamp(0,100).round()}%',style:t.titleSmall),
-        ]),
-        Slider(
-          value:(_capacityBytesValue/_root.freeBytes).clamp(0,1).toDouble(),
-          min:0,max:1,divisions:100,
-          label:'${((_capacityBytesValue/_root.freeBytes)*100).clamp(0,100).round()}%',
-          onChanged: _saving ? null : (v) {
-            final bytes = (v * _root.freeBytes).round();
-            setState(() {
-              _capacityTouched = true;
-              _setExactCapacity(bytes);
-            });
-          },
-        ),
-        Text('Available to allocate: ${fmtBytes(_root.freeBytes)}',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant)),
-      ],
-      if(widget.repo)...[const SizedBox(height:18),TextField(controller:_password,enabled:!_saving,obscureText:!_showPassword,onChanged:(_)=>setState((){_passwordTouched=true;}),decoration:InputDecoration(labelText:'Vault Password',hintText:'At least 8 characters',border:const OutlineInputBorder(),errorText:(!_passwordTouched||_passwordError.isEmpty)?null:_passwordError,suffixIcon:IconButton(tooltip:_showPassword?'Hide Password':'Show Password',icon:Icon(_showPassword?Icons.visibility_off_outlined:Icons.visibility_outlined),onPressed:_saving?null:()=>setState(()=>_showPassword=!_showPassword)))),const SizedBox(height:6),Text('This password is required to open the backup vault.',style:t.bodySmall?.copyWith(color:cs.onSurfaceVariant))],
-      const SizedBox(height:20),Row(children:[Expanded(child:OutlinedButton(onPressed:_saving?null:()=>Navigator.pop(context),child:const Text('Cancel'))),const SizedBox(width:10),Expanded(child:FilledButton.icon(onPressed:_saving?null:_save,icon:_saving?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.check),label:Text(_saving?'Creating…':'Create')))])
-    ])));
+      ),
+    );
   }
 }
 
@@ -1017,20 +1712,26 @@ class DataJobsPage extends ConsumerWidget {
   final Point data;
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-        appBar: AppBar(title: Text('Jobs · ${data.name}')),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => startBackup(context, ref, data: data),
-          icon: const Icon(Icons.backup),
-          label: const Text('Backup'),
-        ),
-        body: JobsList(dataId: data.id),
-      );
+    appBar: AppBar(title: Text('Jobs · ${data.name}')),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: () => startBackup(context, ref, data: data),
+      icon: const Icon(Icons.backup),
+      label: const Text('Backup'),
+    ),
+    body: JobsList(dataId: data.id),
+  );
 }
-
 
 /// Details for one storage location, including who it is shared with.
 class _RootSheet extends StatefulWidget {
-  const _RootSheet({required this.root, required this.vaulton, required this.onShare, required this.onEdit, required this.onEditConnection, required this.onDelete});
+  const _RootSheet({
+    required this.root,
+    required this.vaulton,
+    required this.onShare,
+    required this.onEdit,
+    required this.onEditConnection,
+    required this.onDelete,
+  });
   final Root root;
   final Vaulton vaulton;
   final VoidCallback onShare, onEdit, onEditConnection, onDelete;
@@ -1046,24 +1747,37 @@ class _RootSheetState extends State<_RootSheet> {
   void initState() {
     super.initState();
     if (widget.root.isOwner) {
-      widget.vaulton.shares(widget.root.id).then((v) {
-        if (mounted) setState(() => _shares = v);
-      }).catchError((_) {
-        if (mounted) setState(() => _failed = true);
-      });
+      widget.vaulton
+          .shares(widget.root.id)
+          .then((v) {
+            if (mounted) setState(() => _shares = v);
+          })
+          .catchError((_) {
+            if (mounted) setState(() => _failed = true);
+          });
     }
   }
 
   Widget _row(IconData icon, String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.outline),
-          const SizedBox(width: 12),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const Spacer(),
-          Flexible(child: Text(value, textAlign: TextAlign.end, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.outline),
+        const SizedBox(width: 12),
+        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1072,76 +1786,147 @@ class _RootSheetState extends State<_RootSheet> {
     final cs = Theme.of(context).colorScheme;
     final allocated = r.allocatedBytes;
     final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
-    final holds = [if (r.isDataAllowed) 'Data Folders', if (r.isRepoAllowed) 'Backup Vaults'];
+    final holds = [
+      if (r.isDataAllowed) 'Data Folders',
+      if (r.isRepoAllowed) 'Backup Vaults',
+    ];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          CircleAvatar(backgroundColor: cs.secondaryContainer, child: Icon(Icons.dns_outlined, color: cs.onSecondaryContainer)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(r.name, style: t.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(r.isOwner ? 'Owned by You' : 'Shared by ${r.userName}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-            ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: cs.secondaryContainer,
+                child: Icon(Icons.dns_outlined, color: cs.onSecondaryContainer),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.name,
+                      style: t.titleLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      r.isOwner ? 'Owned by You' : 'Shared by ${r.userName}',
+                      style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ]),
-        const SizedBox(height: 16),
-        if (r.isOwner) ...[
-          UsageBar(used: allocated, max: r.maxBytes),
-          const SizedBox(height: 6),
-          Text('${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}', style: t.bodySmall),
-        ] else ...[
-          UsageBar(used: r.freeBytes, max: r.maxBytes),
-          const SizedBox(height: 6),
-          Text('Available to you: ${fmtBytes(r.freeBytes)}', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-        ],
-        const SizedBox(height: 8),
-        if (scheme.isNotEmpty) _row(Icons.cable_outlined, 'Connection Type', scheme),
-        _row(Icons.inventory_2_outlined, 'Can Hold', holds.isEmpty ? 'Nothing Yet' : holds.join(' and ')),
-        const Divider(height: 28),
-        Text('Who Can Use It', style: t.titleSmall),
-        const SizedBox(height: 8),
-        if (!r.isOwner)
-          Text('Only the owner can manage access.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
-        else if (_failed)
-          Text('Couldn’t load sharing.', style: t.bodyMedium?.copyWith(color: cs.error))
-        else if (_shares == null)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator())
-        else if (_shares!.isEmpty)
-          Text('Not shared. Only you can use this location.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant))
-        else
-          for (final s in _shares!)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: CircleAvatar(radius: 16, child: Text('${s['userName']}'.isEmpty ? '?' : '${s['userName']}'[0].toUpperCase())),
-              title: Text('${s['userName']}'),
-              trailing: Text('Up to ${fmtBytes(toInt(s['maxBytes']))}', style: t.bodySmall),
+          const SizedBox(height: 16),
+          if (r.isOwner) ...[
+            UsageBar(used: allocated, max: r.maxBytes),
+            const SizedBox(height: 6),
+            Text(
+              '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
+              style: t.bodySmall,
             ),
-        if (r.isOwner) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: widget.onShare,
-              icon: const Icon(Icons.group_add_outlined),
-              label: Text(_shares != null && _shares!.isNotEmpty ? 'Manage Sharing' : 'Share This Location'),
+          ] else ...[
+            UsageBar(used: r.freeBytes, max: r.maxBytes),
+            const SizedBox(height: 6),
+            Text(
+              'Available to you: ${fmtBytes(r.freeBytes)}',
+              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
-          ),
+          ],
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            OutlinedButton.icon(onPressed: widget.onEdit, icon: const Icon(Icons.edit_outlined), label: const Text('Edit Details')),
-            OutlinedButton.icon(onPressed: widget.onEditConnection, icon: const Icon(Icons.link), label: const Text('Edit Connection')),
-            TextButton.icon(
-              onPressed: widget.onDelete,
-              style: TextButton.styleFrom(foregroundColor: cs.error),
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete'),
+          if (scheme.isNotEmpty)
+            _row(Icons.cable_outlined, 'Connection Type', scheme),
+          _row(
+            Icons.inventory_2_outlined,
+            'Can Hold',
+            holds.isEmpty ? 'Nothing Yet' : holds.join(' and '),
+          ),
+          const Divider(height: 28),
+          Text('Who Can Use It', style: t.titleSmall),
+          const SizedBox(height: 8),
+          if (!r.isOwner)
+            Text(
+              'Only the owner can manage access.',
+              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            )
+          else if (_failed)
+            Text(
+              'Couldn’t load sharing.',
+              style: t.bodyMedium?.copyWith(color: cs.error),
+            )
+          else if (_shares == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            )
+          else if (_shares!.isEmpty)
+            Text(
+              'Not shared. Only you can use this location.',
+              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            )
+          else
+            for (final s in _shares!)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: CircleAvatar(
+                  radius: 16,
+                  child: Text(
+                    '${s['userName']}'.isEmpty
+                        ? '?'
+                        : '${s['userName']}'[0].toUpperCase(),
+                  ),
+                ),
+                title: Text('${s['userName']}'),
+                trailing: Text(
+                  'Up to ${fmtBytes(toInt(s['maxBytes']))}',
+                  style: t.bodySmall,
+                ),
+              ),
+          if (r.isOwner) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: widget.onShare,
+                icon: const Icon(Icons.group_add_outlined),
+                label: Text(
+                  _shares != null && _shares!.isNotEmpty
+                      ? 'Manage Sharing'
+                      : 'Share This Location',
+                ),
+              ),
             ),
-          ]),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: widget.onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit Details'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: widget.onEditConnection,
+                  icon: const Icon(Icons.link),
+                  label: const Text('Edit Connection'),
+                ),
+                TextButton.icon(
+                  onPressed: widget.onDelete,
+                  style: TextButton.styleFrom(foregroundColor: cs.error),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                ),
+              ],
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }

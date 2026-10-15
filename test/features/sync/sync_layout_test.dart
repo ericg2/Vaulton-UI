@@ -103,8 +103,8 @@ void main() {
         expect(find.text('Settings'), findsOneWidget);
         expect(tester.takeException(), isNull);
 
-      await tester.drag(find.byType(ListView).first, const Offset(0, -350));
-      await tester.pump(const Duration(milliseconds: 300));
+        await tester.drag(find.byType(ListView).first, const Offset(0, -350));
+        await tester.pump(const Duration(milliseconds: 300));
         await tester.tap(find.text('Settings'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
@@ -175,6 +175,11 @@ void main() {
 
       expect(find.text('Uploading New Files'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
+      // While a sync runs, starting another one must be impossible.
+      final syncNow = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Sync Now'),
+      );
+      expect(syncNow.onPressed, isNull);
       final indicators = tester.widgetList<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );

@@ -380,7 +380,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                               case 'run':
                                 await guarded(context, () => _v.runSchedule(s.id));
                                 ref.read(epochProvider.notifier).bump();
-                                if (context.mounted) toast(context, 'Job queued');
+                                if (context.mounted) toast(context, 'Job queued.');
                               case 'toggle':
                                 await guarded(context, () => _v.patchSchedule(s.id, {'enabled': !s.enabled}));
                                 _key.currentState?.refresh();

@@ -173,8 +173,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     Flexible(
                       child: Text(
                         failedPoints > 0
-                            ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention'
-                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours' : 'Everything looks healthy'),
+                            ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention.'
+                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours.' : 'Everything looks healthy.'),
                         style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
                       ),
                     ),
@@ -286,7 +286,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 else
                   for (final j in d.jobs.where((j) => !j.active).take(5))
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
-                if (d.jobs.isNotEmpty)
+                if (d.jobs.where((j) => !j.active).length > 5)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Align(

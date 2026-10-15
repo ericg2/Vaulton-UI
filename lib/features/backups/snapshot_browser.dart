@@ -233,7 +233,7 @@ Future<void> restoreSnapshotFlow({
   if (queued == 1) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: last!.id)));
   } else {
-    toast(context, 'Queued $queued restore jobs — follow them under Jobs');
+    toast(context, 'Queued $queued restore jobs — follow them under Jobs.');
   }
 }
 
@@ -313,7 +313,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
                 : _items == null
                     ? const Center(child: CircularProgressIndicator())
                     : _items!.isEmpty
-                        ? const EmptyView('This snapshot folder is empty', icon: Icons.folder_open)
+                        ? const EmptyView('This snapshot folder is empty.', icon: Icons.folder_open)
                         : ListView.builder(
                             itemCount: _items!.length,
                             itemBuilder: (_, i) {
@@ -444,7 +444,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
       final locked = !snap.locked;
       final result = await guarded(context, () => _v.lockSnapshot(widget.repo.id, snap.id, locked));
       if (result == null || !mounted) return;
-      toast(context, toStr(result['message']) ?? (locked ? 'Snapshot locked' : 'Snapshot unlocked'));
+      toast(context, toStr(result['message']) ?? (locked ? 'Snapshot locked.' : 'Snapshot unlocked.'));
       await _init(keep: snap);
     } finally {
       if (mounted) setState(() => _locking = false);
@@ -610,9 +610,9 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     final appBar = selecting
         ? AppBar(
             leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
-            title: Text('${_sel.length} selected'),
+            title: Text('${_sel.length} Selected'),
             actions: [
-              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) {
+              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect All' : 'Select All', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) {
                 _sel.clear();
               } else {
                 _sel.addAll(_loaded.map(_entryKey));
@@ -654,13 +654,23 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                   }
                 }),
               ),
-              IconButton(tooltip: _desc ? 'Descending' : 'Ascending', icon: Icon(_desc ? Icons.arrow_downward : Icons.arrow_upward), onPressed: () => setState(() => _desc = !_desc)),
-              IconButton(
-                tooltip: 'Restore This Folder…',
-                icon: const Icon(Icons.settings_backup_restore),
-                onPressed: () => _restore([(path: _cur ?? '/', isDir: true, name: _trail.isEmpty ? 'snapshot' : _trail.last.name)]),
+              PopupMenuButton<String>(
+                tooltip: 'More Actions',
+                onSelected: (v) {
+                  if (v == 'sort') {
+                    setState(() => _desc = !_desc);
+                  } else if (v == 'restore') {
+                    _restore([(path: _cur ?? '/', isDir: true, name: _trail.isEmpty ? 'snapshot' : _trail.last.name)]);
+                  } else if (v == 'refresh') {
+                    setState(() => _reload++);
+                  }
+                },
+                itemBuilder: (c) => [
+                  PopupMenuItem(value: 'sort', child: Text(_desc ? 'Sort Ascending' : 'Sort Descending')),
+                  const PopupMenuItem(value: 'restore', child: Text('Restore This Folder…')),
+                  const PopupMenuItem(value: 'refresh', child: Text('Refresh')),
+                ],
               ),
-              IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: () => setState(() => _reload++)),
             ],
           );
 

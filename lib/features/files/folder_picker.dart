@@ -102,6 +102,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
             ? const Center(child: CircularProgressIndicator())
             : Column(children: [
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _point?.id,
                   decoration: const InputDecoration(labelText: 'Data Folder'),
                   items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
@@ -123,6 +124,14 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
                   Expanded(child: Text(_path, overflow: TextOverflow.ellipsis)),
                 ]),
                 const Divider(height: 1),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _point == null ? null : _createFolder,
+                    icon: const Icon(Icons.create_new_folder_outlined),
+                    label: const Text('New Folder'),
+                  ),
+                ),
                 Expanded(
                   child: _error != null
                       ? ErrorView(_error!, onRetry: _load)
@@ -146,7 +155,6 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
               ]),
       ),
       actions: [
-        TextButton.icon(onPressed: _point == null ? null : _createFolder, icon: const Icon(Icons.create_new_folder_outlined), label: const Text('New Folder')),
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(
           onPressed: _point == null ? null : () => Navigator.pop(context, PickedFolder(_point!, _path)),

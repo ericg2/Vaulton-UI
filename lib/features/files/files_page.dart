@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+
 import '../../core/api_client.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
@@ -27,17 +29,39 @@ import 'preview_page.dart';
 IconData iconFor(Node n) {
   if (n.isDir) return Icons.folder;
   switch (extOf(n.name)) {
-    case 'png': case 'jpg': case 'jpeg': case 'gif': case 'webp': case 'bmp': case 'heic': case 'svg':
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'webp':
+    case 'bmp':
+    case 'heic':
+    case 'svg':
       return Icons.image_outlined;
-    case 'mp4': case 'mkv': case 'mov': case 'avi': case 'webm':
+    case 'mp4':
+    case 'mkv':
+    case 'mov':
+    case 'avi':
+    case 'webm':
       return Icons.movie_outlined;
-    case 'mp3': case 'flac': case 'wav': case 'ogg': case 'm4a':
+    case 'mp3':
+    case 'flac':
+    case 'wav':
+    case 'ogg':
+    case 'm4a':
       return Icons.audiotrack_outlined;
     case 'pdf':
       return Icons.picture_as_pdf_outlined;
-    case 'zip': case 'tar': case 'gz': case '7z': case 'rar':
+    case 'zip':
+    case 'tar':
+    case 'gz':
+    case '7z':
+    case 'rar':
       return Icons.folder_zip_outlined;
-    case 'txt': case 'md': case 'doc': case 'docx':
+    case 'txt':
+    case 'md':
+    case 'doc':
+    case 'docx':
       return Icons.description_outlined;
     default:
       return Icons.insert_drive_file_outlined;
@@ -72,10 +96,16 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Vaulton get _v => ref.read(vaultonProvider);
   TransferManager get _mgr => ref.read(transferProvider.notifier);
 
-  List<SyncProfile> get _syncProfiles => SyncProfile.loadAll(ref.read(prefsProvider));
+  List<SyncProfile> get _syncProfiles =>
+      SyncProfile.loadAll(ref.read(prefsProvider));
 
-  SyncProfile? _syncForPath(String path, String pointId) =>
-      _syncProfiles.where((p) => p.pointId == pointId && _normalizeSyncPath(p.remoteDir) == _normalizeSyncPath(path)).firstOrNull;
+  SyncProfile? _syncForPath(String path, String pointId) => _syncProfiles
+      .where(
+        (p) =>
+            p.pointId == pointId &&
+            _normalizeSyncPath(p.remoteDir) == _normalizeSyncPath(path),
+      )
+      .firstOrNull;
 
   static String _normalizeSyncPath(String path) {
     if (path.isEmpty) return '/';
@@ -98,7 +128,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     // Quietly re-sync the listing and usage in the background. This never clears
     // the list or shows a spinner, so there is no flicker while you browse.
     _autoTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (mounted && TickerMode.valuesOf(context).enabled && _point != null) _silent();
+      if (mounted && TickerMode.valuesOf(context).enabled && _point != null)
+        _silent();
     });
   }
 
@@ -113,7 +144,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     setState(() => _pointsError = null);
     try {
       final pts = await loadAllPoints(ref);
-      final last = widget.initialPointId ?? ref.read(settingsProvider).lastPointId;
+      final last =
+          widget.initialPointId ?? ref.read(settingsProvider).lastPointId;
       if (!mounted) return;
       setState(() {
         _points = pts;
@@ -157,17 +189,27 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }
 
   void _toggle(Node n) => setState(() {
-        if (!_sel.remove(n.name)) _sel.add(n.name);
-      });
+    if (!_sel.remove(n.name)) _sel.add(n.name);
+  });
 
-  List<Node> get _selected => _loaded.where((n) => _sel.contains(n.name)).toList();
+  List<Node> get _selected =>
+      _loaded.where((n) => _sel.contains(n.name)).toList();
 
   // --------------------------------------------------------------- actions
   Future<void> _open(Node n) async {
     if (n.isDir) return _go([..._segs, n.name]);
     if (canPreview(n.name, n.bytes)) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewPage(
-            pointId: _point!.id, path: joinPath(_path, n.name), name: n.name, onDownload: () => _download([n]))));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PreviewPage(
+            pointId: _point!.id,
+            path: joinPath(_path, n.name),
+            name: n.name,
+            onDownload: () => _download([n]),
+          ),
+        ),
+      );
     } else {
       _info(n);
     }
@@ -182,13 +224,30 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       final ids = <String>[];
       for (final n in nodes) {
         if (!n.isDir) {
-          final t = _mgr.addDownload(pointId: pt.id, remotePath: joinPath(_path, n.name), name: n.name, localPath: p.join(base, n.name), size: n.bytes);
+          final t = _mgr.addDownload(
+            pointId: pt.id,
+            remotePath: joinPath(_path, n.name),
+            name: n.name,
+            localPath: p.join(base, n.name),
+            size: n.bytes,
+          );
           if (t != null) ids.add(t.id);
         } else {
           if (mounted) toast(context, 'Reading folder “${n.name}”…');
-          final files = await collectFiles(_v, pt.id, joinPath(_path, n.name), n.name);
+          final files = await collectFiles(
+            _v,
+            pt.id,
+            joinPath(_path, n.name),
+            n.name,
+          );
           for (final f in files) {
-            final t = _mgr.addDownload(pointId: pt.id, remotePath: f.path, name: baseName(f.path), localPath: p.join(base, p.joinAll(f.relative.split('/'))), size: f.size);
+            final t = _mgr.addDownload(
+              pointId: pt.id,
+              remotePath: f.path,
+              name: baseName(f.path),
+              localPath: p.join(base, p.joinAll(f.relative.split('/'))),
+              size: f.size,
+            );
             if (t != null) ids.add(t.id);
           }
         }
@@ -199,7 +258,14 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       if (ids.isEmpty) {
         toast(context, 'Already queued.');
       } else {
-        showDownloadSheet(context, ids, onOpenTransfers: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransfersPage())));
+        showDownloadSheet(
+          context,
+          ids,
+          onOpenTransfers: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TransfersPage()),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) toastError(context, e);
@@ -215,15 +281,24 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       final remote = joinPath(_path, f.name);
       if (kIsWeb) {
         final size = f.lengthSync() ?? await f.length() ?? 0;
-        requests.add(UploadRequest(
-          pointId: _point!.id,
-          remotePath: remote,
-          size: size,
-          loadBytes: () => f.readAsBytes(),
-        ));
+        requests.add(
+          UploadRequest(
+            pointId: _point!.id,
+            remotePath: remote,
+            size: size,
+            loadBytes: () => f.readAsBytes(),
+          ),
+        );
       } else if (f.path != null) {
         final size = f.lengthSync() ?? await f.length() ?? 0;
-        requests.add(UploadRequest(pointId: _point!.id, remotePath: remote, localPath: f.path, size: size));
+        requests.add(
+          UploadRequest(
+            pointId: _point!.id,
+            remotePath: remote,
+            localPath: f.path,
+            size: size,
+          ),
+        );
       }
     }
 
@@ -232,11 +307,17 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final dup = results.length - n;
     if (!mounted) return;
     if (n == 0 && dup > 0) {
-      toast(context, 'Already uploading ${dup == 1 ? 'that file' : 'those files'}');
+      toast(
+        context,
+        'Already uploading ${dup == 1 ? 'that file' : 'those files'}.',
+      );
     } else if (dup > 0) {
-      toast(context, 'Queued $n file${n == 1 ? '' : 's'} ($dup already in progress)');
+      toast(
+        context,
+        'Queued $n file${n == 1 ? '' : 's'} ($dup already in progress).',
+      );
     } else if (n >= 25) {
-      toast(context, 'Queued $n uploads');
+      toast(context, 'Queued $n uploads.');
     }
   }
 
@@ -261,40 +342,69 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final queued = results.whereType<TransferTask>().length;
     if (!mounted) return;
     if (entries.isEmpty) {
-      toast(context, '“$root” has no files to upload');
+      toast(context, '“$root” has no files to upload.');
     } else if (queued >= 25) {
-      toast(context, 'Queued $queued files from “$root”');
+      toast(context, 'Queued $queued files from “$root”.');
     }
   }
 
   Future<void> _newFolder() async {
-    final name = await promptText(context, 'New Folder', 'Folder name', ok: 'Create');
+    final name = await promptText(
+      context,
+      'New Folder',
+      'Folder Name',
+      ok: 'Create',
+    );
     if (name == null) return;
     await guarded(context, () => _v.mkdir(_point!.id, joinPath(_path, name)));
     _refresh();
   }
 
   Future<void> _rename(Node n) async {
-    final name = await promptText(context, 'Rename', 'New name', initial: n.name, ok: 'Rename');
+    final name = await promptText(
+      context,
+      'Rename',
+      'New Name',
+      initial: n.name,
+      ok: 'Rename',
+    );
     if (name == null || name == n.name) return;
     await _runTransfers([n], _point!.id, _path, copy: false, rename: name);
   }
 
   Future<void> _moveCopy(List<Node> nodes, bool copy) async {
-    final dest = await pickFolder(context, initialPointId: _point!.id, initialPath: _path, title: copy ? 'Copy to…' : 'Move to…');
+    final dest = await pickFolder(
+      context,
+      initialPointId: _point!.id,
+      initialPath: _path,
+      title: copy ? 'Copy to…' : 'Move to…',
+    );
     if (dest == null) return;
     await _runTransfers(nodes, dest.point.id, dest.path, copy: copy);
   }
 
-  Future<void> _runTransfers(List<Node> nodes, String dstPoint, String dstDir, {required bool copy, String? rename}) async {
+  Future<void> _runTransfers(
+    List<Node> nodes,
+    String dstPoint,
+    String dstDir, {
+    required bool copy,
+    String? rename,
+  }) async {
     final pt = _point!;
     String? err;
     var i = 0;
     for (final n in nodes) {
       i++;
-      if (nodes.length > 1 && mounted) toast(context, '${copy ? 'Copying' : 'Moving'} $i / ${nodes.length}…');
+      if (nodes.length > 1 && mounted)
+        toast(context, '${copy ? 'Copying' : 'Moving'} $i / ${nodes.length}…');
       try {
-        final id = await _v.transfer(pt.id, joinPath(_path, n.name), dstPoint, joinPath(dstDir, rename ?? n.name), copy: copy);
+        final id = await _v.transfer(
+          pt.id,
+          joinPath(_path, n.name),
+          dstPoint,
+          joinPath(dstDir, rename ?? n.name),
+          copy: copy,
+        );
         final r = await _v.awaitTransfer(id);
         if (r != null && r != 'timeout') err = r;
       } catch (e) {
@@ -302,7 +412,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       }
       if (err != null) break;
     }
-    ref.read(epochProvider.notifier).bump(); // usage may have changed (dashboard, storage)
+    ref
+        .read(epochProvider.notifier)
+        .bump(); // usage may have changed (dashboard, storage)
     if (!mounted) return;
     setState(_sel.clear);
     _refresh();
@@ -315,9 +427,15 @@ class _FilesPageState extends ConsumerState<FilesPage> {
 
   Future<void> _delete(List<Node> nodes) async {
     final dirs = nodes.where((n) => n.isDir).length;
-    final ok = await confirm(context, 'Delete ${nodes.length} item${nodes.length == 1 ? '' : 's'}?',
-        dirs > 0 ? 'Folders are deleted together with everything inside them. This cannot be undone.' : 'This cannot be undone.',
-        ok: 'Delete', danger: true);
+    final ok = await confirm(
+      context,
+      'Delete ${nodes.length} item${nodes.length == 1 ? '' : 's'}?',
+      dirs > 0
+          ? 'Folders are deleted together with everything inside them. This cannot be undone.'
+          : 'This cannot be undone.',
+      ok: 'Delete',
+      danger: true,
+    );
     if (!ok || !mounted) return;
     var cancelled = false;
     final progress = ValueNotifier<int>(0);
@@ -326,8 +444,16 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: const Text('Deleting…'),
-        content: ValueListenableBuilder<int>(valueListenable: progress, builder: (_, n, _) => Text('$n item${n == 1 ? '' : 's'} deleted')),
-        actions: [TextButton(onPressed: () => cancelled = true, child: const Text('Stop'))],
+        content: ValueListenableBuilder<int>(
+          valueListenable: progress,
+          builder: (_, n, _) => Text('$n item${n == 1 ? '' : 's'} deleted'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => cancelled = true,
+            child: const Text('Stop'),
+          ),
+        ],
       ),
     );
     String? err;
@@ -335,8 +461,14 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     try {
       for (final n in nodes) {
         final base = done;
-        done += await deleteRecursive(_v, _point!.id, joinPath(_path, n.name), n.isDir,
-            onProgress: (c) => progress.value = base + c, cancelled: () => cancelled);
+        done += await deleteRecursive(
+          _v,
+          _point!.id,
+          joinPath(_path, n.name),
+          n.isDir,
+          onProgress: (c) => progress.value = base + c,
+          cancelled: () => cancelled,
+        );
       }
     } catch (e) {
       err = ApiException.from(e).message;
@@ -354,14 +486,27 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(n.name, overflow: TextOverflow.ellipsis),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Path: ${joinPath(_path, n.name)}'),
-          if (!n.isDir) Text('Size: ${fmtBytes(n.bytes)}'),
-          Text('Modified: ${fmtDate(n.modified)}'),
-          Text('Created: ${fmtDate(n.created)}'),
-        ]),
+        insetPadding: const EdgeInsets.all(16),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText('Path: ${joinPath(_path, n.name)}'),
+                if (!n.isDir) SelectableText('Size: ${fmtBytes(n.bytes)}'),
+                SelectableText('Modified: ${fmtDate(n.modified)}'),
+                SelectableText('Created: ${fmtDate(n.created)}'),
+              ],
+            ),
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
           FilledButton.icon(
             icon: const Icon(Icons.download),
             label: const Text('Download'),
@@ -380,11 +525,36 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.upload_file), title: const Text('Upload Files'), onTap: () { Navigator.pop(ctx); _pickFiles(); }),
-          if (isDesktop) ListTile(leading: const Icon(Icons.drive_folder_upload_outlined), title: const Text('Upload Folder'), onTap: () { Navigator.pop(ctx); _pickFolder(); }),
-          ListTile(leading: const Icon(Icons.create_new_folder_outlined), title: const Text('New Folder'), onTap: () { Navigator.pop(ctx); _newFolder(); }),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.upload_file),
+              title: const Text('Upload Files'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickFiles();
+              },
+            ),
+            if (isDesktop)
+              ListTile(
+                leading: const Icon(Icons.drive_folder_upload_outlined),
+                title: const Text('Upload Folder'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickFolder();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.create_new_folder_outlined),
+              title: const Text('New Folder'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _newFolder();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -393,18 +563,41 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   @override
   Widget build(BuildContext context) {
     if (_pointsError != null) {
-      return Scaffold(appBar: AppBar(title: const Text('Files')), body: ErrorView(_pointsError!, onRetry: _initPoints));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Files')),
+        body: ErrorView(_pointsError!, onRetry: _initPoints),
+      );
     }
-    if (_points == null) return Scaffold(appBar: AppBar(title: const Text('Files')), body: const Center(child: CircularProgressIndicator()));
+    if (_points == null)
+      return Scaffold(
+        appBar: AppBar(title: const Text('Files')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     if (_point == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Files')),
-          body: const EmptyView('No data folders yet.\nCreate one under Storage to start storing files.', icon: Icons.folder_off_outlined));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Files')),
+        body: const EmptyView(
+          'No data folders yet.\nCreate one under Storage to start storing files.',
+          icon: Icons.folder_off_outlined,
+        ),
+      );
     }
     final pt = _point!;
     final currentSync = _syncForPath(_path, pt.id);
     final selecting = _sel.isNotEmpty;
     // An upload to this data folder just finished -> refresh the list in place (no spinner).
-    final doneUploads = ref.watch(transferProvider.select((l) => l.where((t) => t.kind == TKind.upload && t.state == TState.done && t.pointId == pt.id).length));
+    final doneUploads = ref.watch(
+      transferProvider.select(
+        (l) => l
+            .where(
+              (t) =>
+                  t.kind == TKind.upload &&
+                  t.state == TState.done &&
+                  t.pointId == pt.id,
+            )
+            .length,
+      ),
+    );
     if (_doneUploads >= 0 && doneUploads != _doneUploads) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _silent();
@@ -412,22 +605,64 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     }
     _doneUploads = doneUploads;
     // Only the count is watched here, so progress ticks do not rebuild the whole page.
-    final upActive = ref.watch(transferProvider.select((l) => l.where((t) => t.kind == TKind.upload && t.pointId == pt.id && t.active).length));
+    final upActive = ref.watch(
+      transferProvider.select(
+        (l) => l
+            .where(
+              (t) => t.kind == TKind.upload && t.pointId == pt.id && t.active,
+            )
+            .length,
+      ),
+    );
 
     final appBar = selecting
         ? AppBar(
-            leading: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(_sel.clear)),
-            title: Text('${_sel.length} selected'),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => setState(_sel.clear),
+            ),
+            title: Text('${_sel.length} Selected'),
             actions: [
-              IconButton(tooltip: _sel.length == _loaded.length && _loaded.isNotEmpty ? 'Deselect all' : 'Select all', icon: const Icon(Icons.select_all), onPressed: () => setState(() { if (_sel.length == _loaded.length && _loaded.isNotEmpty) {
-                _sel.clear();
-              } else {
-                _sel.addAll(_loaded.map((n) => n.name));
-              } })),
-              IconButton(tooltip: 'Download', icon: const Icon(Icons.download), onPressed: () => _download(_selected)),
-              IconButton(tooltip: 'Move', icon: const Icon(Icons.drive_file_move_outline), onPressed: () => _moveCopy(_selected, false)),
-              IconButton(tooltip: 'Copy', icon: const Icon(Icons.copy_outlined), onPressed: () => _moveCopy(_selected, true)),
-              IconButton(tooltip: 'Delete', icon: const Icon(Icons.delete_outline), onPressed: () => _delete(_selected)),
+              IconButton(
+                tooltip: 'Download',
+                icon: const Icon(Icons.download),
+                onPressed: () => _download(_selected),
+              ),
+              IconButton(
+                tooltip: 'Delete',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _delete(_selected),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'More Actions',
+                onSelected: (v) {
+                  if (v == 'select') {
+                    setState(() {
+                      if (_sel.length == _loaded.length && _loaded.isNotEmpty) {
+                        _sel.clear();
+                      } else {
+                        _sel.addAll(_loaded.map((n) => n.name));
+                      }
+                    });
+                  } else if (v == 'move') {
+                    _moveCopy(_selected, false);
+                  } else if (v == 'copy') {
+                    _moveCopy(_selected, true);
+                  }
+                },
+                itemBuilder: (c) => [
+                  PopupMenuItem(
+                    value: 'select',
+                    child: Text(
+                      _sel.length == _loaded.length && _loaded.isNotEmpty
+                          ? 'Deselect All'
+                          : 'Select All',
+                    ),
+                  ),
+                  const PopupMenuItem(value: 'move', child: Text('Move To…')),
+                  const PopupMenuItem(value: 'copy', child: Text('Copy To…')),
+                ],
+              ),
             ],
           )
         : AppBar(
@@ -435,17 +670,29 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 ? TextField(
                     controller: _searchCtl,
                     autofocus: true,
-                    decoration: const InputDecoration(hintText: 'Search this folder', border: InputBorder.none),
-                    onSubmitted: (v) { setState(() => _search = v.trim()); _refresh(); },
+                    decoration: const InputDecoration(
+                      hintText: 'Search this folder',
+                      border: InputBorder.none,
+                    ),
+                    onSubmitted: (v) {
+                      setState(() => _search = v.trim());
+                      _refresh();
+                    },
                   )
                 : DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: pt.id,
+                      isExpanded: true,
                       borderRadius: BorderRadius.circular(12),
-                      items: [for (final x in _points!) DropdownMenuItem(value: x.id, child: Text(x.name))],
+                      items: [
+                        for (final x in _points!)
+                          DropdownMenuItem(value: x.id, child: Text(x.name)),
+                      ],
                       onChanged: (id) {
                         ref.read(settingsProvider.notifier).setLastPoint(id!);
-                        setState(() => _point = _points!.firstWhere((x) => x.id == id));
+                        setState(
+                          () => _point = _points!.firstWhere((x) => x.id == id),
+                        );
                         _go([]);
                       },
                     ),
@@ -454,7 +701,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               IconButton(
                 tooltip: 'Select All',
                 icon: const Icon(Icons.select_all),
-                onPressed: _loaded.isEmpty ? null : () => setState(() => _sel.addAll(_loaded.map((n) => n.name))),
+                onPressed: _loaded.isEmpty
+                    ? null
+                    : () => setState(
+                        () => _sel.addAll(_loaded.map((n) => n.name)),
+                      ),
               ),
               IconButton(
                 tooltip: 'Search',
@@ -467,13 +718,32 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                   }
                 }),
               ),
-              IconButton(tooltip: _desc ? 'Descending' : 'Ascending', icon: Icon(_desc ? Icons.arrow_downward : Icons.arrow_upward), onPressed: () { setState(() => _desc = !_desc); _refresh(); }),
+              IconButton(
+                tooltip: _desc ? 'Descending' : 'Ascending',
+                icon: Icon(_desc ? Icons.arrow_downward : Icons.arrow_upward),
+                onPressed: () {
+                  setState(() => _desc = !_desc);
+                  _refresh();
+                },
+              ),
               if (upActive > 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Tooltip(message: 'Uploading $upActive file${upActive == 1 ? '' : 's'}…', child: const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5))),
+                  child: Tooltip(
+                    message:
+                        'Uploading $upActive file${upActive == 1 ? '' : 's'}…',
+                    child: const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  ),
                 ),
-              IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _refresh),
+              IconButton(
+                tooltip: 'Refresh',
+                icon: const Icon(Icons.refresh),
+                onPressed: _refresh,
+              ),
             ],
           );
 
@@ -489,7 +759,13 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       },
       child: Scaffold(
         appBar: appBar,
-        floatingActionButton: selecting ? null : FloatingActionButton.extended(onPressed: _addMenu, icon: const Icon(Icons.add), label: const Text('Add')),
+        floatingActionButton: selecting
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: _addMenu,
+                icon: const Icon(Icons.add),
+                label: const Text('Add'),
+              ),
         body: DropTarget(
           onDragEntered: (_) => setState(() => _drag = true),
           onDragExited: (_) => setState(() => _drag = false),
@@ -498,205 +774,382 @@ class _FilesPageState extends ConsumerState<FilesPage> {
             final requests = <UploadRequest>[];
             for (final f in d.files) {
               if (kIsWeb) {
-                requests.add(UploadRequest(
-                  pointId: pt.id,
-                  remotePath: joinPath(_path, f.name),
-                  size: await f.length(),
-                  loadBytes: () => f.readAsBytes(),
-                ));
+                requests.add(
+                  UploadRequest(
+                    pointId: pt.id,
+                    remotePath: joinPath(_path, f.name),
+                    size: await f.length(),
+                    loadBytes: () => f.readAsBytes(),
+                  ),
+                );
               } else if (await localFiles.isDirectory(f.path)) {
                 await _uploadDir(f.path);
               } else {
-                requests.add(UploadRequest(
-                  pointId: pt.id,
-                  remotePath: joinPath(_path, f.name),
-                  localPath: f.path,
-                  size: await f.length(),
-                ));
+                requests.add(
+                  UploadRequest(
+                    pointId: pt.id,
+                    remotePath: joinPath(_path, f.name),
+                    localPath: f.path,
+                    size: await f.length(),
+                  ),
+                );
               }
             }
             final results = _mgr.addUploads(requests);
             final queued = results.whereType<TransferTask>().length;
-            if (mounted && queued >= 25) toast(context, 'Queued $queued uploads');
+            if (mounted && queued >= 25)
+              toast(context, 'Queued $queued uploads');
           },
-          child: Stack(children: [
-            Column(children: [
-              _Breadcrumbs(point: pt, segs: _segs, onTap: (i) => _go(_segs.sublist(0, i))),
-              if (!kIsWeb && !isDesktop) const HintBanner(id: 'files_select', text: 'Long-press to select several files. Tap ⋮ for more actions.'),
-              Expanded(
-                child: Column(
-                  children: [
-                    if (currentSync != null)
-                      Builder(
-                        builder: (context) {
-                          final sync = currentSync;
-                          final status = SyncRunStatus.load(ref.read(prefsProvider), sync.id);
-                          final error = status.error;
-                          final cs = Theme.of(context).colorScheme;
-                          return InkWell(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => SyncPage(settingsSyncId: sync.id)),
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: error != null ? cs.errorContainer : cs.primaryContainer.withValues(alpha: 0.65),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(children: [
-                                Icon(error != null ? Icons.warning_amber_rounded : Icons.sync, size: 18, color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    error != null ? 'Sync Error: $error' : 'Sync Folder · ${sync.name}',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: error != null ? cs.onErrorContainer : cs.onPrimaryContainer,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _Breadcrumbs(
+                    point: pt,
+                    segs: _segs,
+                    onTap: (i) => _go(_segs.sublist(0, i)),
+                  ),
+                  if (!kIsWeb && !isDesktop)
+                    const HintBanner(
+                      id: 'files_select',
+                      text: 'Long-press to select several files. Tap ⋮ for more actions.',
+                    ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        if (currentSync != null)
+                          Builder(
+                            builder: (context) {
+                              final sync = currentSync;
+                              final status = SyncRunStatus.load(
+                                ref.read(prefsProvider),
+                                sync.id,
+                              );
+                              final error = status.error;
+                              final cs = Theme.of(context).colorScheme;
+                              return InkWell(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SyncPage(settingsSyncId: sync.id),
                                   ),
                                 ),
-                              ]),
-                            ),
-                          );                        },
-                      ),
-                    Expanded(
-                      child: CursorList<Node>(
-                        key: _listKey,
-                        empty: _search.isEmpty ? 'This folder is empty' : 'No matches',
-                        emptyHint: _search.isEmpty
-                            ? (isDesktop || kIsWeb ? 'Tap Add or drag and drop files here.' : 'Tap Add to upload files or create a folder.')
-                            : 'Try a different search.',
-                        emptyIcon: Icons.folder_open,
-                        header: _PendingUploads(pointId: pt.id, dir: _path, since: _panelSince, onDismiss: () => setState(() => _panelSince = DateTime.now())),
-                        fetch: (c) => _v.list(pt.id, _path, search: _search, cursor: c, order: _desc ? 'Desc' : 'Asc'),
-                        onChanged: (l) => _loaded = l,
-                        itemBuilder: (c, n, i) {
-                          final sel = _sel.contains(n.name);
-                          final explicitSelection = kIsWeb || isDesktop;
-                          final sync = n.isDir ? _syncForPath(joinPath(_path, n.name), pt.id) : null;
-                          final syncError = sync == null ? null : SyncRunStatus.load(ref.read(prefsProvider), sync.id).error;
-                          final syncColor = syncError != null ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary;
-                          return GestureDetector(
-                            onSecondaryTapUp: (details) async {
-                              final action = await showMenu<String>(
-                                context: context,
-                                position: RelativeRect.fromLTRB(
-                                  details.globalPosition.dx,
-                                  details.globalPosition.dy,
-                                  MediaQuery.sizeOf(context).width - details.globalPosition.dx,
-                                  MediaQuery.sizeOf(context).height - details.globalPosition.dy,
-                                ),
-                                items: const [
-                                  PopupMenuItem(value: 'open', child: Text('Open')),
-                                  PopupMenuItem(value: 'download', child: Text('Download')),
-                                  PopupMenuItem(value: 'rename', child: Text('Rename')),
-                                  PopupMenuItem(value: 'move', child: Text('Move To…')),
-                                  PopupMenuItem(value: 'copy', child: Text('Copy To…')),
-                                  PopupMenuItem(value: 'select', child: Text('Select')),
-                                  PopupMenuItem(value: 'info', child: Text('Details')),
-                                  PopupMenuDivider(),
-                                  PopupMenuItem(value: 'delete', child: Text('Delete')),
-                                ],
-                              );
-                              if (!context.mounted || action == null) return;
-                              switch (action) {
-                                case 'open': _open(n);
-                                case 'download': _download([n]);
-                                case 'rename': _rename(n);
-                                case 'move': _moveCopy([n], false);
-                                case 'copy': _moveCopy([n], true);
-                                case 'select': _toggle(n);
-                                case 'info': _info(n);
-                                case 'delete': _delete([n]);
-                              }
-                            },
-                            child: ListTile(
-                            key: ValueKey('${pt.id}:$_path:${n.isDir ? "d" : "f"}:${n.name}'),
-                            selected: sel,
-                            leading: selecting
-                                ? SizedBox(
-                                    width: 56,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: Checkbox(
-                                            value: sel,
-                                            onChanged: (_) => _toggle(n),
-                                            visualDensity: VisualDensity.compact,
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    8,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: error != null
+                                        ? cs.errorContainer
+                                        : cs.primaryContainer.withValues(
+                                            alpha: 0.65,
                                           ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        error != null
+                                            ? Icons.warning_amber_rounded
+                                            : Icons.sync,
+                                        size: 18,
+                                        color: error != null
+                                            ? cs.onErrorContainer
+                                            : cs.onPrimaryContainer,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          error != null
+                                              ? 'Sync Error: $error'
+                                              : 'Sync Folder · ${sync.name}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: error != null
+                                                    ? cs.onErrorContainer
+                                                    : cs.onPrimaryContainer,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Icon(
-                                          sync != null ? Icons.sync : iconFor(n),
-                                          size: 24,
-                                          color: sync != null
-                                              ? syncColor
-                                              : (n.isDir ? Colors.orange : null),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : sync != null
-                                    ? Icon(Icons.sync, color: syncColor)
-                                    : Icon(iconFor(n), color: n.isDir ? Colors.orange : null),
-                            title: Text(n.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(sync != null
-                                ? (syncError != null ? 'Sync Error' : 'Sync Folder')
-                                : (n.isDir ? 'Folder · ${fmtShort(n.modified)}' : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}')),
-                            trailing: selecting
-                                ? null
-                                : PopupMenuButton<String>(
-                                    onSelected: (a) {
-                                      switch (a) {
-                                        case 'open': _open(n);
-                                        case 'download': _download([n]);
-                                        case 'rename': _rename(n);
-                                        case 'move': _moveCopy([n], false);
-                                        case 'copy': _moveCopy([n], true);
-                                        case 'select': _toggle(n);
-                                        case 'info': _info(n);
-                                        case 'delete': _delete([n]);
-                                      }
-                                    },
-                                    itemBuilder: (_) => const [
-                                      PopupMenuItem(value: 'open', child: Text('Open')),
-                                      PopupMenuItem(value: 'download', child: Text('Download')),
-                                      PopupMenuItem(value: 'rename', child: Text('Rename')),
-                                      PopupMenuItem(value: 'move', child: Text('Move To…')),
-                                      PopupMenuItem(value: 'copy', child: Text('Copy To…')),
-                                      PopupMenuItem(value: 'select', child: Text('Select')),
-                                      PopupMenuItem(value: 'info', child: Text('Details')),
-                                      PopupMenuDivider(),
-                                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                      ),
                                     ],
                                   ),
-                            onTap: () => (kIsWeb || isDesktop) ? _open(n) : (selecting ? _toggle(n) : _open(n)),
-                            onLongPress: () => _toggle(n),
+                                ),
+                              );
+                            },
                           ),
-                          );
-                        },
+                        Expanded(
+                          child: CursorList<Node>(
+                            key: _listKey,
+                            empty: _search.isEmpty
+                                ? 'This folder is empty.'
+                                : 'No matches.',
+                            emptyHint: _search.isEmpty
+                                ? (isDesktop || kIsWeb
+                                      ? 'Tap Add or drag and drop files here.'
+                                      : 'Tap Add to upload files or create a folder.')
+                                : 'Try a different search.',
+                            emptyIcon: Icons.folder_open,
+                            header: _PendingUploads(
+                              pointId: pt.id,
+                              dir: _path,
+                              since: _panelSince,
+                              onDismiss: () =>
+                                  setState(() => _panelSince = DateTime.now()),
+                            ),
+                            fetch: (c) => _v.list(
+                              pt.id,
+                              _path,
+                              search: _search,
+                              cursor: c,
+                              order: _desc ? 'Desc' : 'Asc',
+                            ),
+                            onChanged: (l) => _loaded = l,
+                            itemBuilder: (c, n, i) {
+                              final sel = _sel.contains(n.name);
+                              final sync = n.isDir
+                                  ? _syncForPath(joinPath(_path, n.name), pt.id)
+                                  : null;
+                              final syncError = sync == null
+                                  ? null
+                                  : SyncRunStatus.load(
+                                      ref.read(prefsProvider),
+                                      sync.id,
+                                    ).error;
+                              final syncColor = syncError != null
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary;
+                              return GestureDetector(
+                                onSecondaryTapUp: (details) async {
+                                  final action = await showMenu<String>(
+                                    context: context,
+                                    position: RelativeRect.fromLTRB(
+                                      details.globalPosition.dx,
+                                      details.globalPosition.dy,
+                                      MediaQuery.sizeOf(context).width -
+                                          details.globalPosition.dx,
+                                      MediaQuery.sizeOf(context).height -
+                                          details.globalPosition.dy,
+                                    ),
+                                    items: const [
+                                      PopupMenuItem(
+                                        value: 'open',
+                                        child: Text('Open'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'download',
+                                        child: Text('Download'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'rename',
+                                        child: Text('Rename'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'move',
+                                        child: Text('Move To…'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'copy',
+                                        child: Text('Copy To…'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'select',
+                                        child: Text('Select'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'info',
+                                        child: Text('Details'),
+                                      ),
+                                      PopupMenuDivider(),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  );
+                                  if (!context.mounted || action == null)
+                                    return;
+                                  switch (action) {
+                                    case 'open':
+                                      _open(n);
+                                    case 'download':
+                                      _download([n]);
+                                    case 'rename':
+                                      _rename(n);
+                                    case 'move':
+                                      _moveCopy([n], false);
+                                    case 'copy':
+                                      _moveCopy([n], true);
+                                    case 'select':
+                                      _toggle(n);
+                                    case 'info':
+                                      _info(n);
+                                    case 'delete':
+                                      _delete([n]);
+                                  }
+                                },
+                                child: ListTile(
+                                  key: ValueKey(
+                                    '${pt.id}:$_path:${n.isDir ? "d" : "f"}:${n.name}',
+                                  ),
+                                  selected: sel,
+                                  leading: selecting
+                                      ? SizedBox(
+                                          width: 56,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: Checkbox(
+                                                  value: sel,
+                                                  onChanged: (_) => _toggle(n),
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Icon(
+                                                sync != null
+                                                    ? Icons.sync
+                                                    : iconFor(n),
+                                                size: 24,
+                                                color: sync != null
+                                                    ? syncColor
+                                                    : (n.isDir
+                                                          ? Colors.orange
+                                                          : null),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : sync != null
+                                      ? Icon(Icons.sync, color: syncColor)
+                                      : Icon(
+                                          iconFor(n),
+                                          color: n.isDir ? Colors.orange : null,
+                                        ),
+                                  title: Text(
+                                    n.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    sync != null
+                                        ? (syncError != null
+                                              ? 'Sync Error'
+                                              : 'Sync Folder')
+                                        : (n.isDir
+                                              ? 'Folder · ${fmtShort(n.modified)}'
+                                              : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}'),
+                                  ),
+                                  trailing: selecting
+                                      ? null
+                                      : PopupMenuButton<String>(
+                                          onSelected: (a) {
+                                            switch (a) {
+                                              case 'open':
+                                                _open(n);
+                                              case 'download':
+                                                _download([n]);
+                                              case 'rename':
+                                                _rename(n);
+                                              case 'move':
+                                                _moveCopy([n], false);
+                                              case 'copy':
+                                                _moveCopy([n], true);
+                                              case 'select':
+                                                _toggle(n);
+                                              case 'info':
+                                                _info(n);
+                                              case 'delete':
+                                                _delete([n]);
+                                            }
+                                          },
+                                          itemBuilder: (_) => const [
+                                            PopupMenuItem(
+                                              value: 'open',
+                                              child: Text('Open'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'download',
+                                              child: Text('Download'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'rename',
+                                              child: Text('Rename'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'move',
+                                              child: Text('Move To…'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'copy',
+                                              child: Text('Copy To…'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'select',
+                                              child: Text('Select'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'info',
+                                              child: Text('Details'),
+                                            ),
+                                            PopupMenuDivider(),
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                  onTap: () => (kIsWeb || isDesktop)
+                                      ? _open(n)
+                                      : (selecting ? _toggle(n) : _open(n)),
+                                  onLongPress: () => _toggle(n),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_drag)
+                Positioned.fill(
+                  child: Container(
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.12),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.upload_file, size: 56),
+                          SizedBox(height: 8),
+                          Text('Drop to Upload Here'),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),            ]),
-            if (_drag)
-              Positioned.fill(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                  child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.upload_file, size: 56), SizedBox(height: 8), Text('Drop to Upload Here')])),
-                ),
-              ),
-          ]),
+            ],
+          ),
         ),
       ),
     );
@@ -704,36 +1157,78 @@ class _FilesPageState extends ConsumerState<FilesPage> {
 }
 
 class _Breadcrumbs extends StatelessWidget {
-  const _Breadcrumbs({required this.point, required this.segs, required this.onTap});
+  const _Breadcrumbs({
+    required this.point,
+    required this.segs,
+    required this.onTap,
+  });
   final Point point;
   final List<String> segs;
   final void Function(int count) onTap;
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      SizedBox(
-        height: 40,
-        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: [
-          for (var i = 0; i <= segs.length; i++) ...[
-            if (i > 0) const Center(child: Icon(Icons.chevron_right, size: 18)),
-            TextButton(
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact, minimumSize: const Size(0, 40)),
-              onPressed: i == segs.length ? null : () => onTap(i),
-              child: Text(i == 0 ? point.name : segs[i - 1]),
-            ),
-          ],
-        ]),
-      ),
-      if (point.maxBytes > 0)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Row(children: [
-            Expanded(child: UsageBar(used: point.usedBytes, max: point.maxBytes)),
-            const SizedBox(width: 12),
-            Text('${fmtBytes(point.usedBytes)} / ${fmtBytes(point.maxBytes)}', style: Theme.of(context).textTheme.labelSmall),
-          ]),
+    return Column(
+      children: [
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              for (var i = 0; i <= segs.length; i++) ...[
+                if (i > 0)
+                  const Center(child: Icon(Icons.chevron_right, size: 18)),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(0, 40),
+                  ),
+                  onPressed: i == segs.length ? null : () => onTap(i),
+                  child: Text(i == 0 ? point.name : segs[i - 1]),
+                ),
+              ],
+            ],
+          ),
         ),
-    ]);
+        if (point.maxBytes > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: LayoutBuilder(
+              builder: (c, constraints) {
+                final narrow = constraints.maxWidth < 360;
+                if (!narrow) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: UsageBar(
+                          used: point.usedBytes,
+                          max: point.maxBytes,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '${fmtBytes(point.usedBytes)} / ${fmtBytes(point.maxBytes)}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    UsageBar(used: point.usedBytes, max: point.maxBytes),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${fmtBytes(point.usedBytes)} / ${fmtBytes(point.maxBytes)}',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -742,7 +1237,12 @@ class _Breadcrumbs extends StatelessWidget {
 /// upload is grouped into one row. Finished uploads disappear because the real
 /// file appears in the list; failed ones stay with Retry / Overwrite / Dismiss.
 class _PendingUploads extends ConsumerWidget {
-  const _PendingUploads({required this.pointId, required this.dir, required this.since, required this.onDismiss});
+  const _PendingUploads({
+    required this.pointId,
+    required this.dir,
+    required this.since,
+    required this.onDismiss,
+  });
   final String pointId, dir;
   final DateTime since;
   final VoidCallback onDismiss;
@@ -754,8 +1254,12 @@ class _PendingUploads extends ConsumerWidget {
     final groups = <String, List<TransferTask>>{};
     List<TransferTask>? batchTasks;
     for (final t in all) {
-      if (t.kind != TKind.upload || t.pointId != pointId || !t.remotePath.startsWith(prefix)) continue;
-      final show = t.active || (t.state == TState.failed && t.createdAt.isAfter(since));
+      if (t.kind != TKind.upload ||
+          t.pointId != pointId ||
+          !t.remotePath.startsWith(prefix))
+        continue;
+      final show =
+          t.active || (t.state == TState.failed && t.createdAt.isAfter(since));
       if (!show) continue;
 
       if (batchTasks != null) {
@@ -765,57 +1269,75 @@ class _PendingUploads extends ConsumerWidget {
 
       final rel = t.remotePath.substring(prefix.length);
       final slash = rel.indexOf('/');
-      groups.putIfAbsent(slash < 0 ? rel : rel.substring(0, slash), () => []).add(t);
+      groups
+          .putIfAbsent(slash < 0 ? rel : rel.substring(0, slash), () => [])
+          .add(t);
       // A large selection should never create thousands of widgets in this header.
       if (groups.length > 40) {
         batchTasks = groups.values.expand((tasks) => tasks).toList();
         groups.clear();
       }
     }
-    if ((batchTasks == null && groups.isEmpty) || (batchTasks != null && batchTasks.isEmpty)) {
+    if ((batchTasks == null && groups.isEmpty) ||
+        (batchTasks != null && batchTasks.isEmpty)) {
       return const SizedBox(width: double.infinity);
     }
 
     final mgr = ref.read(transferProvider.notifier);
     final entries = <MapEntry<String, List<TransferTask>>>[];
     if (batchTasks != null) {
-      entries.add(MapEntry('Bulk upload (${batchTasks.length} files)', batchTasks));
+      entries.add(
+        MapEntry('Bulk upload (${batchTasks.length} files)', batchTasks),
+      );
     } else {
       entries.addAll(groups.entries);
     }
 
-    return Column(children: [
-      for (final e in entries)
-        _PendingRow(
-          key: ValueKey('pending:${e.key}'),
-          name: e.key,
-          tasks: e.value,
-          isFolder: e.value.any((t) => t.remotePath.substring(prefix.length).contains('/')),
-          isBatch: batchTasks != null,
-          onCancel: () {
-            for (final t in e.value.where((t) => t.active)) {
-              mgr.cancel(t.id);
-            }
-          },
-          onRetry: ({bool overwrite = false}) {
-            for (final t in e.value.where((t) => t.state == TState.failed)) {
-              mgr.retry(t.id, overwrite: overwrite);
-            }
-          },
-          onDismiss: () {
-            for (final t in e.value.where((t) => !t.active)) {
-              mgr.remove(t.id);
-            }
-            onDismiss();
-          },
-        ),
-      const Divider(height: 1),
-    ]);
+    return Column(
+      children: [
+        for (final e in entries)
+          _PendingRow(
+            key: ValueKey('pending:${e.key}'),
+            name: e.key,
+            tasks: e.value,
+            isFolder: e.value.any(
+              (t) => t.remotePath.substring(prefix.length).contains('/'),
+            ),
+            isBatch: batchTasks != null,
+            onCancel: () {
+              for (final t in e.value.where((t) => t.active)) {
+                mgr.cancel(t.id);
+              }
+            },
+            onRetry: ({bool overwrite = false}) {
+              for (final t in e.value.where((t) => t.state == TState.failed)) {
+                mgr.retry(t.id, overwrite: overwrite);
+              }
+            },
+            onDismiss: () {
+              for (final t in e.value.where((t) => !t.active)) {
+                mgr.remove(t.id);
+              }
+              onDismiss();
+            },
+          ),
+        const Divider(height: 1),
+      ],
+    );
   }
 }
 
 class _PendingRow extends StatelessWidget {
-  const _PendingRow({super.key, required this.name, required this.tasks, required this.isFolder, this.isBatch = false, required this.onCancel, required this.onRetry, required this.onDismiss});
+  const _PendingRow({
+    super.key,
+    required this.name,
+    required this.tasks,
+    required this.isFolder,
+    this.isBatch = false,
+    required this.onCancel,
+    required this.onRetry,
+    required this.onDismiss,
+  });
   final String name;
   final List<TransferTask> tasks;
   final bool isFolder, isBatch;
@@ -839,50 +1361,99 @@ class _PendingRow extends StatelessWidget {
     final String subtitle;
     if (busy) {
       if (isFolder || isBatch) {
-        subtitle = '${active.length} file${active.length == 1 ? '' : 's'} uploading${fraction != null && running ? ' · ${(fraction * 100).round()}%' : ''}';
+        subtitle =
+            '${active.length} file${active.length == 1 ? '' : 's'} uploading${fraction != null && running ? ' · ${(fraction * 100).round()}%' : ''}';
       } else if (!running) {
         subtitle = active.first.error ?? 'Waiting…';
       } else {
-        subtitle = fraction == null ? 'Uploading…' : 'Uploading · ${(fraction * 100).round()}% · ${fmtBytes(sent)} of ${fmtBytes(total)}';
+        subtitle = fraction == null
+            ? 'Uploading…'
+            : 'Uploading · ${(fraction * 100).round()}% · ${fmtBytes(sent)} of ${fmtBytes(total)}';
       }
     } else {
       final err = failed.isEmpty ? null : failed.first.error;
-      subtitle = isFolder || isBatch ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}' : (err ?? 'Upload failed');
+      subtitle = isFolder || isBatch
+          ? '${failed.length} file${failed.length == 1 ? '' : 's'} failed${err != null ? ' · $err' : ''}'
+          : (err ?? 'Upload failed');
     }
-    final exists = failed.any((x) => x.error?.toLowerCase().contains('exist') ?? false);
+    final exists = failed.any(
+      (x) => x.error?.toLowerCase().contains('exist') ?? false,
+    );
 
     return Container(
-      color: busy ? cs.primaryContainer.withValues(alpha: 0.35) : cs.errorContainer.withValues(alpha: 0.5),
+      color: busy
+          ? cs.primaryContainer.withValues(alpha: 0.35)
+          : cs.errorContainer.withValues(alpha: 0.5),
       child: ListTile(
         leading: SizedBox(
           width: 24,
           height: 24,
           child: busy
-              ? Stack(alignment: Alignment.center, children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: fraction ?? 0),
-                      duration: const Duration(milliseconds: 250),
-                      // value == null spins freely (waiting / size unknown); otherwise a determinate ring.
-                      builder: (_, v, _) => CircularProgressIndicator(value: (running && fraction != null) ? v : null, strokeWidth: 2.5),
+              ? Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: fraction ?? 0),
+                        duration: const Duration(milliseconds: 250),
+                        // value == null spins freely (waiting / size unknown); otherwise a determinate ring.
+                        builder: (_, v, _) => CircularProgressIndicator(
+                          value: (running && fraction != null) ? v : null,
+                          strokeWidth: 2.5,
+                        ),
+                      ),
                     ),
-                  ),
-                  Icon(isFolder ? Icons.folder : Icons.upload, size: 11, color: cs.primary),
-                ])
+                    Icon(
+                      isFolder ? Icons.folder : Icons.upload,
+                      size: 11,
+                      color: cs.primary,
+                    ),
+                  ],
+                )
               : Icon(Icons.error_outline, color: cs.error),
         ),
         title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: busy ? cs.onSurfaceVariant : cs.error)),
+        subtitle: Text(
+          subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: t.bodySmall?.copyWith(
+            color: busy ? cs.onSurfaceVariant : cs.error,
+          ),
+        ),
         trailing: busy
-            ? IconButton(tooltip: 'Cancel Upload', icon: const Icon(Icons.close), onPressed: onCancel)
-            : Row(mainAxisSize: MainAxisSize.min, children: [
-                if (exists && (!isFolder || isBatch))
-                  TextButton(onPressed: () => onRetry(overwrite: true), child: Text(isBatch ? 'Overwrite All' : 'Overwrite')),
-                IconButton(tooltip: 'Retry', icon: const Icon(Icons.refresh), onPressed: () => onRetry()),
-                IconButton(tooltip: 'Dismiss', icon: const Icon(Icons.close), onPressed: onDismiss),
-              ]),
+            ? IconButton(
+                tooltip: 'Cancel Upload',
+                icon: const Icon(Icons.close),
+                onPressed: onCancel,
+              )
+            : ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 0,
+                  children: [
+                    if (exists && (!isFolder || isBatch))
+                      TextButton(
+                        onPressed: () => onRetry(overwrite: true),
+                        child: Text(isBatch ? 'Overwrite All' : 'Overwrite'),
+                      ),
+                    IconButton(
+                      tooltip: 'Retry',
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () => onRetry(),
+                    ),
+                    IconButton(
+                      tooltip: 'Dismiss',
+                      icon: const Icon(Icons.close),
+                      onPressed: onDismiss,
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }

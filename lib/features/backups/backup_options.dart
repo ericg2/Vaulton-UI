@@ -134,13 +134,14 @@ class _BackupSheetState extends State<_BackupSheet> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Start a backup', style: t.headlineSmall),
+              Text('Start a Backup', style: t.headlineSmall),
               const SizedBox(height: 4),
               Text('Saves a snapshot, a restorable copy of your files as they are now.',
                   style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
               const SizedBox(height: 16),
               if (widget.datas.length > 1)
                 DropdownButtonFormField<Point>(
+                  isExpanded: true,
                   initialValue: _data,
                   decoration: const InputDecoration(labelText: 'Backup From', prefixIcon: Icon(Icons.folder_outlined)),
                   items: [for (final d in widget.datas) DropdownMenuItem(value: d, child: Text(d.name))],
@@ -154,8 +155,9 @@ class _BackupSheetState extends State<_BackupSheet> {
               if (widget.datas.length > 1) const SizedBox(height: 12),
               if (widget.repos.length > 1)
                 DropdownButtonFormField<Point>(
+                  isExpanded: true,
                   initialValue: _repo,
-                  decoration: const InputDecoration(labelText: 'Save to', prefixIcon: Icon(Icons.inventory_2_outlined)),
+                  decoration: const InputDecoration(labelText: 'Save To', prefixIcon: Icon(Icons.inventory_2_outlined)),
                   items: [for (final r in widget.repos) DropdownMenuItem(value: r, child: Text(r.name))],
                   onChanged: (r) => setState(() => _repo = r ?? _repo),
                 ),
@@ -220,11 +222,23 @@ class _BackupSheetState extends State<_BackupSheet> {
         const Divider(height: 1),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Row(children: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            const Spacer(),
-            FilledButton.icon(onPressed: _start, icon: const Icon(Icons.backup_outlined), label: Text(_dry ? 'Start Test Run' : 'Start Backup')),
-          ]),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                onPressed: _start,
+                icon: const Icon(Icons.backup_outlined),
+                label: Text(_dry ? 'Start Test Run' : 'Start Backup'),
+              ),
+            ],
+          ),
         ),
       ]),
     );
@@ -340,7 +354,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean up old snapshots once', style: t.headlineSmall),
             const SizedBox(height: 4),
-            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Snapshots outside these rules are forgotten, then the repository is pruned so data no remaining snapshot needs can be reclaimed. Shared data remains while another snapshot references it; pruning reclaims only data that is no longer needed. Locked snapshots and the newest snapshot in each backup series are always kept. Preview cleanup to see candidate snapshots before deleting anything.',
+            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Snapshots outside these rules are forgotten, then the repository is pruned so only data no remaining snapshot needs is reclaimed. Shared data remains while another snapshot references it; pruning reclaims only data that is no longer needed. Locked snapshots and the newest snapshot in each backup series are always kept. Preview cleanup to see candidate snapshots before deleting anything.',
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
             const SizedBox(height: 16),
             for (var i = 0; i < _plans.length; i++)
@@ -364,7 +378,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
                 collapsedShape: const Border(),
                 leading: const Icon(Icons.tune),
                 title: const Text('Custom'),
-                subtitle: const Text('Set Each Rule Yourself'),
+                subtitle: const Text('Set each rule yourself.'),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 children: [
                   _rule('keepLast', 'Latest snapshots', 'Always keep the newest few'),
@@ -408,15 +422,39 @@ class _RetentionSheetState extends State<_RetentionSheet> {
       const Divider(height: 1),
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        child: Row(children: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          const Spacer(),
-          FilledButton.icon(
-            onPressed: empty ? null : () => Navigator.pop(context, RetentionRequest(Map.of(_v), _preview)),
-            icon: Icon(widget.forSchedule ? Icons.check : (_preview ? Icons.visibility_outlined : Icons.auto_delete_outlined)),
-            label: Text(widget.forSchedule ? 'Use This Plan' : (_preview ? 'Preview cleanup' : 'Clean up now')),
-          ),
-        ]),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.end,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed:
+                  empty
+                      ? null
+                      : () => Navigator.pop(
+                        context,
+                        RetentionRequest(Map.of(_v), _preview),
+                      ),
+              icon: Icon(
+                widget.forSchedule
+                    ? Icons.check
+                    : (_preview
+                        ? Icons.visibility_outlined
+                        : Icons.auto_delete_outlined),
+              ),
+              label: Text(
+                widget.forSchedule
+                    ? 'Use This Plan'
+                    : (_preview ? 'Preview cleanup' : 'Clean up now'),
+              ),
+            ),
+          ],
+        ),
       ),
     ]);
   }

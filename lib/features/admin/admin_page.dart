@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
@@ -21,12 +22,20 @@ class AdminPage extends ConsumerWidget {
       if (u.has(Scopes.jobsManage)) ('All Jobs', const JobsList(admin: true)),
       if (u.has(Scopes.adminVfs)) ('VFS', const _VfsTab()),
       if (u.has(Scopes.adminLogs)) ('Logs', const _LogsTab()),
-      if (u.userName.toLowerCase() == 'admin') ('Configuration', const ConfigurationTab()),
+      if (u.userName.toLowerCase() == 'admin')
+        ('Configuration', const ConfigurationTab()),
     ];
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Administration'), bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final t in tabs) Tab(text: t.$1)])),
+        appBar: AppBar(
+          title: const Text('Administration'),
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [for (final t in tabs) Tab(text: t.$1)],
+          ),
+        ),
         body: TabBarView(children: [for (final t in tabs) t.$2]),
       ),
     );
@@ -42,7 +51,12 @@ class _StatusCount {
   final Color color;
 }
 
-Widget _statusCountsTile(BuildContext context, String title, List<_StatusCount> counts, IconData icon) {
+Widget _statusCountsTile(
+  BuildContext context,
+  String title,
+  List<_StatusCount> counts,
+  IconData icon,
+) {
   return LayoutBuilder(
     builder: (context, constraints) {
       final narrow = constraints.maxWidth < 520;
@@ -57,25 +71,42 @@ Widget _statusCountsTile(BuildContext context, String title, List<_StatusCount> 
                 color: c.color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(c.icon, size: 14, color: c.color),
-                const SizedBox(width: 4),
-                Text('${c.value} ${c.label}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: c.color, fontWeight: FontWeight.w600)),
-              ]),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(c.icon, size: 14, color: c.color),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${c.value} ${c.label}',
+                    style: Theme.of(context).textTheme.labelMedium
+                        ?.copyWith(color: c.color, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
         ],
       );
       if (narrow) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [Icon(icon), const SizedBox(width: 16), Text(title)]),
-            const SizedBox(height: 8),
-            badges,
-          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [Icon(icon), const SizedBox(width: 16), Text(title)],
+              ),
+              const SizedBox(height: 8),
+              badges,
+            ],
+          ),
         );
       }
-      return ListTile(dense: true, leading: Icon(icon), title: Text(title), trailing: badges);
+      return ListTile(
+        dense: true,
+        leading: Icon(icon),
+        title: Text(title),
+        trailing: badges,
+      );
     },
   );
 }
@@ -89,54 +120,139 @@ class _StatusTab extends ConsumerWidget {
     return AsyncBody<Json>(
       load: v.status,
       builder: (ctx, s, reload) {
-        Widget tile(String k, Object? val, [IconData? icon]) => ListTile(dense: true, leading: icon == null ? null : Icon(icon), title: Text(k), trailing: Text('$val', style: Theme.of(ctx).textTheme.titleSmall));
+        Widget tile(String k, Object? val, [IconData? icon]) => ListTile(
+          dense: true,
+          leading: icon == null ? null : Icon(icon),
+          title: Text(k),
+          trailing: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 180),
+            child: Text(
+              '$val',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: Theme.of(ctx).textTheme.titleSmall,
+            ),
+          ),
+        );
         final ok = toBool(s['backendReachable']);
         final cs = Theme.of(ctx).colorScheme;
         return RefreshIndicator(
           onRefresh: reload,
-          child: ListView(children: [
-            Card(
-              color: ok ? null : Theme.of(ctx).colorScheme.errorContainer,
-              child: ListTile(
-                leading: Icon(ok ? Icons.check_circle_outline : Icons.error_outline),
-                title: Text(ok ? 'Storage Backend Reachable' : 'Storage Backend Unreachable'),
-                subtitle: Text('Version ${s['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}${s['backendError'] != null ? '\n${s['backendError']}' : ''}'),
-              ),
-            ),
-            Section('Overview', children: [
-              tile('Users', s['users'], Icons.people_outline),
-              tile('Locations', s['roots'], Icons.dns_outlined),
-              tile('Data Folders', s['dataPoints'], Icons.folder_outlined),
-              tile('Backup Vaults', s['repoPoints'], Icons.inventory_2_outlined),
-              _statusCountsTile(ctx, 'Health', [
-                _StatusCount(Icons.check_circle_outline, 'Healthy', toInt(s['pointsHealthy']), cs.primary),
-                _StatusCount(Icons.error_outline, 'Failed', toInt(s['pointsFailed']), cs.error),
-                _StatusCount(Icons.help_outline, 'Unknown', toInt(s['pointsUnknown']), cs.outline),
-              ], Icons.monitor_heart_outlined),
-              _statusCountsTile(ctx, 'Jobs', [
-                _StatusCount(Icons.schedule, 'Waiting', toInt(s['jobsPending']), cs.secondary),
-                _StatusCount(Icons.sync, 'Running', toInt(s['jobsRunning']), cs.tertiary),
-              ], Icons.work_outline),
-              tile('Failed Jobs (24h)', s['jobsFailedLast24h'], Icons.warning_amber_outlined),
-              tile('Enabled Schedules', s['schedulesEnabled'], Icons.schedule),
-              tile('SMB', toBool(s['smbRunning']) ? 'Running · ${s['smbShares']} shares' : 'Stopped', Icons.folder_shared_outlined),
-              tile('Email', toBool(s['emailEnabled']) ? 'Enabled · ${s['emailPending']} queued' : 'Disabled', Icons.email_outlined),
-            ]),
-            if (u.has(Scopes.adminVfs))
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.mark_email_read_outlined),
-                    label: const Text('Send Test Email'),
-                    onPressed: () async {
-                      await guarded(ctx, v.testEmail);
-                      if (ctx.mounted) toast(ctx, 'Test email sent');
-                    },
+          child: ListView(
+            children: [
+              Card(
+                color: ok ? null : Theme.of(ctx).colorScheme.errorContainer,
+                child: ListTile(
+                  leading: Icon(
+                    ok ? Icons.check_circle_outline : Icons.error_outline,
                   ),
-                ]),
+                  title: Text(
+                    ok
+                        ? 'Storage Backend Reachable'
+                        : 'Storage Backend Unreachable',
+                  ),
+                  subtitle: Text(
+                    'Version ${s['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}${s['backendError'] != null ? '\n${s['backendError']}' : ''}',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-          ]),
+              Section(
+                'Overview',
+                children: [
+                  tile('Users', s['users'], Icons.people_outline),
+                  tile('Locations', s['roots'], Icons.dns_outlined),
+                  tile('Data Folders', s['dataPoints'], Icons.folder_outlined),
+                  tile(
+                    'Backup Vaults',
+                    s['repoPoints'],
+                    Icons.inventory_2_outlined,
+                  ),
+                  _statusCountsTile(ctx, 'Health', [
+                    _StatusCount(
+                      Icons.check_circle_outline,
+                      'Healthy',
+                      toInt(s['pointsHealthy']),
+                      cs.primary,
+                    ),
+                    _StatusCount(
+                      Icons.error_outline,
+                      'Failed',
+                      toInt(s['pointsFailed']),
+                      cs.error,
+                    ),
+                    _StatusCount(
+                      Icons.help_outline,
+                      'Unknown',
+                      toInt(s['pointsUnknown']),
+                      cs.outline,
+                    ),
+                  ], Icons.monitor_heart_outlined),
+                  _statusCountsTile(ctx, 'Jobs', [
+                    _StatusCount(
+                      Icons.schedule,
+                      'Waiting',
+                      toInt(s['jobsPending']),
+                      cs.secondary,
+                    ),
+                    _StatusCount(
+                      Icons.sync,
+                      'Running',
+                      toInt(s['jobsRunning']),
+                      cs.tertiary,
+                    ),
+                  ], Icons.work_outline),
+                  tile(
+                    'Failed Jobs (24h)',
+                    s['jobsFailedLast24h'],
+                    Icons.warning_amber_outlined,
+                  ),
+                  tile(
+                    'Enabled Schedules',
+                    s['schedulesEnabled'],
+                    Icons.schedule,
+                  ),
+                  tile(
+                    'SMB',
+                    toBool(s['smbRunning'])
+                        ? 'Running · ${s['smbShares']} shares'
+                        : 'Stopped',
+                    Icons.folder_shared_outlined,
+                  ),
+                  tile(
+                    'Email',
+                    toBool(s['emailEnabled'])
+                        ? 'Enabled · ${s['emailPending']} queued'
+                        : 'Disabled',
+                    Icons.email_outlined,
+                  ),
+                ],
+              ),
+              if (u.has(Scopes.adminVfs))
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.mark_email_read_outlined),
+                        label: const Text('Send Test Email'),
+                        onPressed: () async {
+                          await guarded(ctx, v.testEmail);
+                          if (ctx.mounted) toast(ctx, 'Test email sent.');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -165,29 +281,51 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
       const FieldSpec('welcome', 'Send Welcome Email', kind: 'bool'),
     ], ok: 'Create');
     if (f == null) return;
-    final r = await guarded(context, () => _v.addUser({
-          'username': f['u'], if (f['first']!.isNotEmpty) 'firstName': f['first'], if (f['last']!.isNotEmpty) 'lastName': f['last'],
-          if (f['email']!.isNotEmpty) 'email': f['email'], 'sendWelcomeEmail': f['welcome'] == 'true'}));
+    final r = await guarded(
+      context,
+      () => _v.addUser({
+        'username': f['u'],
+        if (f['first']!.isNotEmpty) 'firstName': f['first'],
+        if (f['last']!.isNotEmpty) 'lastName': f['last'],
+        if (f['email']!.isNotEmpty) 'email': f['email'],
+        'sendWelcomeEmail': f['welcome'] == 'true',
+      }),
+    );
     if (r == null || !mounted) return;
     _key.currentState?.refresh();
-    _showPassword('Temporary password for ${r['userName']}', '${r['temporaryPassword']}');
+    _showPassword(
+      'Temporary password for ${r['userName']}',
+      '${r['temporaryPassword']}',
+    );
   }
 
   void _showPassword(String title, String pw) => showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(title),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Shown once. The user must change it at first sign-in.'),
-            const SizedBox(height: 12),
-            SelectableText(pw, style: const TextStyle(fontFamily: 'monospace', fontSize: 18)),
-          ]),
-          actions: [
-            TextButton(onPressed: () => copyText(ctx, pw), child: const Text('Copy')),
-            FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Done')),
-          ],
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Shown once. The user must change it at first sign-in.'),
+          const SizedBox(height: 12),
+          SelectableText(
+            pw,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 18),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => copyText(ctx, pw),
+          child: const Text('Copy'),
         ),
-      );
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Done'),
+        ),
+      ],
+    ),
+  );
 
   Future<void> _scopes(UserAccount u) async {
     final all = await guarded(context, _v.scopes);
@@ -199,21 +337,34 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
           title: Text('Permissions for ${u.userName}'),
+          insetPadding: const EdgeInsets.all(16),
           content: SizedBox(
-            width: 460,
-            child: ListView(shrinkWrap: true, children: [
-              for (final s in available)
-                CheckboxListTile(
-                  title: Text(s.name),
-                  subtitle: Text(s.description),
-                  value: chosen.contains(s.name),
-                  onChanged: (v) => set(() => v! ? chosen.add(s.name) : chosen.remove(s.name)),
-                ),
-            ]),
+            width: double.maxFinite,
+            height: MediaQuery.sizeOf(ctx).height * 0.6,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                for (final s in available)
+                  CheckboxListTile(
+                    title: Text(s.name),
+                    subtitle: Text(s.description),
+                    value: chosen.contains(s.name),
+                    onChanged: (v) => set(
+                      () => v! ? chosen.add(s.name) : chosen.remove(s.name),
+                    ),
+                  ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
@@ -227,71 +378,146 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   Widget build(BuildContext context) {
     final me = ref.watch(userProvider)!;
     return Scaffold(
-      floatingActionButton: _manage ? FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.person_add_alt), label: const Text('New User')) : null,
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search users'),
-            onSubmitted: (v) => setState(() => _search = v.trim()),
+      floatingActionButton: _manage
+          ? FloatingActionButton.extended(
+              onPressed: _create,
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('New User'),
+            )
+          : null,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Search users',
+              ),
+              onSubmitted: (v) => setState(() => _search = v.trim()),
+            ),
           ),
-        ),
-        Expanded(
-          child: CursorList<UserAccount>(
-            key: ValueKey(_search),
-            empty: 'No users',
-            emptyIcon: Icons.people_outline,
-            fetch: (c) => _v.users(search: _search, cursor: c),
-            itemBuilder: (ctx, u, i) => Card(
-              child: ListTile(
-                leading: CircleAvatar(child: Text(u.userName.isEmpty ? '?' : u.userName[0].toUpperCase())),
-                title: Text(u.displayName),
-                subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${u.userName}${u.email != null ? ' · ${u.email}' : ''}\nLast sign-in ${fmtDate(u.lastLogin)}'),
-                  Wrap(children: [
-                    if (u.isLockedOut) chip(ctx, 'Locked', color: Theme.of(ctx).colorScheme.errorContainer),
-                    if (u.mustChangePassword) chip(ctx, 'Temporary Password'),
-                    for (final s in u.scopes) chip(ctx, s),
-                  ]),
-                ]),
-                isThreeLine: true,
-                trailing: _manage
-                    ? PopupMenuButton<String>(
-                        onSelected: (a) async {
-                          switch (a) {
-                            case 'scopes': _scopes(u);
-                            case 'lock':
-                              await guarded(context, () => u.isLockedOut ? _v.unlockUser(u.userName) : _v.lockUser(u.userName));
-                              _key.currentState?.refresh();
-                            case 'reset':
-                              if (await confirm(context, 'Reset password?', 'A new temporary password is created and all sessions of ${u.userName} end.', ok: 'Reset')) {
-                                final r = await guarded(context, () => _v.resetPassword(u.userName));
-                                if (r != null && context.mounted) _showPassword('New password for ${u.userName}', '${r['temporaryPassword']}');
-                              }
-                            case 'revoke':
-                              await guarded(context, () => _v.revokeSessions(u.userName));
-                              if (context.mounted) toast(context, 'Sessions ended');
-                            case 'del':
-                              if (await confirm(context, 'Delete ${u.userName}?', 'Deletes the user and everything they own.', ok: 'Delete', danger: true)) {
-                                await guarded(context, () => _v.deleteUser(u.userName));
-                                _key.currentState?.refresh();
-                              }
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'scopes', child: Text('Edit Permissions')),
-                          PopupMenuItem(value: 'lock', child: Text(u.isLockedOut ? 'Unlock' : 'Lock')),
-                          const PopupMenuItem(value: 'reset', child: Text('Reset Password')),
-                          const PopupMenuItem(value: 'revoke', child: Text('Revoke Sessions')),
-                          if (u.userName != me.userName) const PopupMenuItem(value: 'del', child: Text('Delete')),
+          Expanded(
+            child: CursorList<UserAccount>(
+              key: ValueKey(_search),
+              empty: 'No users.',
+              emptyIcon: Icons.people_outline,
+              fetch: (c) => _v.users(search: _search, cursor: c),
+              itemBuilder: (ctx, u, i) => Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Text(
+                      u.userName.isEmpty ? '?' : u.userName[0].toUpperCase(),
+                    ),
+                  ),
+                  title: Text(u.displayName),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${u.userName}${u.email != null ? ' · ${u.email}' : ''}\nLast sign-in ${fmtDate(u.lastLogin)}',
+                      ),
+                      Wrap(
+                        children: [
+                          if (u.isLockedOut)
+                            chip(
+                              ctx,
+                              'Locked',
+                              color: Theme.of(ctx).colorScheme.errorContainer,
+                            ),
+                          if (u.mustChangePassword)
+                            chip(ctx, 'Temporary Password'),
+                          for (final s in u.scopes) chip(ctx, s),
                         ],
-                      )
-                    : null,
+                      ),
+                    ],
+                  ),
+                  isThreeLine: true,
+                  trailing: _manage
+                      ? PopupMenuButton<String>(
+                          onSelected: (a) async {
+                            switch (a) {
+                              case 'scopes':
+                                _scopes(u);
+                              case 'lock':
+                                await guarded(
+                                  context,
+                                  () => u.isLockedOut
+                                      ? _v.unlockUser(u.userName)
+                                      : _v.lockUser(u.userName),
+                                );
+                                _key.currentState?.refresh();
+                              case 'reset':
+                                if (await confirm(
+                                  context,
+                                  'Reset Password?',
+                                  'A new temporary password is created and all sessions of ${u.userName} end.',
+                                  ok: 'Reset',
+                                )) {
+                                  final r = await guarded(
+                                    context,
+                                    () => _v.resetPassword(u.userName),
+                                  );
+                                  if (r != null && context.mounted)
+                                    _showPassword(
+                                      'New password for ${u.userName}',
+                                      '${r['temporaryPassword']}',
+                                    );
+                                }
+                              case 'revoke':
+                                await guarded(
+                                  context,
+                                  () => _v.revokeSessions(u.userName),
+                                );
+                                if (context.mounted)
+                                  toast(context, 'Sessions ended.');
+                              case 'del':
+                                if (await confirm(
+                                  context,
+                                  'Delete ${u.userName}?',
+                                  'Deletes the user and everything they own.',
+                                  ok: 'Delete',
+                                  danger: true,
+                                )) {
+                                  await guarded(
+                                    context,
+                                    () => _v.deleteUser(u.userName),
+                                  );
+                                  _key.currentState?.refresh();
+                                }
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'scopes',
+                              child: Text('Edit Permissions'),
+                            ),
+                            PopupMenuItem(
+                              value: 'lock',
+                              child: Text(u.isLockedOut ? 'Unlock' : 'Lock'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'reset',
+                              child: Text('Reset Password'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'revoke',
+                              child: Text('Revoke Sessions'),
+                            ),
+                            if (u.userName != me.userName)
+                              const PopupMenuItem(
+                                value: 'del',
+                                child: Text('Delete'),
+                              ),
+                          ],
+                        )
+                      : null,
+                ),
               ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -319,10 +545,13 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
     );
     if (!ok || !mounted) return;
 
-    await guarded(context, () => ref.read(vaultonProvider).resetQuota(user, pointId));
+    await guarded(
+      context,
+      () => ref.read(vaultonProvider).resetQuota(user, pointId),
+    );
     if (!mounted) return;
     await _key.currentState?.refresh();
-    if (mounted) toast(context, 'Quota usage reset for $pointName');
+    if (mounted) toast(context, 'Quota usage reset for $pointName.');
   }
 
   @override
@@ -335,48 +564,122 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
       itemBuilder: (ctx, p, i) {
         final err = toStr(p['error']);
         final health = '${p['health'] ?? 'Unknown'}';
-        final updatedRaw = p['healthUpdatedAt'] ?? p['updatedAt'] ?? p['updated'] ?? p['lastHealthCheck'];
+        final updatedRaw =
+            p['healthUpdatedAt'] ??
+            p['updatedAt'] ??
+            p['updated'] ??
+            p['lastHealthCheck'];
         final updated = updatedRaw == null ? null : toDate(updatedRaw);
         final cs = Theme.of(ctx).colorScheme;
         final remote = toBool(p['remote']);
         return Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.only(left: 8, right: 4),
-            leading: Icon(err != null ? Icons.error_outline : Icons.storage_outlined, color: err != null ? cs.error : null),
-            title: Text('${p['name']}'),
-            subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Wrap(spacing: 6, runSpacing: 4, children: [
-                chip(ctx, '${p['user']}'),
-                chip(ctx, remote ? 'Remote' : 'Local'),
-                chip(ctx, updated == null ? health : '$health · ${fmtDate(updated)}', color: err != null ? cs.errorContainer : null),
-              ]),
-              const SizedBox(height: 4),
-              Text('${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Read/Write' : 'Read-Only'}${err != null ? '\\n$err' : ''}'),
-            ]),
-            isThreeLine: true,
-            trailing: Wrap(
-              spacing: 2,
-              children: [
-                if (remote)
-                  OutlinedButton.icon(
-                    onPressed: () => _resetQuota(p),
-                    icon: const Icon(Icons.restart_alt),
-                    label: const Text('Reset Quota', textAlign: TextAlign.center),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 40)),
-                  ),
-                IconButton(
-                  tooltip: 'Reload User VFS',
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () async {
-                    await guarded(ctx, () => v.reloadVfs('${p['user']}'));
-                    if (ctx.mounted) {
-                      await _key.currentState?.refresh();
-                      toast(ctx, 'Reloaded ${p['user']}');
-                    }
-                  },
+          child: LayoutBuilder(
+            builder: (ctx2, constraints) {
+              final narrow = constraints.maxWidth < 420;
+              return ListTile(
+                contentPadding: const EdgeInsets.only(left: 8, right: 4),
+                leading: Icon(
+                  err != null ? Icons.error_outline : Icons.storage_outlined,
+                  color: err != null ? cs.error : null,
                 ),
-              ],
-            ),
+                title: Text(
+                  '${p['name']}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        chip(ctx, '${p['user']}'),
+                        chip(ctx, remote ? 'Remote' : 'Local'),
+                        chip(
+                          ctx,
+                          updated == null
+                              ? health
+                              : '$health · ${fmtDate(updated)}',
+                          color: err != null ? cs.errorContainer : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Read/Write' : 'Read-Only'}${err != null ? '\n$err' : ''}',
+                    ),
+                    if (narrow && remote)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Wrap(
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _resetQuota(p),
+                              icon: const Icon(Icons.restart_alt, size: 18),
+                              label: const Text('Reset Quota'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                minimumSize: const Size(0, 36),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                isThreeLine: true,
+                trailing: narrow
+                    ? IconButton(
+                        tooltip: 'Reload User VFS',
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () async {
+                          await guarded(ctx, () => v.reloadVfs('${p['user']}'));
+                          if (ctx.mounted) {
+                            await _key.currentState?.refresh();
+                            toast(ctx, 'Reloaded ${p['user']}.');
+                          }
+                        },
+                      )
+                    : Wrap(
+                        spacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (remote)
+                            OutlinedButton.icon(
+                              onPressed: () => _resetQuota(p),
+                              icon: const Icon(Icons.restart_alt),
+                              label: const Text(
+                                'Reset Quota',
+                                textAlign: TextAlign.center,
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                minimumSize: const Size(0, 40),
+                              ),
+                            ),
+                          IconButton(
+                            tooltip: 'Reload User VFS',
+                            icon: const Icon(Icons.refresh),
+                            onPressed: () async {
+                              await guarded(
+                                ctx,
+                                () => v.reloadVfs('${p['user']}'),
+                              );
+                              if (ctx.mounted) {
+                                await _key.currentState?.refresh();
+                                toast(ctx, 'Reloaded ${p['user']}.');
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+              );
+            },
           ),
         );
       },
@@ -403,13 +706,20 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
       initialDateRange: _from != null && _to != null
-          ? DateTimeRange(start: _from!, end: _to!.subtract(const Duration(seconds: 1)))
+          ? DateTimeRange(
+              start: _from!,
+              end: _to!.subtract(const Duration(seconds: 1)),
+            )
           : null,
     );
     if (range == null) return;
     setState(() {
       _from = DateTime(range.start.year, range.start.month, range.start.day);
-      _to = DateTime(range.end.year, range.end.month, range.end.day).add(const Duration(days: 1));
+      _to = DateTime(
+        range.end.year,
+        range.end.month,
+        range.end.day,
+      ).add(const Duration(days: 1));
     });
   }
 
@@ -422,29 +732,38 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
   @override
   Widget build(BuildContext context) {
     final v = ref.read(vaultonProvider);
-    return Column(children: [
-      LogFilterBar(
-        searchController: _searchCtl,
-        search: _search,
-        priority: _priority,
-        onSearch: (s) => setState(() => _search = s),
-        onPriority: (p) => setState(() => _priority = p),
-        from: _from,
-        to: _to,
-        onDates: _pickDates,
-      ),
-      Expanded(
-        child: CursorList<Json>(
-          key: ValueKey('$_search|$_priority|$_from|$_to'),
-          empty: 'No Log Entries',
-          fetch: (c) => v.logs(search: _search, minPriority: _priority, from: _from, to: _to, cursor: c, order: 'Desc'),
-          itemBuilder: (ctx, e, i) => LogLine(
-            time: toDate(e['time']),
-            priority: '${e['priority'] ?? 'Info'}',
-            message: '${e['message']}',
+    return Column(
+      children: [
+        LogFilterBar(
+          searchController: _searchCtl,
+          search: _search,
+          priority: _priority,
+          onSearch: (s) => setState(() => _search = s),
+          onPriority: (p) => setState(() => _priority = p),
+          from: _from,
+          to: _to,
+          onDates: _pickDates,
+        ),
+        Expanded(
+          child: CursorList<Json>(
+            key: ValueKey('$_search|$_priority|$_from|$_to'),
+            empty: 'No Log Entries',
+            fetch: (c) => v.logs(
+              search: _search,
+              minPriority: _priority,
+              from: _from,
+              to: _to,
+              cursor: c,
+              order: 'Desc',
+            ),
+            itemBuilder: (ctx, e, i) => LogLine(
+              time: toDate(e['time']),
+              priority: '${e['priority'] ?? 'Info'}',
+              message: '${e['message']}',
+            ),
           ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }

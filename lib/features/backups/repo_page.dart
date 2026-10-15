@@ -39,8 +39,23 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   final _cleanupKey = GlobalKey<CleanupCardState>();
   late final TabController _tc = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.clamp(0, 2));
   Point? _repo;
+  Object? _repoError;
   Timer? _usageTimer;
   Vaulton get _v => ref.read(vaultonProvider);
+
+  Future<void> _reloadRepo() async {
+    try {
+      final r = await _v.repo(widget.repoId);
+      if (mounted) {
+        setState(() {
+          _repo = r;
+          _repoError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _repoError = e);
+    }
+  }
 
   @override
   void initState() {
@@ -51,9 +66,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       if (!_tc.indexIsChanging && mounted) _cleanupKey.currentState?.reload();
     });
     if (_repo == null) {
-      _v.repo(widget.repoId).then((r) {
-        if (mounted) setState(() => _repo = r);
-      }).catchError((_) {});
+      _reloadRepo();
     }
     _usageTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!mounted || !TickerMode.valuesOf(context).enabled) return;
@@ -73,7 +86,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   }
 
   Future<void> _queued(RepoJob j) async {
-    toast(context, '${kindLabel(j.kind)} queued');
+    toast(context, '${kindLabel(j.kind)} queued.');
     ref.read(epochProvider.notifier).bump();
     await Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id, showVaultLink: false)));
     if (mounted) ref.read(epochProvider.notifier).bump();
@@ -90,7 +103,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (repo == null) return;
     final datas = await guarded(context, () => _v.datas(limit: 200));
     if (datas == null || !mounted) return;
-    if (datas.items.isEmpty) return toast(context, 'Create a data folder first', error: true);
+    if (datas.items.isEmpty) return toast(context, 'Create a data folder first.', error: true);
     final req = await showBackupSheet(context, datas: datas.items, repos: [repo], repo: repo);
     if (req == null || !mounted) return;
     // Let Rustic report its own live byte total during the backup. A separate
@@ -150,7 +163,26 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (r == null)
-            const Padding(padding: EdgeInsets.only(bottom: 12), child: LinearProgressIndicator())
+            if (_repoError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Could not load vault details.',
+                        style: tt.bodyMedium?.copyWith(color: cs.error),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _reloadRepo,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const Padding(padding: EdgeInsets.only(bottom: 12), child: LinearProgressIndicator())
           else ...[
             Row(children: [
               Expanded(child: Text('Storage', style: tt.titleSmall)),

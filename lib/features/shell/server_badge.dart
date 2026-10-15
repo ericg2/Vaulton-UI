@@ -21,8 +21,7 @@ Future<void> wakeServerFromUi(BuildContext context, WidgetRef ref) async {
 }
 
 class _WakeButton extends ConsumerStatefulWidget {
-  const _WakeButton({this.icon = false});
-  final bool icon;
+  const _WakeButton();
   @override
   ConsumerState<_WakeButton> createState() => _WakeButtonState();
 }
@@ -38,14 +37,6 @@ class _WakeButtonState extends ConsumerState<_WakeButton> {
   @override
   Widget build(BuildContext context) {
     final spinner = const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2));
-    if (widget.icon) {
-      return IconButton(
-        tooltip: 'Wake Server',
-        visualDensity: VisualDensity.compact,
-        onPressed: _busy ? null : _go,
-        icon: _busy ? spinner : const Icon(Icons.power_settings_new_rounded),
-      );
-    }
     return TextButton.icon(
       onPressed: _busy ? null : _go,
       icon: _busy ? spinner : const Icon(Icons.power_settings_new_rounded, size: 18),

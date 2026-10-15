@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/util.dart';
 
 const logPriorityOptions = <(String label, String? value)>[
@@ -9,14 +10,14 @@ const logPriorityOptions = <(String label, String? value)>[
   ('Error', 'Error'),
 ];
 
-String logPriorityLabel(String? value) => value == null
-    ? 'All Priorities'
-    : (value == 'Warn' ? 'Warning' : value);
+String logPriorityLabel(String? value) =>
+    value == null ? 'All Priorities' : (value == 'Warn' ? 'Warning' : value);
 
 Color logPriorityColor(BuildContext context, String value) {
   final cs = Theme.of(context).colorScheme;
   final p = value.toLowerCase();
-  if (p.contains('err') || p.contains('crit') || p.contains('fatal')) return cs.error;
+  if (p.contains('err') || p.contains('crit') || p.contains('fatal'))
+    return cs.error;
   if (p.contains('warn')) return cs.tertiary;
   if (p.contains('debug') || p.contains('trace')) return cs.outline;
   return cs.primary;
@@ -28,11 +29,15 @@ bool logPriorityMatches(String value, String? minimum) {
   final rank = p.contains('err') || p.contains('crit') || p.contains('fatal')
       ? 3
       : p.contains('warn')
-          ? 2
-          : p.contains('info')
-              ? 1
-              : 0;
-  final wanted = minimum == 'Error' ? 3 : minimum == 'Warn' ? 2 : 1;
+      ? 2
+      : p.contains('info')
+      ? 1
+      : 0;
+  final wanted = minimum == 'Error'
+      ? 3
+      : minimum == 'Warn'
+      ? 2
+      : 1;
   return rank >= wanted;
 }
 
@@ -83,10 +88,15 @@ class LogFilterBar extends StatelessWidget {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
                     hintText: 'Search Log',
-                    suffixIcon: search.isEmpty ? null : IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () { searchController.clear(); onSearch(''); },
-                    ),
+                    suffixIcon: search.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              searchController.clear();
+                              onSearch('');
+                            },
+                          ),
                   ),
                   onSubmitted: onSearch,
                 ),
@@ -101,7 +111,11 @@ class LogFilterBar extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: onDates,
                   icon: const Icon(Icons.date_range),
-                  label: Text(dateLabel),
+                  label: Text(
+                    dateLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               if (onCopy != null)
                 IconButton(
@@ -118,7 +132,12 @@ class LogFilterBar extends StatelessWidget {
 }
 
 class LogLine extends StatelessWidget {
-  const LogLine({super.key, required this.time, required this.priority, required this.message});
+  const LogLine({
+    super.key,
+    required this.time,
+    required this.priority,
+    required this.message,
+  });
 
   final DateTime? time;
   final String priority;
@@ -128,9 +147,13 @@ class LogLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = logPriorityColor(context, priority);
-    final p = priority.length > 4 ? priority.substring(0, 4).toUpperCase() : priority.toUpperCase();
+    final p = priority.length > 4
+        ? priority.substring(0, 4).toUpperCase()
+        : priority.toUpperCase();
     return Container(
-      color: priority.toLowerCase().contains('err') ? cs.errorContainer.withValues(alpha: 0.35) : null,
+      color: priority.toLowerCase().contains('err')
+          ? cs.errorContainer.withValues(alpha: 0.35)
+          : null,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,17 +162,35 @@ class LogLine extends StatelessWidget {
             width: 68,
             child: Text(
               time == null ? '--:--:--' : _hms(time!),
-              style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: cs.outline),
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
+                color: cs.outline,
+              ),
             ),
           ),
           SizedBox(
             width: 56,
             child: Text(
               p,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
-          Expanded(child: Text(message, style: TextStyle(fontFamily: 'monospace', fontSize: 12.5, color: color))),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12.5,
+                color: color,
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,20 +69,23 @@ class TransferManager extends Notifier<List<TransferTask>> {
   int _running = 0, _seq = 0;
   Timer? _flush, _persistTimer, _handoffTimer, _watch, _hb;
   bool _handedOff = false, _dirty = false;
+  // Captured in build(): reading other providers is not allowed in onDispose.
+  late final SharedPreferences _prefs;
 
   bool get hasActive => _tasks.any((t) => t.active);
 
   @override
   List<TransferTask> build() {
     _engine = TransferEngine(ref.read(apiClientProvider));
+    _prefs = ref.read(prefsProvider);
     if (!kIsWeb) {
-      for (final t in decodeQueue(ref.read(prefsProvider).getString(kQueueKey))) {
+      for (final t in decodeQueue(_prefs.getString(kQueueKey))) {
         if (t.state == TState.running) t.state = TState.queued;
         _tasks.add(t);
         _taskById[t.id] = t;
         if (t.state == TState.queued) _pending.addLast(t.id);
       }
-      _hb = Timer.periodic(const Duration(seconds: 5), (_) => ref.read(prefsProvider).setInt(kUiHeartbeat, DateTime.now().millisecondsSinceEpoch));
+      _hb = Timer.periodic(const Duration(seconds: 5), (_) => _prefs.setInt(kUiHeartbeat, DateTime.now().millisecondsSinceEpoch));
     }
     ref.onDispose(() {
       _flush?.cancel();
@@ -423,7 +427,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
 
   void _persist() {
     if (kIsWeb) return;
-    ref.read(prefsProvider).setString(kQueueKey, encodeQueue(_tasks));
+    _prefs.setString(kQueueKey, encodeQueue(_tasks));
   }
 
   // ------------------------------------------------- background hand-off
@@ -459,11 +463,10 @@ class TransferManager extends Notifier<List<TransferTask>> {
   void _watchBackground() {
     _watch?.cancel();
     _watch = Timer.periodic(const Duration(seconds: 2), (_) async {
-      final p = ref.read(prefsProvider);
-      await p.reload();
-      final hb = p.getInt(kBgHeartbeat) ?? 0;
+      await _prefs.reload();
+      final hb = _prefs.getInt(kBgHeartbeat) ?? 0;
       final fresh = DateTime.now().millisecondsSinceEpoch - hb < 25000;
-      final loaded = decodeQueue(p.getString(kQueueKey));
+      final loaded = decodeQueue(_prefs.getString(kQueueKey));
       if (fresh) {
         _tasks
           ..clear()

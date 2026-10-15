@@ -66,7 +66,7 @@ class _ErrorViewState extends ConsumerState<ErrorView> {
               icon: _waking
                   ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.power_settings_new_rounded),
-              label: Text(_waking ? 'Waking Up…' : 'Wake Server'),
+              label: Text(_waking ? 'Waking up…' : 'Wake Server'),
             ),
           ],
           if (widget.onRetry != null && !e.isForbidden) ...[
@@ -115,7 +115,7 @@ class CursorList<T> extends StatefulWidget {
     super.key,
     required this.fetch,
     required this.itemBuilder,
-    this.empty = 'Nothing here yet',
+    this.empty = 'Nothing here yet.',
     this.emptyIcon = Icons.inbox_outlined,
     this.padding,
     this.onChanged,
@@ -292,7 +292,7 @@ class CursorListState<T> extends State<CursorList<T>> {
             if (!_loading) WidgetsBinding.instance.addPostFrameCallback((_) => load());
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))));
           }
-          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Couldn’t load more. Tap to retry'));
+          if (_error != null) return TextButton(onPressed: () => load(), child: const Text('Couldn’t load more. Tap to retry.'));
           return const SizedBox(height: 88);
           },
         ),
