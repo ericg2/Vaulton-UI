@@ -30,6 +30,18 @@ class _SyncPageApi extends Vaulton {
   }) async => [DateTime.now().add(const Duration(hours: 1))];
 }
 
+class _FailingSyncApi extends _SyncPageApi {
+  @override
+  Future<Paged<Point>> datas({
+    String? rootId,
+    String? search,
+    String? cursor,
+    int limit = 100,
+  }) async {
+    throw Exception('vault unreachable');
+  }
+}
+
 final _point = Point(
   id: 'point-1',
   rootId: 'root-1',
@@ -101,6 +113,9 @@ void main() {
         expect(find.text(profile.name), findsOneWidget);
         expect(find.text('Sync Now'), findsOneWidget);
         expect(find.text('Settings'), findsOneWidget);
+        // Sync Now opens the review dialog itself, so no separate Preview
+        // action may exist.
+        expect(find.text('Preview'), findsNothing);
         expect(tester.takeException(), isNull);
 
         await tester.drag(find.byType(ListView).first, const Offset(0, -350));
@@ -187,4 +202,43 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('a failed load offers retry instead of an empty page', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('flutter_timezone'),
+          (_) async => 'UTC',
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('flutter_timezone'),
+            null,
+          ),
+    );
+
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          prefsProvider.overrideWithValue(prefs),
+          sessionProvider.overrideWithValue(SessionStore()),
+          vaultonProvider.overrideWithValue(_FailingSyncApi()),
+        ],
+        child: const MaterialApp(home: SyncPage()),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

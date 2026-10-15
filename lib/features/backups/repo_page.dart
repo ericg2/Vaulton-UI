@@ -132,7 +132,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     ], intro: 'Updates the password Vaulton uses to open this vault. It doesn’t change the vault’s encryption.');
     if (f == null) return;
     await guarded(context, () => _v.changeRepoPassword(widget.repoId, f['cur']!, f['new']!));
-    if (mounted) toast(context, 'Password updated');
+    if (mounted) toast(context, 'Password updated.');
   }
 
   Widget _menu() => PopupMenuButton<String>(

@@ -80,8 +80,10 @@ const _snapshotFilters = ['All', 'Locked', 'Unlocked'];
 class _TimelineFilterDelegate extends SliverPersistentHeaderDelegate {
   const _TimelineFilterDelegate(this.child);
   final Widget child;
-  @override double get minExtent => 52;
-  @override double get maxExtent => 52;
+  // Must match the _filterBar height below: the header paints exactly what
+  // the delegate claims, otherwise the sliver geometry is invalid.
+  @override double get minExtent => 48;
+  @override double get maxExtent => 48;
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final cs = Theme.of(context).colorScheme;

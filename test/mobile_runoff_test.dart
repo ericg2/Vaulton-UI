@@ -29,6 +29,7 @@ class _FakeVaulton extends Vaulton {
     this.scheduleList = const [],
     this.rootList = const [],
     this.msgs = const [],
+    this.failSettings = false,
   }) : super(ApiClient(SessionStore()));
 
   final List<Point> points;
@@ -37,6 +38,7 @@ class _FakeVaulton extends Vaulton {
   final List<Schedule> scheduleList;
   final List<Root> rootList;
   final List<Msg> msgs;
+  final bool failSettings;
 
   @override
   Future<Paged<Point>> datas({
@@ -149,10 +151,16 @@ class _FakeVaulton extends Vaulton {
   };
 
   @override
-  Future<Json> wolSettings() async => {};
+  Future<Json> wolSettings() async {
+    if (failSettings) throw Exception('settings unreachable');
+    return {};
+  }
 
   @override
-  Future<Json> powerSettings() async => {};
+  Future<Json> powerSettings() async {
+    if (failSettings) throw Exception('settings unreachable');
+    return {};
+  }
 
   @override
   Future<Json> powerAgentStatus() async => {};
@@ -229,7 +237,17 @@ void main() {
   }
 
   Future<void> tapTab(WidgetTester tester, String label) async {
-    await tester.tap(find.widgetWithText(Tab, label));
+    // Tab content can repeat the title, so only drive the Tab itself.
+    Finder tab() => find.widgetWithText(Tab, label).first;
+    // Scrollable tab bars start later tabs off-screen: drag until visible.
+    final width = tester.view.physicalSize.width;
+    for (var i = 0; i < 5; i++) {
+      final dx = tester.getCenter(tab()).dx;
+      if (dx > 0 && dx < width) break;
+      await tester.drag(find.byType(TabBar).first, const Offset(-200, 0));
+      await tester.pump();
+    }
+    await tester.tap(tab());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 200));
@@ -297,6 +315,11 @@ void main() {
 
       expect(find.text('report.pdf'), findsOneWidget);
       expect(find.text('photos'), findsOneWidget);
+      // Unmounting must dispose the transfer queue cleanly (regression: the
+      // manager used to read a provider inside onDispose).
+      await tester.pumpWidget(Container());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('storage tabs fit', (tester) async {
@@ -317,6 +340,17 @@ void main() {
               isRepoAllowed: true,
               isOwner: true,
             ),
+            Root(
+              id: 'r2',
+              name: 'Shared Team Drive With A Long Name',
+              userName: 'teammate',
+              maxBytes: 200,
+              allocatedBytes: 150,
+              freeBytes: 50,
+              isDataAllowed: true,
+              isRepoAllowed: false,
+              isOwner: false,
+            ),
           ],
         ),
       );
@@ -324,6 +358,8 @@ void main() {
       expect(find.text('Data Folders'), findsOneWidget);
       await tapTab(tester, 'Backup Vaults');
       await tapTab(tester, 'Locations');
+      // Shared locations report consumed space (max minus free), not free.
+      expect(find.textContaining('Available to you:'), findsOneWidget);
     });
 
     testWidgets('activity tabs fit', (tester) async {
@@ -400,5 +436,24 @@ void main() {
         await tapTab(tester, tab);
       }
     });
+
+    testWidgets(
+      'configuration shows retry instead of a stuck spinner on failure',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          const AdminPage(),
+          _FakeVaulton(failSettings: true),
+        );
+
+        await tapTab(tester, 'Configuration');
+        expect(find.text('Try Again'), findsOneWidget);
+        await tester.tap(find.text('Try Again'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(tester.takeException(), isNull);
+        expect(find.text('Try Again'), findsOneWidget);
+      },
+    );
   });
 }
