@@ -11,7 +11,7 @@ import '../../platform/desktop_window.dart';
 import '../transfers/transfer_manager.dart';
 
 /// Keep in sync with `version:` in pubspec.yaml.
-const kAppVersion = '1.3.17';
+const kAppVersion = '1.3.18';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
