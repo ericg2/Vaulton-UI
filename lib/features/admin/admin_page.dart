@@ -458,19 +458,21 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                     context,
                                     () => _v.resetPassword(u.userName),
                                   );
-                                  if (r != null && context.mounted)
+                                  if (r != null && context.mounted) {
                                     _showPassword(
                                       'New password for ${u.userName}',
                                       '${r['temporaryPassword']}',
                                     );
+                                  }
                                 }
                               case 'revoke':
                                 await guarded(
                                   context,
                                   () => _v.revokeSessions(u.userName),
                                 );
-                                if (context.mounted)
+                                if (context.mounted) {
                                   toast(context, 'Sessions ended.');
+                                }
                               case 'del':
                                 if (await confirm(
                                   context,

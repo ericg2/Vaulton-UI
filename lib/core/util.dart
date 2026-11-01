@@ -27,8 +27,9 @@ String fmtDate(DateTime? d) =>
 String fmtShort(DateTime? d) {
   if (d == null) return '—';
   final n = DateTime.now();
-  if (d.year == n.year && d.month == n.month && d.day == n.day)
+  if (d.year == n.year && d.month == n.month && d.day == n.day) {
     return DateFormat.jm().format(d);
+  }
   return DateFormat.yMMMd().format(d);
 }
 
@@ -36,10 +37,12 @@ String fmtDuration(Duration d) {
   final days = d.inDays;
   final hours = d.inHours % 24;
   final minutes = d.inMinutes % 60;
-  if (days > 0)
+  if (days > 0) {
     return '${days}d ${hours.toString().padLeft(2, '0')}h ${minutes.toString().padLeft(2, '0')}m';
-  if (d.inHours > 0)
+  }
+  if (d.inHours > 0) {
     return '${d.inHours}h ${minutes.toString().padLeft(2, '0')}m';
+  }
   return '${minutes}m';
 }
 
@@ -387,8 +390,9 @@ Future<Map<String, String>?> formDialog(
                           : -1);
                 if ((f.required && raw.isEmpty) ||
                     bytes < 0 ||
-                    (f.maxBytes != null && bytes > f.maxBytes!))
+                    (f.maxBytes != null && bytes > f.maxBytes!)) {
                   return;
+                }
               }
               Navigator.pop(ctx, {
                 for (final f in fields)
@@ -468,8 +472,9 @@ class _CapacityFieldState extends State<_CapacityField> {
           widget.exactBytes ??
           (n * (_capacityFactors[widget.unit] ?? _capacityFactors['GiB']!))
               .round();
-      if (bytes > widget.maxBytes!)
+      if (bytes > widget.maxBytes!) {
         return 'Over maximum (${_formatCapacity(widget.maxBytes!)})';
+      }
     }
     return null;
   }
@@ -544,8 +549,9 @@ String _formatCapacity(int bytes) {
     ('GiB', 1073741824),
     ('MiB', 1048576),
   ]) {
-    if (bytes.abs() >= e.$2)
+    if (bytes.abs() >= e.$2) {
       return '${(bytes / e.$2).toStringAsFixed(bytes % e.$2 == 0 ? 0 : 2)} ${e.$1}';
+    }
   }
   return '$bytes B';
 }

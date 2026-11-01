@@ -16,8 +16,9 @@ String logPriorityLabel(String? value) =>
 Color logPriorityColor(BuildContext context, String value) {
   final cs = Theme.of(context).colorScheme;
   final p = value.toLowerCase();
-  if (p.contains('err') || p.contains('crit') || p.contains('fatal'))
+  if (p.contains('err') || p.contains('crit') || p.contains('fatal')) {
     return cs.error;
+  }
   if (p.contains('warn')) return cs.tertiary;
   if (p.contains('debug') || p.contains('trace')) return cs.outline;
   return cs.primary;

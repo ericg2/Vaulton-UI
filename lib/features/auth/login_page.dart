@@ -459,8 +459,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
     } catch (e) {
       if (!mounted ||
           generation != _attemptGeneration ||
-          cancelToken.isCancelled)
+          cancelToken.isCancelled) {
         return;
+      }
       final ex = ApiException.from(e);
       setState(() {
         final text = '${ex.title ?? ''} ${ex.message}'.toLowerCase();

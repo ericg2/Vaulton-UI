@@ -91,8 +91,9 @@ class StorageHeader extends StatelessWidget {
       animation: pages,
       builder: (context, child) {
         var p = pages.initialPage.toDouble();
-        if (pages.hasClients && pages.position.haveDimensions)
+        if (pages.hasClients && pages.position.haveDimensions) {
           p = pages.page ?? p;
+        }
         final first = basePage.toDouble(), last = basePage + 2.0;
         final dx = p < first
             ? (first - p) * width
@@ -136,8 +137,9 @@ class StorageTabStrip extends StatelessWidget {
   static const _labels = ['Data Folders', 'Backup Vaults', 'Locations'];
 
   double _position() {
-    if (!pages.hasClients || !pages.position.haveDimensions)
+    if (!pages.hasClients || !pages.position.haveDimensions) {
       return pages.initialPage.toDouble();
+    }
     return pages.page ?? pages.initialPage.toDouble();
   }
 
@@ -345,8 +347,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                   );
                                   if (name == null ||
                                       name.trim().isEmpty ||
-                                      !ctx.mounted)
+                                      !ctx.mounted) {
                                     return;
+                                  }
                                   try {
                                     await _v.createLocalDirectory(
                                       path,
@@ -499,8 +502,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     );
     if (capacity == null || !mounted) return;
     final maxBytes = int.tryParse(capacity['capacity'] ?? '');
-    if (maxBytes == null || maxBytes <= 0)
+    if (maxBytes == null || maxBytes <= 0) {
       return toast(context, 'Enter a valid capacity.', error: true);
+    }
     final created = await guarded(
       context,
       () => _v.createRoot({
@@ -556,8 +560,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
 
   Future<void> _editSource(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
-    if (!kSourceSchemas.containsKey(scheme))
+    if (!kSourceSchemas.containsKey(scheme)) {
       return toast(context, 'Unknown connection type.', error: true);
+    }
     final src = await _sourceForm(scheme, root.source);
     if (src == null) return;
     await guarded(context, () => _v.patchRoot(root.id, {'source': src}));
@@ -605,8 +610,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       'Not allowed while it still holds data folders or backup vaults. Files in the underlying storage are kept.',
       ok: 'Delete',
       danger: true,
-    ))
+    )) {
       return;
+    }
     await guarded(context, () => _v.deleteRoot(root.id));
     _key.currentState?.refresh();
   }
@@ -790,12 +796,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     final usable = roots.items
         .where((r) => widget.repo ? r.isRepoAllowed : r.isDataAllowed)
         .toList();
-    if (usable.isEmpty)
+    if (usable.isEmpty) {
       return toast(
         context,
         'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Add or share one first.',
         error: true,
       );
+    }
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -1151,10 +1158,12 @@ class _EditPointSheetState extends State<_EditPointSheet> {
 
   String get _error {
     if (_name.text.trim().isEmpty) return 'Enter a name.';
-    if (_capacity.text.trim().isEmpty || _bytes < 4096)
+    if (_capacity.text.trim().isEmpty || _bytes < 4096) {
       return 'Enter a valid space limit.';
-    if (_bytes > _availableBytes)
+    }
+    if (_bytes > _availableBytes) {
       return 'Limit exceeds the capacity available to you.';
+    }
     return '';
   }
 
@@ -1393,8 +1402,9 @@ class _NewPointSheetState extends State<_NewPointSheet> {
     if (n == null || !n.isFinite || n < 0 || _capacityBytesValue < 4096) {
       return 'Enter a valid space limit.';
     }
-    if (_root.freeBytes <= 0)
+    if (_root.freeBytes <= 0) {
       return 'No allocatable capacity remains for you on this location.';
+    }
     if (_capacityBytesValue > _root.freeBytes) {
       return 'The limit exceeds the capacity available to you on this location.';
     }
@@ -1410,8 +1420,9 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       _capacityTouched = true;
       _passwordTouched = true;
     });
-    if (name.isEmpty || _capacityError.isNotEmpty || _passwordError.isNotEmpty)
+    if (name.isEmpty || _capacityError.isNotEmpty || _passwordError.isNotEmpty) {
       return;
+    }
     final maxBytes = _capacityBytesValue;
     setState(() => _saving = true);
     try {

@@ -128,8 +128,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     // Quietly re-sync the listing and usage in the background. This never clears
     // the list or shows a spinner, so there is no flicker while you browse.
     _autoTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (mounted && TickerMode.valuesOf(context).enabled && _point != null)
+      if (mounted && TickerMode.valuesOf(context).enabled && _point != null) {
         _silent();
+      }
     });
   }
 
@@ -395,8 +396,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     var i = 0;
     for (final n in nodes) {
       i++;
-      if (nodes.length > 1 && mounted)
+      if (nodes.length > 1 && mounted) {
         toast(context, '${copy ? 'Copying' : 'Moving'} $i / ${nodes.length}…');
+      }
       try {
         final id = await _v.transfer(
           pt.id,
@@ -568,11 +570,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         body: ErrorView(_pointsError!, onRetry: _initPoints),
       );
     }
-    if (_points == null)
+    if (_points == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Files')),
         body: const Center(child: CircularProgressIndicator()),
       );
+    }
     if (_point == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Files')),
@@ -797,8 +800,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
             }
             final results = _mgr.addUploads(requests);
             final queued = results.whereType<TransferTask>().length;
-            if (mounted && queued >= 25)
+            if (mounted && queued >= 25) {
               toast(context, 'Queued $queued uploads');
+            }
           },
           child: Stack(
             children: [
@@ -981,8 +985,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                       ),
                                     ],
                                   );
-                                  if (!context.mounted || action == null)
+                                  if (!context.mounted || action == null) {
                                     return;
+                                  }
                                   switch (action) {
                                     case 'open':
                                       _open(n);
@@ -1256,8 +1261,9 @@ class _PendingUploads extends ConsumerWidget {
     for (final t in all) {
       if (t.kind != TKind.upload ||
           t.pointId != pointId ||
-          !t.remotePath.startsWith(prefix))
+          !t.remotePath.startsWith(prefix)) {
         continue;
+      }
       final show =
           t.active || (t.state == TState.failed && t.createdAt.isAfter(since));
       if (!show) continue;

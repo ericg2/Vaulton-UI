@@ -156,8 +156,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       context,
       () => _v.broadcast(f['subject']!, f['body']!),
     );
-    if (n != null && mounted)
+    if (n != null && mounted) {
       toast(context, 'Delivered to $n user${n == 1 ? '' : 's'}.');
+    }
   }
 
   Future<void> _open(Msg m, bool inbox) async {

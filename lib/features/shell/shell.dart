@@ -213,10 +213,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   Widget _icon(_Dest d, bool sel, int unread, int active) {
     final base = Icon(sel ? d.selected : d.icon);
-    if (d.label == 'Messages' && unread > 0)
+    if (d.label == 'Messages' && unread > 0) {
       return Badge(label: Text('$unread'), child: base);
-    if (d.label == 'Transfers' && active > 0)
+    }
+    if (d.label == 'Transfers' && active > 0) {
       return Badge(label: Text('$active'), child: base);
+    }
     return base;
   }
 

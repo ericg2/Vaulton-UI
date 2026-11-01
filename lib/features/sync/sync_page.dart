@@ -505,8 +505,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   final occurrences = await ref
                       .read(vaultonProvider)
                       .previewCron(scheduleCron, tz: timeZone, count: 1);
-                  if (occurrences.isEmpty)
+                  if (occurrences.isEmpty) {
                     throw StateError('No upcoming run could be calculated.');
+                  }
                   Navigator.pop(
                     ctx,
                     SyncProfile(
@@ -899,8 +900,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       );
     }
     await triggerSyncNow(profileId: p.id);
-    if (mounted)
+    if (mounted) {
       toast(context, 'Sync started. It keeps running if you close the app.');
+    }
   }
 
   /// Sync Now always reviews the plan first: the Review Sync dialog shows every

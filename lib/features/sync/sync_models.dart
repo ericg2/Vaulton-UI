@@ -51,8 +51,8 @@ class SyncProfile {
 }
 
 String _legacySyncCron(int minutes) {
-  if (minutes <= 30) return '*/' + minutes.toString() + ' * * * *';
-  if (minutes < 1440) return '0 */' + (minutes / 60).round().toString() + ' * * *';
+  if (minutes <= 30) return '*/$minutes * * * *';
+  if (minutes < 1440) return '0 */${(minutes / 60).round()} * * *';
   return '0 2 * * *';
 }
 

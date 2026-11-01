@@ -212,12 +212,13 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ]);
                   if (f == null) return;
-                  if (f['new']!.length < 8)
+                  if (f['new']!.length < 8) {
                     return toast(
                       context,
                       'Use at least 8 characters.',
                       error: true,
                     );
+                  }
                   final t = await guarded(
                     context,
                     () => v.changePassword(f['cur']!, f['new']!),
@@ -237,8 +238,9 @@ class SettingsPage extends ConsumerWidget {
                     'Sign Out Everywhere?',
                     'This ends every session, including this one.',
                     ok: 'Sign Out',
-                  ))
+                  )) {
                     return;
+                  }
                   await guarded(context, v.logoutAll);
                   ref.read(transferProvider.notifier).reset();
                   await session.clear();

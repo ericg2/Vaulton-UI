@@ -369,8 +369,8 @@ Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
   final currentIds = profiles.map((profile) => profile.id).toSet();
   final previousIds = prefs.getStringList(_kScheduledSyncIds) ?? const <String>[];
   for (final id in previousIds.where((id) => !currentIds.contains(id))) {
-    await Workmanager().cancelByUniqueName('vaulton-sync-' + id);
-    await Workmanager().cancelByUniqueName('vaulton-sync-now-' + id);
+    await Workmanager().cancelByUniqueName('vaulton-sync-$id');
+    await Workmanager().cancelByUniqueName('vaulton-sync-now-$id');
   }
   await prefs.setStringList(_kScheduledSyncIds, currentIds.toList());
 
@@ -387,10 +387,10 @@ Future<void> configureSyncSchedules(List<SyncProfile> profiles) async {
     description: 'Progress and results of folder syncs.', importance: Importance.low));
 
   for (final profile in profiles) {
-    final unique = 'vaulton-sync-' + profile.id;
+    final unique = 'vaulton-sync-${profile.id}';
     await Workmanager().cancelByUniqueName(unique);
     if (!profile.enabled) {
-      await Workmanager().cancelByUniqueName('vaulton-sync-now-' + profile.id);
+      await Workmanager().cancelByUniqueName('vaulton-sync-now-${profile.id}');
       continue;
     }
     await _scheduleSyncOccurrence(profile);
@@ -402,7 +402,7 @@ Future<void> _scheduleSyncOccurrence(SyncProfile profile, {bool append = false})
   final now = DateTime.now().millisecondsSinceEpoch;
   final delayMs = profile.nextRun > now ? profile.nextRun - now : 0;
   await Workmanager().registerOneOffTask(
-    'vaulton-sync-' + profile.id,
+    'vaulton-sync-${profile.id}',
     _kSync,
     initialDelay: Duration(milliseconds: delayMs),
     inputData: {'profileId': profile.id, 'scheduled': true},

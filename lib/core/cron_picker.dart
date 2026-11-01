@@ -222,11 +222,11 @@ String describeCron(String cron, BuildContext context) {
   final minuteStep = step.firstMatch(p[0]);
   if (minuteStep != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(minuteStep.group(1) ?? '');
-    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every ${n} minutes';
+    if (n != null && n > 0) return n == 1 ? 'Every minute' : 'Every $n minutes';
   }
   if (minute != null && hourStep != null && p.skip(2).every((x) => x == '*')) {
     final n = int.tryParse(hourStep.group(1) ?? '');
-    if (n != null && n > 0) return n == 1 ? 'Every hour at :${minute.toString().padLeft(2, '0')}' : 'Every ${n} hours at :${minute.toString().padLeft(2, '0')}';
+    if (n != null && n > 0) return n == 1 ? 'Every hour at :${minute.toString().padLeft(2, '0')}' : 'Every $n hours at :${minute.toString().padLeft(2, '0')}';
   }
   if (minute != null && p[1] == '*' && p.skip(2).every((x) => x == '*')) {
     return 'Every hour at :${minute.toString().padLeft(2, '0')}';
@@ -242,7 +242,9 @@ String describeCron(String cron, BuildContext context) {
       final range = part.split('-');
       final start = int.tryParse(range.first), end = int.tryParse(range.last);
       if (start == null || end == null || start < 0 || start > 7 || end < start || end > 7) return 'Custom schedule';
-      for (var day = start; day <= end; day++) days.add(day % 7);
+      for (var day = start; day <= end; day++) {
+        days.add(day % 7);
+      }
     }
     if (days.isEmpty) return 'Custom schedule';
     final labels = [for (final d in _days) if (days.contains(d.$2)) d.$1];

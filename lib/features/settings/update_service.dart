@@ -171,11 +171,13 @@ class UpdateService {
               progress.dispose();
               if (status == 'failed') {
                 final error = state['error'] as String? ?? 'The background download failed.';
-                if (context.mounted) messenger.showSnackBar(SnackBar(
+                if (context.mounted) {
+                  messenger.showSnackBar(SnackBar(
                   content: Text('Update download failed: ${_friendlyError(FormatException(error))}'),
                   duration: const Duration(seconds: 10),
                   action: SnackBarAction(label: 'Retry', onPressed: () => checkAndInstall(context, currentVersion)),
                 ));
+                }
                 return;
               }
               final path = state['path'] as String?;
