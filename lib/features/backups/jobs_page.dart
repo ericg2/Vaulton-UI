@@ -354,23 +354,72 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     if (times == null || !mounted) return;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Next Runs'),
-        content: SizedBox(
-          width: 420,
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Times shown in ${s.timeZone}.', style: Theme.of(ctx).textTheme.bodySmall),
-            const SizedBox(height: 8),
-            for (var i = 0; i < times.length; i++)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(radius: 14, child: Text('${i + 1}')),
-                title: Text(times[i]),
-              ),
-          ]),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
-      ),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final colors = theme.colorScheme;
+        return AlertDialog(
+          insetPadding: const EdgeInsets.all(16),
+          title: const Text('Upcoming Backup Runs'),
+          content: SizedBox(
+            width: 440,
+            height: (MediaQuery.sizeOf(ctx).height - 220)
+                .clamp(160.0, 520.0)
+                .toDouble(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule_outlined, color: colors.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Schedule Preview', style: theme.textTheme.titleSmall),
+                            Text('All times use ${s.timeZone}.', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: times.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 6),
+                    itemBuilder: (context, i) => Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: colors.secondaryContainer,
+                          child: Text('${i + 1}', style: TextStyle(color: colors.onSecondaryContainer)),
+                        ),
+                        title: Text(times[i]),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
     );
   }
 
