@@ -60,23 +60,19 @@ Do not expose the server directly to the internet without configuring secure rem
 
 Vaulton only shows management features your account is allowed to use. Your server remains in control of access and permissions.
 
-## Layout
+## Helpful Notes
 
-```
-lib/core        API client, typed endpoints (vaulton.dart), models, session, theme, shared widgets
-lib/platform    dart:io vs web abstractions (local files, desktop window)
-lib/background  WorkManager dispatcher (Android) + web/desktop stubs
-lib/features    auth · shell · files · transfers · sync · storage · backups · messages · admin · settings
-```
+- The app needs a running Vaulton server. It does not store or serve your files by itself.
+- Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
+- Web uploads are best suited to small and medium files because the browser manages the transfer.
+- Android background tasks are scheduled by the operating system. Battery-saving settings can delay photo backups and other background work.
+- When restoring a folder, Vaulton creates that folder inside the destination you select. A restored file is placed directly in the selected destination.
+- If you are unsure what a restore will change, review the **Dry Run** before starting it.
 
-## Notes & limitations
+## Need Help?
 
-* The API only deletes **empty** directories, so folder deletion/download is done client-side recursively.
-* Move/copy is a server-side job; the client polls `/files/transfers/{jobId}` (3 min, then leaves it running).
-* Web cannot read the filesystem in the background; downloads go through the browser and uploads are held in memory (best for small/medium files).
-* Android background work is best-effort: the OS decides when periodic jobs run (minimum 15 min). Exempting the app from battery optimisation helps.
-* `Content-Length` is sent for uploads; downloads resume from the existing partial file.
-* iOS/macOS are not configured (no background-fetch entitlement work done).
-* Query enums follow the revised spec (`Asc`/`Desc`, job `kind`/`status`, `All`/`Files`/`Directories`).
-* Snapshot browse entries are expected to carry a `path` (per the endpoint description); if the server omits it the client builds `parent/name`.
-* Restoring a folder from the browser writes into `<destination>/<folder name>`; a single file is restored into the destination folder. Use *Dry run* first if unsure.
+- Read the [user guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md) for help with everyday tasks.
+- Read the [administrator guide](https://github.com/ericg2/Vaulton/blob/main/docs/ADMIN_GUIDE.md) if you manage the server.
+- If something is not working, check the [troubleshooting guide](https://github.com/ericg2/Vaulton/blob/main/docs/TROUBLESHOOTING.md).
+- Report a problem through [GitHub Issues](https://github.com/ericg2/Vaulton-UI/issues).
+
