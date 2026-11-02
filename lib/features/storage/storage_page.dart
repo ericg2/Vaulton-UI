@@ -1800,6 +1800,33 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                   : '${fmtBytes(_root.freeBytes)} available to you on this shared location.',
               style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
+            if (!_root.isOwner) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.shield_outlined, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This location is shared by another user. Files in this Data Folder are not independently encrypted, so the location owner or server administrator may be able to access them outside Vaulton. Only store sensitive files here if you trust them.',
+                        style: t.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             TextField(
               controller: _name,
