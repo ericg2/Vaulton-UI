@@ -889,7 +889,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         emptyIcon: widget.repo
             ? Icons.inventory_2_outlined
             : Icons.folder_outlined,
-        autoRefresh: const Duration(seconds: 5),
+        autoRefresh: const Duration(seconds: 30),
         fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
         itemBuilder: (ctx, p, i) => _pointCard(ctx, p),
       ),
