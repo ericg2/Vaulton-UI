@@ -136,19 +136,19 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       recipients = picked;
     }
 
-    final f = await formDialog(
-      context,
-      replyTo == null ? 'New Message' : 'Reply',
-      [
-        FieldSpec('subject', 'Subject', initial: subject ?? '', required: true),
-        const FieldSpec('body', 'Message', kind: 'multiline', required: true),
-      ],
-      ok: 'Send',
+    final draft = await showDialog<_MessageDraft>(
+      context: context,
+      builder: (_) => _MessageDraftDialog(
+        title: replyTo == null ? 'New Message' : 'Reply',
+        audience: '${recipients.length} recipient${recipients.length == 1 ? '' : 's'}',
+        initialSubject: subject ?? '',
+        sendLabel: 'Send Message',
+      ),
     );
-    if (f == null) return;
+    if (draft == null || !mounted) return;
     await guarded(
       context,
-      () => _v.send(recipients, f['subject']!, f['body']!, replyTo: replyTo),
+      () => _v.send(recipients, draft.subject, draft.body, replyTo: replyTo),
     );
     if (!mounted) return;
     toast(context, 'Message sent.');
@@ -156,14 +156,19 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   }
 
   Future<void> _broadcast() async {
-    final f = await formDialog(context, 'Broadcast to Everyone', [
-      const FieldSpec('subject', 'Subject', required: true),
-      const FieldSpec('body', 'Message', kind: 'multiline', required: true),
-    ], ok: 'Send to All');
-    if (f == null) return;
+    final draft = await showDialog<_MessageDraft>(
+      context: context,
+      builder: (_) => const _MessageDraftDialog(
+        title: 'Broadcast to Everyone',
+        audience: 'All users will receive this message.',
+        sendLabel: 'Send to Everyone',
+        broadcast: true,
+      ),
+    );
+    if (draft == null || !mounted) return;
     final n = await guarded(
       context,
-      () => _v.broadcast(f['subject']!, f['body']!),
+      () => _v.broadcast(draft.subject, draft.body),
     );
     if (n != null && mounted) {
       toast(context, 'Delivered to $n user${n == 1 ? '' : 's'}.');
@@ -353,6 +358,129 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         ),
         body: TabBarView(children: [_list(true), _list(false)]),
       ),
+    );
+  }
+}
+
+
+class _MessageDraft {
+  const _MessageDraft(this.subject, this.body);
+  final String subject;
+  final String body;
+}
+
+class _MessageDraftDialog extends StatefulWidget {
+  const _MessageDraftDialog({
+    required this.title,
+    required this.audience,
+    required this.sendLabel,
+    this.initialSubject = '',
+    this.broadcast = false,
+  });
+
+  final String title;
+  final String audience;
+  final String sendLabel;
+  final String initialSubject;
+  final bool broadcast;
+
+  @override
+  State<_MessageDraftDialog> createState() => _MessageDraftDialogState();
+}
+
+class _MessageDraftDialogState extends State<_MessageDraftDialog> {
+  late final _subject = TextEditingController(text: widget.initialSubject);
+  final _body = TextEditingController();
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    _body.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final canSend = _subject.text.trim().isNotEmpty && _body.text.trim().isNotEmpty;
+    return AlertDialog(
+      insetPadding: const EdgeInsets.all(16),
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 520,
+        height: (MediaQuery.sizeOf(context).height - 220)
+            .clamp(180.0, 520.0)
+            .toDouble(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    widget.broadcast ? Icons.campaign_outlined : Icons.people_alt_outlined,
+                    color: cs.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(widget.audience, style: Theme.of(context).textTheme.bodyMedium)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _subject,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Subject',
+                prefixIcon: Icon(Icons.short_text),
+              ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => FocusScope.of(context).nextFocus(),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TextField(
+                controller: _body,
+                expands: true,
+                minLines: null,
+                maxLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Message',
+                  alignLabelWithHint: true,
+                  hintText: 'Write your message…',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: canSend
+              ? () => Navigator.pop(
+                    context,
+                    _MessageDraft(_subject.text.trim(), _body.text.trim()),
+                  )
+              : null,
+          icon: const Icon(Icons.send_outlined),
+          label: Text(widget.sendLabel),
+        ),
+      ],
     );
   }
 }
