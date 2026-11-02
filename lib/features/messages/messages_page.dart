@@ -408,8 +408,8 @@ class _MessageDraftDialogState extends State<_MessageDraftDialog> {
       title: Text(widget.title),
       content: SizedBox(
         width: 520,
-        height: (MediaQuery.sizeOf(context).height - 220)
-            .clamp(180.0, 520.0)
+        height: (MediaQuery.sizeOf(context).height - MediaQuery.viewInsetsOf(context).bottom - 220)
+            .clamp(140.0, 520.0)
             .toDouble(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
