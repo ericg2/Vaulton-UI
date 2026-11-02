@@ -13,6 +13,7 @@ import 'package:vaulton/features/settings/settings_page.dart';
 // tester.takeException() so overflows are caught.
 void main() {
   const viewports = [
+    (width: 568.0, height: 320.0, label: 'landscape phone'),
     (width: 320.0, height: 568.0, label: 'small phone'),
     (width: 390.0, height: 844.0, label: 'phone'),
     (width: 768.0, height: 900.0, label: 'tablet'),
