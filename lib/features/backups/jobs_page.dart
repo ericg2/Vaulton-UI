@@ -249,25 +249,49 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
   final _key = GlobalKey<CursorListState<Schedule>>();
   Vaulton get _v => ref.read(vaultonProvider);
 
+  Future<List<Point>> _loadAllPoints({required bool repos}) async {
+    final out = <Point>[];
+    String? cursor;
+    do {
+      final page = repos
+          ? await _v.repos(cursor: cursor, limit: 200)
+          : await _v.datas(cursor: cursor, limit: 200);
+      out.addAll(page.items);
+      cursor = page.hasMore ? page.nextCursor : null;
+    } while (cursor != null);
+    return out;
+  }
+
+  Future<List<Schedule>> _loadAllSchedules(String repoId) async {
+    final out = <Schedule>[];
+    String? cursor;
+    do {
+      final page = await _v.schedules(repoId: repoId, cursor: cursor, limit: 200);
+      out.addAll(page.items);
+      cursor = page.hasMore ? page.nextCursor : null;
+    } while (cursor != null);
+    return out;
+  }
+
   Future<void> _edit([Schedule? s, String? startMode, String? startRepoId]) async {
-    final repos = await guarded(context, () => _v.repos(limit: 200));
-    final datas = await guarded(context, () => _v.datas(limit: 200));
+    final repos = await guarded(context, () => _loadAllPoints(repos: true));
+    final datas = await guarded(context, () => _loadAllPoints(repos: false));
     if (repos == null || datas == null || !mounted) return;
-    if (repos.items.isEmpty) return toast(context, 'Create a backup vault first', error: true);
+    if (repos.isEmpty) return toast(context, 'Create a backup vault first', error: true);
     String repoName(Point p) => p.name;
-    final repoMap = {for (final r in repos.items) repoName(r): r};
-    final dataMap = {for (final d in datas.items) d.name: d};
+    final repoMap = {for (final r in repos) repoName(r): r};
+    final dataMap = {for (final d in datas) d.name: d};
     final deviceTz = await deviceTimeZone();
     if (!mounted) return;
     final isNew = s == null;
-    final curRepo = repos.items.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.items.first;
-    final curData = datas.items.where((d) => d.id == s?.dataId).firstOrNull;
+    final curRepo = repos.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.items.first;
+    final curData = datas.where((d) => d.id == s?.dataId).firstOrNull;
     final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
       if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
       if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean Up Snapshots', 'Repair'], initial: startMode ?? 'Backup'),
       if ((s == null && startMode == null) || s?.mode == 'backup') ...[
-        if (datas.items.isNotEmpty) FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
+        if (datas.isNotEmpty) FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
         FieldSpec('path', 'Folder to Back Up', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
       ],
       FieldSpec('cron', 'Schedule', kind: 'cron', initial: s?.cron ?? '0 2 * * *'),
@@ -309,8 +333,8 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
 
   /// After a backup schedule is created, suggest a cleanup schedule if the vault has none.
   Future<void> _remindCleanup(String repoId) async {
-    final existing = await _v.schedules(repoId: repoId, limit: 200);
-    if (!mounted || existing.items.any((x) => x.mode == 'retention')) return;
+    final existing = await _loadAllSchedules(repoId);
+    if (!mounted || existing.any((x) => x.mode == 'retention')) return;
     final go = await confirm(context, 'Add a Cleanup Schedule?',
         'Each backup adds a snapshot and nothing removes old ones. Without cleanup, this vault will eventually fill up and backups will fail.',
         ok: 'Set Up Cleanup Now');
