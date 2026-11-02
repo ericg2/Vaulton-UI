@@ -1360,17 +1360,55 @@ class _NewUserDialogState extends State<_NewUserDialog> {
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
                 decoration: const InputDecoration(
-                  labelText: 'Email Address',
+                  labelText: 'Email Address (Optional)',
                   prefixIcon: Icon(Icons.mail_outline),
                 ),
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (email.isNotEmpty &&
+                      !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _create,
+          icon: const Icon(Icons.person_add_alt_1),
+          label: const Text('Create User'),
+        ),
+      ],
+    );
+  }
+}
+).hasMatch(email)) {
+                    return 'Enter a valid email address.';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  if (value.trim().isEmpty && _sendWelcomeEmail) {
+                    setState(() => _sendWelcomeEmail = false);
+                  }
+                },
               ),
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Send Welcome Email'),
-                subtitle: const Text('Email the account details if an address is provided.'),
+                subtitle: Text(
+                  _email.text.trim().isEmpty
+                      ? 'Add an email address to enable this option.'
+                      : 'Send the account welcome message to this address.',
+                ),
                 value: _sendWelcomeEmail,
-                onChanged: (value) => setState(() => _sendWelcomeEmail = value),
+                onChanged: _email.text.trim().isEmpty
+                    ? null
+                    : (value) => setState(() => _sendWelcomeEmail = value),
               ),
             ],
           ),
