@@ -44,7 +44,7 @@ class PreviewPage extends ConsumerWidget {
       body: AsyncBody<Uint8List>(
         load: () => _load(ref),
         builder: (c, bytes, _) => isImage
-            ? InteractiveViewer(maxScale: 8, child: Center(child: Image.memory(bytes, errorBuilder: (_, _, _) => const EmptyView('Cannot display this image', icon: Icons.broken_image))))
+            ? InteractiveViewer(maxScale: 8, child: Center(child: Image.memory(bytes, errorBuilder: (_, _, _) => const EmptyView('Cannot display this image.', icon: Icons.broken_image))))
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: SelectableText(utf8.decode(bytes, allowMalformed: true), style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),

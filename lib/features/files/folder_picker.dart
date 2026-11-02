@@ -176,7 +176,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
                       : _dirs == null
                           ? const Center(child: CircularProgressIndicator())
                           : _dirs!.isEmpty
-                              ? const EmptyView('No subfolders', icon: Icons.folder_open)
+                              ? const EmptyView('No subfolders.', icon: Icons.folder_open)
                               : ListView(children: [
                                   for (final d in _dirs!)
                                     ListTile(
