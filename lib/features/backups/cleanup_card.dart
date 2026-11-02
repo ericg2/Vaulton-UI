@@ -36,10 +36,17 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
 
   Future<void> reload() async {
     try {
-      final page = await ref.read(vaultonProvider).schedules(repoId: widget.repoId, limit: 200);
+      final v = ref.read(vaultonProvider);
+      final schedules = <Schedule>[];
+      String? cursor;
+      do {
+        final page = await v.schedules(repoId: widget.repoId, cursor: cursor, limit: 200);
+        schedules.addAll(page.items);
+        cursor = page.hasMore ? page.nextCursor : null;
+      } while (cursor != null);
       if (!mounted) return;
       setState(() {
-        _schedule = page.items.where((s) => s.mode == 'retention').firstOrNull;
+        _schedule = schedules.where((s) => s.mode == 'retention').firstOrNull;
         _loaded = true;
         _failed = false;
       });
