@@ -577,6 +577,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   TextField(
                     controller: name,
                     textCapitalization: TextCapitalization.words,
+                    onChanged: (_) => setSheetState(() {}),
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'e.g. Home Storage',
@@ -692,7 +693,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     }
 
     final available = toInt(detected?['availableBytes']);
-    final total = toInt(detected?['capacityBytes']);
     int? maxBytes;
     if (selectedScheme == 'fs' && available > 0) {
       maxBytes = await _capacityDialog(
