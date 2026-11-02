@@ -895,9 +895,45 @@ class _ApiTokensDialogState extends State<_ApiTokensDialog> {
       );
     }
 
+    final maxHeight = (MediaQuery.sizeOf(context).height -
+            MediaQuery.viewInsetsOf(context).bottom -
+            200)
+        .clamp(160.0, 560.0)
+        .toDouble();
     return AlertDialog(
+      insetPadding: const EdgeInsets.all(16),
       title: const Text('API Tokens'),
-      content: SizedBox(width: 480, child: body),
+      content: SizedBox(
+        width: 500,
+        height: maxHeight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.key_outlined),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'API tokens let scripts and integrations access Vaulton. Give each token only the permissions it needs, and revoke it if it is no longer used.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(child: body),
+          ],
+        ),
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
