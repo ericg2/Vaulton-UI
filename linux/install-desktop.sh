@@ -29,4 +29,10 @@ if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$data_home/applications" || true
 fi
 
+if command -v kbuildsycoca6 >/dev/null 2>&1; then
+  kbuildsycoca6 --noincremental || true
+elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+  kbuildsycoca5 --noincremental || true
+fi
+
 printf 'Vaulton is registered in your application menu. Restart it to refresh the window icon.\n'

@@ -84,9 +84,8 @@ void main() {
     ) async {
       setViewport(tester, vp.width, vp.height);
 
-      // Mirrors DashboardPage: LayoutBuilder decides the column count and each
-      // stat card gets an exact width inside a Wrap, so narrow screens wrap to
-      // two columns instead of overflowing.
+      // Mirrors DashboardPage: use one column on narrow phones, two on
+      // medium screens, and three on wide screens to keep status text readable.
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -95,7 +94,7 @@ void main() {
               child: LayoutBuilder(
                 builder: (ctx, c) {
                   const count = 4;
-                  final cols = c.maxWidth > 700 ? count : 2;
+                  final cols = c.maxWidth >= 900 ? 3 : (c.maxWidth >= 520 ? 2 : 1);
                   final w = (c.maxWidth - 10 * (cols - 1)) / cols;
                   return Wrap(
                     spacing: 10,
