@@ -675,7 +675,16 @@ class _TwoFactorDialogState extends State<_TwoFactorDialog> {
 
     return AlertDialog(
       title: const Text('Two-Factor Authentication'),
-      content: SizedBox(width: 420, child: body),
+      insetPadding: const EdgeInsets.all(16),
+      content: SizedBox(
+        width: 420,
+        height: (MediaQuery.sizeOf(context).height -
+                MediaQuery.viewInsetsOf(context).bottom -
+                200)
+            .clamp(120.0, 520.0)
+            .toDouble(),
+        child: SingleChildScrollView(child: body),
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
