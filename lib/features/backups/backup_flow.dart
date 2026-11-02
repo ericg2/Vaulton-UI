@@ -11,18 +11,39 @@ import 'job_widgets.dart';
 /// when launching from a card; anything left out is chosen in the dialog.
 Future<RepoJob?> startBackup(BuildContext context, WidgetRef ref, {Point? data, Point? repo}) async {
   final v = ref.read(vaultonProvider);
-  final datas = await guarded(context, () => v.datas(limit: 200));
-  final repos = await guarded(context, () => v.repos(limit: 200));
-  if (datas == null || repos == null || !context.mounted) return null;
-  if (datas.items.isEmpty) {
+  final loaded = await guarded(context, () async {
+    Future<List<Point>> all(Future<Paged<Point>> Function(String?) fetch) async {
+      final out = <Point>[];
+      String? cursor;
+      do {
+        final page = await fetch(cursor);
+        out.addAll(page.items);
+        cursor = page.hasMore ? page.nextCursor : null;
+      } while (cursor != null);
+      return out;
+    }
+
+    return (
+      datas: await all((cursor) => v.datas(cursor: cursor, limit: 200)),
+      repos: await all((cursor) => v.repos(cursor: cursor, limit: 200)),
+    );
+  });
+  if (loaded == null || !context.mounted) return null;
+  if (loaded.datas.isEmpty) {
     toast(context, 'Create a data folder in Storage first.', error: true);
     return null;
   }
-  if (repos.isEmpty) {
+  if (loaded.repos.isEmpty) {
     toast(context, 'Create a backup vault in Storage first.', error: true);
     return null;
   }
-  final req = await showBackupSheet(context, datas: datas, repos: repos, data: data, repo: repo);
+  final req = await showBackupSheet(
+    context,
+    datas: loaded.datas,
+    repos: loaded.repos,
+    data: data,
+    repo: repo,
+  );
   if (req == null || !context.mounted) return null;
   final j = await guarded(context, () => v.backup(req.repo.id, req.toBody()));
   if (j != null) {
