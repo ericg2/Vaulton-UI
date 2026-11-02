@@ -98,7 +98,10 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         'Wake Before Job (Minutes)',
         initial: '$_wakeBeforeMinutes',
       ),
-    ], ok: 'Save');
+    ],
+      ok: 'Save Settings',
+      intro: 'Configure the Cloudflare Worker connection and how early Vaulton should wake the server before scheduled jobs.',
+    );
 
     if (f == null || !mounted) return;
     final minutes = int.tryParse(f['minutes'] ?? '');
@@ -142,11 +145,32 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
           title: const Text('Automatic Power Management'),
           content: SizedBox(
             width: 440,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (MediaQuery.sizeOf(context).height -
+                        MediaQuery.viewInsetsOf(context).bottom -
+                        180)
+                    .clamp(140.0, 560.0)
+                    .toDouble(),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Vaulton powers down the host only when it is idle and no scheduled job is about to start. The host agent performs the action.',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Power Action', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Enable Automatic Power Management'),
@@ -172,7 +196,9 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                     onChanged: (v) =>
                         setDialogState(() => action = v ?? 'Sleep'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  Text('Idle & Schedule Protection', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: idle,
                     keyboardType: TextInputType.number,
@@ -192,7 +218,9 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                       helperText: 'A scheduled job inside this window prevents power down.',
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  Text('Host Agent Security', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
                   LayoutBuilder(
                     builder: (context, c) {
                       final narrow = c.maxWidth < 360;
@@ -257,7 +285,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                   const Text(
                     'The host agent runs outside Docker and performs the actual power action. Keep the agent key secret.',
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
