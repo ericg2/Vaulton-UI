@@ -568,7 +568,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(n.isDir ? Icons.folder_outlined : iconFor(n.name)),
+                    Icon(n.isDir ? Icons.folder_outlined : iconFor(n)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
