@@ -348,6 +348,13 @@ class Vaulton {
       Paged.from(await _req('GET', '/admin/events', q: _pg(cursor, limit, 'Desc', {'user': user})), (j) => j);
   Future<void> testEmail() => _req('POST', '/admin/email/test');
 
+  Future<Json> emailSettings() async => toJson(await _req('GET', '/admin/settings/email'));
+  Future<Json> saveEmailSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/email', body: body));
+  Future<Json> rateLimitSettings() async => toJson(await _req('GET', '/admin/settings/rate-limits'));
+  Future<Json> saveRateLimitSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/rate-limits', body: body));
+  Future<Json> operationalLimits() async => toJson(await _req('GET', '/admin/settings/limits'));
+  Future<Json> saveOperationalLimits(Json body) async => toJson(await _req('PUT', '/admin/settings/limits', body: body));
+
   Future<Json> wolSettings() async => toJson(await _req('GET', '/admin/settings/wol'));
   Future<Json> saveWolSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/wol', body: body));
   Future<Json> powerSettings() async => toJson(await _req('GET', '/admin/settings/power'));
