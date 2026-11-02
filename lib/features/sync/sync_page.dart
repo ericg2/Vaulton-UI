@@ -1196,7 +1196,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   const Card(
                     child: Padding(
                       padding: EdgeInsets.all(20),
-                      child: EmptyView('No folders added.', icon: Icons.sync),
+                      child: EmptyView(
+                        'No folders added.',
+                        icon: Icons.sync,
+                        hint: kIsWeb
+                            ? 'Folder sync is available in the desktop and mobile apps.'
+                            : 'Add a folder pair to choose a folder on this device and where it should sync in Vaulton storage.',
+                      ),
                     ),
                   ),
               for (final p in _profiles) _profileCard(p),
