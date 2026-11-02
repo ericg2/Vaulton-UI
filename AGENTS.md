@@ -76,6 +76,15 @@ Consistently apply these rules to every user-facing string, including buttons, p
 - Review every card and screen for information density: remove repeated labels, redundant descriptions, and decorative metadata; group related values; use concise summaries; and make additional detail available on demand. Do not solve clutter by hiding information users need to make a safe decision.
 - Keep authentication flows compact and focused. For example, changing a password from the login screen should normally navigate to a dedicated Change Password screen (or a similarly focused full-screen flow) rather than expanding a large form inline and making the login screen excessively tall. Preserve a clear way to return to login and handle validation, loading, and errors within that flow.
 
+## Navigation and Discoverability
+
+- Make core features and common actions easy to find. Do not bury important functionality several levels deep in nested menus, overflow menus, or unrelated settings pages.
+- Use clear, predictable navigation with a shallow information hierarchy. Prefer a direct destination, visible tab, clearly named section, or contextual action over making users guess where a feature lives.
+- Put frequently used actions where users naturally need them, close to the relevant content or workflow. Keep rare, advanced, or destructive actions secondary without making routine tasks difficult to reach.
+- Use menus for genuinely secondary or occasional actions, not as the default hiding place for major features. Avoid excessive nesting and avoid duplicating the same action in multiple places without a clear usability reason.
+- Keep navigation labels understandable to inexperienced users. Group related features under intuitive names, make the current location clear, and provide a straightforward way back. Do not make users learn internal technical terminology to find ordinary tasks.
+- Balance discoverability with visual simplicity: make important destinations visible without filling every screen with buttons. Review common user journeys and check that key tasks can be reached in a small, predictable number of steps.
+
 ## Task-Specific Screens and Workflows
 
 - Prefer purpose-built, task-specific screens and interaction flows over generic placeholder forms. Do not reduce a meaningful product action to a lone text box, a few unstructured fields, or a bare submit button when the task has domain-specific choices, configuration, review, or lifecycle steps.
