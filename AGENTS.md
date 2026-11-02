@@ -72,6 +72,13 @@ Consistently apply these rules to every user-facing string, including buttons, p
 - Sync should clearly communicate source and destination, scan and transfer phases, cancellation, and errors. Preserve the configured mirror behavior, including the user's delete option, and warn clearly when selecting a root could affect the entire point.
 - Keep UI strings short enough to fit supported layouts. Verify that text scaling, localization-ready layouts, and small screens do not cause avoidable overflow.
 
+## Task-Specific Screens and Workflows
+
+- Prefer purpose-built, task-specific screens and interaction flows over generic placeholder forms. Do not reduce a meaningful product action to a lone text box, a few unstructured fields, or a bare submit button when the task has domain-specific choices, configuration, review, or lifecycle steps.
+- Design each action around what the user is trying to accomplish. Use appropriate controls such as permission checklists, scope selectors, toggles, searchable lists, summaries, validation, and review/confirmation steps when they make the task clearer and safer. Explain options in plain language and show the consequences of the selected choices.
+- For example, API token creation should be a dedicated, understandable flow: let the user name the token, explicitly choose its permissions/scopes, explain what those permissions allow, apply least-privilege defaults, review the selection, and then create the token. Present the generated secret clearly with a copy action and a warning that it may only be shown once, where that matches backend behavior. Do not substitute a generic token text box for this workflow.
+- Keep these experiences focused rather than adding complexity for its own sake. A simple form is appropriate when the task genuinely needs only a small amount of information; use richer screens and controls when the underlying action warrants them. Reuse existing design-system components and maintain responsive, accessible layouts.
+
 ## Safety and Data Integrity
 
 - Treat deletion, restore, overwrite, reset, and cleanup operations as consequential. Make the scope clear and require confirmation when needed.
