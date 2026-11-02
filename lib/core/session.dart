@@ -68,8 +68,17 @@ class SessionStore {
     expiresAt = e == null ? null : DateTime.fromMillisecondsSinceEpoch(e);
   }
 
+  static bool isSameServer(String first, String second) =>
+      normalizeServerUrl(first) == normalizeServerUrl(second);
+
   Future<void> setBaseUrl(String url) async {
-    baseUrl = normalizeUrl(url);
+    final next = normalizeUrl(url);
+    if (!isSameServer(baseUrl, next)) {
+      // Never send credentials from one server to another. This also prevents
+      // the refresh interceptor from posting an old refresh token to the new host.
+      await clear();
+    }
+    baseUrl = next;
     await _st.write(key: 'baseUrl', value: baseUrl);
   }
 
@@ -129,6 +138,7 @@ class SessionStore {
     if (refreshToken != refresh) return;
     accessToken = null;
     refreshToken = null;
+    userName = null;
     expiresAt = null;
     for (final k in ['access', 'refresh', 'exp', 'user']) {
       await _st.delete(key: k);
@@ -138,6 +148,7 @@ class SessionStore {
   Future<void> clear() async {
     accessToken = null;
     refreshToken = null;
+    userName = null;
     expiresAt = null;
     // Wake-on-LAN settings must remain available on the signed-out login screen.
     for (final k in ['access', 'refresh', 'exp', 'user']) {
