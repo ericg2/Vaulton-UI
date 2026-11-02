@@ -71,7 +71,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: Size(0, isWin || isLinux ? 40 : 44),
+        minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         iconSize: 18,
         shape: isWin ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)) : null,
@@ -79,7 +79,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        minimumSize: Size(0, isWin || isLinux ? 40 : 44),
+        minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         iconSize: 18,
         splashFactory: InkRipple.splashFactory,

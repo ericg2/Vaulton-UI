@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/session.dart';
 import '../../core/wake.dart';
 import '../../core/widgets/vaulton_logo.dart';
+import 'temporary_password_change_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -26,11 +29,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
   final _port = TextEditingController();
   final _user = TextEditingController();
   final _pass = TextEditingController();
-  final _new = TextEditingController();
-  final _new2 = TextEditingController();
   final _otp = TextEditingController();
   final _key = GlobalKey<FormState>();
-  bool _busy = false, _temp = false, _show = false, _rememberPassword = false;
+  bool _busy = false, _show = false, _rememberPassword = false;
   bool _needsOtp = false;
   int _attemptGeneration = 0;
   CancelToken? _attemptCancelToken;
@@ -43,7 +44,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
   String? _previousPassword;
   bool _previousEditServer = false;
   String _busyLabel = 'Signing In…';
-  String? _pwTitle;
   String? _error;
 
   @override
@@ -51,7 +51,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     _attemptCancelToken?.cancel('Login screen closed');
     _breath.dispose();
     _passFocus.dispose();
-    for (final c in [_host, _port, _user, _pass, _new, _new2, _otp]) {
+    for (final c in [_host, _port, _user, _pass, _otp]) {
       c.dispose();
     }
     super.dispose();
@@ -144,7 +144,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
       _setServerUrl(a.url);
       _user.text = a.user;
       _pass.clear();
-      _temp = false;
       _needsOtp = false;
       _otp.clear();
       _error = null;
@@ -166,7 +165,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
       _port.clear();
       _user.clear();
       _pass.clear();
-      _temp = false;
       _needsOtp = false;
       _otp.clear();
       _error = null;
@@ -185,7 +183,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
       _pass.text = _previousPassword ?? '';
       _editServer = _previousEditServer;
       _addingServer = false;
-      _temp = false;
       _needsOtp = false;
       _otp.clear();
       _error = null;
@@ -426,13 +423,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
     try {
       final username = _user.text.trim();
       final url = _serverUrl();
-      final password = _temp ? _new.text : _pass.text;
+      final password = _pass.text;
       final remember = _rememberPassword;
       // Set the target URL before checking readiness so automatic wake targets the
       // address entered on this screen, not a previously saved server.
       await session.setBaseUrl(url);
       if (generation != _attemptGeneration || cancelToken.isCancelled) return;
-      if (!_temp && session.hasWakeConfigFor(url)) {
+      if (session.hasWakeConfigFor(url)) {
         setState(() => _busyLabel = 'Waking Server…');
         final ready = await WakeService.ensureReady(
           ApiClient(session),
@@ -455,7 +452,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
         url,
         username,
         _pass.text,
-        newPassword: _temp ? _new.text : null,
         twoFactorCode: _needsOtp ? _otp.text.trim() : null,
         cancelToken: cancelToken,
       );
@@ -473,12 +469,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
         return;
       }
       final ex = ApiException.from(e);
+      final text = '${ex.title ?? ''} ${ex.message}'.toLowerCase();
+      final passwordChangeRequired =
+          ex.status == 403 && text.contains('password');
       setState(() {
-        final text = '${ex.title ?? ''} ${ex.message}'.toLowerCase();
-        if (ex.status == 403 && text.contains('password')) {
-          // The server wants a permanent password before it will sign this account in.
-          _temp = true;
-          _pwTitle = 'Password Change Required';
+        if (passwordChangeRequired) {
           _error = null;
         } else if (ex.status == 403 && text.contains('two-factor')) {
           // The password is correct; ask for the authenticator or recovery code.
@@ -490,6 +485,29 @@ class _LoginPageState extends ConsumerState<LoginPage>
           _error = ex.message;
         }
       });
+      if (passwordChangeRequired) {
+        final username = _user.text.trim();
+        final url = _serverUrl();
+        final temporaryPassword = _pass.text;
+        final remember = _rememberPassword;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          unawaited(
+            Navigator.of(context)
+                .push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TemporaryPasswordChangePage(
+                      username: username,
+                      serverUrl: url,
+                      temporaryPassword: temporaryPassword,
+                      rememberPassword: remember,
+                    ),
+                  ),
+                )
+                .then<void>((_) {}),
+          );
+        });
+      }
     } finally {
       if (generation == _attemptGeneration) {
         _attemptCancelToken = null;
@@ -847,14 +865,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               focusNode: _passFocus,
                               obscureText: !_show,
                               autofillHints: const [AutofillHints.password],
-                              textInputAction: _temp
-                                  ? TextInputAction.next
-                                  : TextInputAction.done,
-                              onFieldSubmitted: (_) => _temp ? null : _submit(),
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _submit(),
                               decoration: InputDecoration(
-                                labelText: _temp
-                                    ? 'Temporary Password'
-                                    : 'Password',
+                                labelText: 'Password',
                                 prefixIcon: const Icon(Icons.key),
                                 suffixIcon: IconButton(
                                   tooltip: _show
@@ -901,78 +915,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                             ? 'Enter your authentication code.'
                                             : null,
                                       ),
-                                    ),
-                            ),
-                            // Password-change section slides open when the server asks for it.
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 320),
-                              curve: Curves.easeOutCubic,
-                              alignment: Alignment.topCenter,
-                              child: !_temp
-                                  ? const SizedBox(width: double.infinity)
-                                  : Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        _banner(
-                                          cs,
-                                          Icons.lock_reset,
-                                          cs.tertiaryContainer,
-                                          cs.onTertiaryContainer,
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                _pwTitle ??
-                                                    'Password Change Required',
-                                                style: t.titleSmall?.copyWith(
-                                                  color: cs.onTertiaryContainer,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Enter the temporary password above, then choose a permanent one.',
-                                                style: t.bodySmall?.copyWith(
-                                                  color: cs.onTertiaryContainer,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          margin: const EdgeInsets.only(
-                                            top: 12,
-                                            bottom: 12,
-                                          ),
-                                        ),
-                                        TextFormField(
-                                          controller: _new,
-                                          obscureText: !_show,
-                                          textInputAction: TextInputAction.next,
-                                          decoration: const InputDecoration(
-                                            labelText: 'New Password',
-                                            prefixIcon: Icon(Icons.password),
-                                            helperText:
-                                                'At least 8 characters.',
-                                          ),
-                                          validator: (v) =>
-                                              (v == null || v.length < 8)
-                                              ? 'At least 8 characters.'
-                                              : null,
-                                        ),
-                                        gap,
-                                        TextFormField(
-                                          controller: _new2,
-                                          obscureText: !_show,
-                                          textInputAction: TextInputAction.done,
-                                          onFieldSubmitted: (_) => _submit(),
-                                          decoration: const InputDecoration(
-                                            labelText: 'Repeat New Password',
-                                            prefixIcon: Icon(Icons.password),
-                                          ),
-                                          validator: (v) => v != _new.text
-                                              ? 'Passwords do not match.'
-                                              : null,
-                                        ),
-                                      ],
                                     ),
                             ),
                             CheckboxListTile(
@@ -1033,12 +975,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                             Text(_busyLabel),
                                           ],
                                         )
-                                      : Text(
-                                          _temp
-                                              ? 'Change Password and Sign In'
-                                              : 'Sign In',
-                                          key: ValueKey(_temp),
-                                        ),
+                                      : const Text('Sign In', key: ValueKey('sign-in')),
                                 ),
                               ),
                             ),
