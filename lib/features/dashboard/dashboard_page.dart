@@ -499,7 +499,10 @@ class _HealthRow extends StatelessWidget {
       title: Row(children: [
         Expanded(child: Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall)),
         const SizedBox(width: 8),
-        Text(status, style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+        Flexible(
+          child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+        ),
       ]),
       subtitle: details.isEmpty ? null : Text(details, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
     );

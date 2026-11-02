@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-bundle_dir="$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")" && pwd -P)"
-data_home="\${XDG_DATA_HOME:-$HOME/.local/share}"
+bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 icon_source="$bundle_dir/share/icons/hicolor/scalable/apps/com.ericg2.vaulton.svg"
 
 if [[ ! -x "$bundle_dir/vaulton" || ! -f "$icon_source" ]]; then
