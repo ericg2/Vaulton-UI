@@ -312,8 +312,12 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
         if (req == null || !mounted) return;
         policy = req.policy;
       }
+      final selectedData = dataMap[f['data']];
+      if (mode == 'backup' && selectedData == null) {
+        return toast(context, 'Create a data folder before scheduling a backup.', error: true);
+      }
       final Map<String, dynamic> opts = mode == 'backup'
-          ? {'mode': 'backup', 'dataId': dataMap[f['data']]!.id, 'path': f['path']!.isEmpty ? '/' : f['path']}
+          ? {'mode': 'backup', 'dataId': selectedData!.id, 'path': f['path']!.isEmpty ? '/' : f['path']}
           : (mode == 'retention' ? {'mode': 'retention', 'policy': policy, 'dryRun': false} : {'mode': 'check'});
       if (s == null) {
         await _v.createSchedule({
