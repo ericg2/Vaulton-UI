@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,6 +29,7 @@ void main() {
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
   });
+
   testWidgets('renders the shared Vaulton shield logo without errors', (
     tester,
   ) async {
@@ -40,6 +42,5 @@ void main() {
     expect(find.byType(VaultonLogo), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
 }
 
