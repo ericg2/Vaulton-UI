@@ -640,7 +640,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
             ? 'Add a location first. A location is the disk, network share or cloud account where your files and backups will live.'
             : 'Ask an administrator to share a location with you.',
         emptyIcon: Icons.storage_outlined,
-        autoRefresh: const Duration(seconds: 8),
+        autoRefresh: const Duration(seconds: 30),
         fetch: (c) => _v.roots(cursor: c),
         itemBuilder: (ctx, r, i) {
           final allocated = r.allocatedBytes;
