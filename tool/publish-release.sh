@@ -144,8 +144,8 @@ cp "$APK" "$STAGE/Vaulton-Android.apk"
 
 git add -- "$PUBSPEC" pubspec.lock "$SETTINGS"
 git commit -m "Prepare Vaulton UI release $TAG"
-git push origin main
 COMMITTED=1
+git push origin main
 
 RELEASE_ARGS=(release create "$TAG" "$STAGE/Vaulton-Android.apk" "$STAGE/Vaulton-Android.apk.sha256" --title "Vaulton $VERSION" --target main)
 if [[ -n "$NOTES" ]]; then
