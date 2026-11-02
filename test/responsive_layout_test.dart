@@ -530,10 +530,10 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Settings'), findsWidgets);
-      // Section headers render uppercased (see Section in core/widgets.dart).
+      // Section headers use the app's consistent Title Case typography.
       // Short viewports virtualize the ListView, so scroll each section into
       // view: this also proves every section fits without overflow.
-      for (final section in ['APPEARANCE', 'TRANSFERS', 'SECURITY', 'ABOUT']) {
+      for (final section in ['Appearance', 'Transfers', 'Security', 'About']) {
         await tester.scrollUntilVisible(find.text(section), 200);
         await tester.pump();
         expect(tester.takeException(), isNull);
