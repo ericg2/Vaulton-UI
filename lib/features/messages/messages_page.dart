@@ -54,8 +54,8 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
             insetPadding: const EdgeInsets.all(16),
             content: SizedBox(
               width: double.maxFinite,
-              height: (MediaQuery.sizeOf(ctx).height * 0.6)
-                  .clamp(260.0, 520.0)
+              height: (MediaQuery.sizeOf(ctx).height - 200)
+                  .clamp(120.0, 520.0)
                   .toDouble(),
               child: Column(
                 children: [
