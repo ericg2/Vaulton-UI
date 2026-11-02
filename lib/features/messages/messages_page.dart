@@ -167,6 +167,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     );
     if (n != null && mounted) {
       toast(context, 'Delivered to $n user${n == 1 ? '' : 's'}.');
+      _refreshAll();
     }
   }
 
