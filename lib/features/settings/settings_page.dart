@@ -917,7 +917,9 @@ class _CreateApiTokenDialogState extends State<_CreateApiTokenDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final maxHeight = (MediaQuery.sizeOf(context).height - 180)
+    final maxHeight = (MediaQuery.sizeOf(context).height -
+            MediaQuery.viewInsetsOf(context).bottom -
+            180)
         .clamp(120.0, 600.0)
         .toDouble();
 
