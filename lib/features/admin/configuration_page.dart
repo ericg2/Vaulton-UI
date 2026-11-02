@@ -256,9 +256,10 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     final freeBytes = number('freeBytes'), alert = number('alertInterval');
     final backupInterval = number('backupInterval'), backupRetain = number('backupRetain');
     final backupDelay = number('backupDelay'), auditRetention = number('auditRetention');
+    final accessTokenMinutes = number('accessTokenMinutes'), refreshTokenDays = number('refreshTokenDays');
     final freePercent = double.tryParse(f['freePercent'] ?? '');
     if ([receive, send, chunk, poll, sync, timeout, freeBytes, alert, backupInterval,
-      backupRetain, backupDelay, auditRetention].any((v) => v == null) || freePercent == null) {
+      backupRetain, backupDelay, auditRetention, accessTokenMinutes, refreshTokenDays].any((v) => v == null) || freePercent == null) {
       toast(context, 'Enter valid numeric values for all server settings.', error: true);
       return;
     }
@@ -281,8 +282,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       'knownProxies': (f['knownProxies'] ?? '').split(',').map((x) => x.trim()).where((x) => x.isNotEmpty).toList(),
       'exposeOpenApi': f['exposeOpenApi'] == 'true',
       'smbEnabled': f['smbEnabled'] == 'true', 'smbBindAddress': f['smbBindAddress'],
-      'accessTokenMinutes': int.tryParse(f['accessTokenMinutes'] ?? '') ?? 30,
-      'refreshTokenDays': int.tryParse(f['refreshTokenDays'] ?? '') ?? 14,
+      'accessTokenMinutes': accessTokenMinutes!,
+      'refreshTokenDays': refreshTokenDays!,
     }));
     if (saved == null || !mounted) return;
     setState(() => _startup = saved);
