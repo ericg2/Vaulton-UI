@@ -345,7 +345,7 @@ class Section extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(title,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.primary, letterSpacing: 1)),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
         ),
         ...children,
       ]);
