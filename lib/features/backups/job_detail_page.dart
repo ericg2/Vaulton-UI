@@ -51,7 +51,10 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     super.initState();
     _refresh();
     _timer = Timer.periodic(const Duration(seconds: 2), (_) {
-      if (_job == null || _job!.active) _refresh();
+      if (TickerMode.valuesOf(context).enabled &&
+          (_job == null || _job!.active)) {
+        _refresh();
+      }
     });
   }
 
