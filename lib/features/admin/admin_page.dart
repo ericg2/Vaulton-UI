@@ -356,48 +356,96 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
     if (all == null || !mounted) return;
     final available = all.where((s) => s.name != 'Users.List').toList();
     final chosen = {...u.scopes};
+    var search = '';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) => AlertDialog(
-          title: Text('Permissions for ${u.userName}'),
-          insetPadding: const EdgeInsets.all(16),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: (MediaQuery.sizeOf(ctx).height - 200)
-                .clamp(120.0, 520.0)
-                .toDouble(),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                for (final s in available)
-                  CheckboxListTile(
-                    title: Text(s.name),
-                    subtitle: Text(s.description),
-                    value: chosen.contains(s.name),
-                    onChanged: (v) => set(
-                      () => v! ? chosen.add(s.name) : chosen.remove(s.name),
+        builder: (ctx, set) {
+          final q = search.toLowerCase();
+          final visible = available.where((scope) =>
+              scope.name.toLowerCase().contains(q) ||
+              scope.description.toLowerCase().contains(q)).toList();
+          return AlertDialog(
+            title: Text('Permissions for ${u.userName}'),
+            insetPadding: const EdgeInsets.all(16),
+            content: SizedBox(
+              width: 520,
+              height: (MediaQuery.sizeOf(ctx).height - 200)
+                  .clamp(180.0, 560.0)
+                  .toDouble(),
+              child: Column(
+                children: [
+                  TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Find a permission',
                     ),
+                    onChanged: (value) => set(() => search = value),
                   ),
-              ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${chosen.length} of ${available.length} permissions selected',
+                          style: Theme.of(ctx).textTheme.bodySmall,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => set(chosen.clear),
+                        child: const Text('Clear all'),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: visible.isEmpty
+                        ? const Center(child: Text('No matching permissions.'))
+                        : ListView.builder(
+                            itemCount: visible.length,
+                            itemBuilder: (context, index) {
+                              final scope = visible[index];
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                title: Text(scope.name),
+                                subtitle: Text(scope.description),
+                                value: chosen.contains(scope.name),
+                                onChanged: (value) => set(
+                                  () => value == true
+                                      ? chosen.add(scope.name)
+                                      : chosen.remove(scope.name),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(ctx, true),
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Save Permissions'),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (ok != true) return;
-    await guarded(context, () => _v.setScopes(u.userName, chosen.toList()));
+    final saved = await guarded(
+      context,
+      () => _v.setScopes(u.userName, chosen.toList()),
+    );
+    if (saved == null || !mounted) return;
     _key.currentState?.refresh();
+    toast(context, 'Permissions updated.');
   }
 
   @override
