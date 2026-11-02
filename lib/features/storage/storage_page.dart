@@ -694,36 +694,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     ),
   );
 
-  Future<void> _create() async {
-    final details = await formDialog(context, 'New Location', [
-      const FieldSpec('name', 'Name', required: true),
-      const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
-      const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
-    ], ok: 'Choose Storage',
-      intro: 'Name this location and choose what it can store.');
-    if (details == null || !mounted) return;
-    final scheme = await _chooseSourceType();
-    if (scheme == null || !mounted) return;
-    final src = await _sourceForm(scheme, null);
-    if (src == null || !mounted) return;
-    Json? detected;
-    if (scheme == 'fs') {
-      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
-      if (detected == null || !mounted) return;
-    }
-    final maxBytes = await _capacityDialog(currentBytes: toInt(detected?['availableBytes']),
-      detected: detected, isLocal: scheme == 'fs');
-    if (maxBytes == null || maxBytes <= 0 || !mounted) return;
-    final created = await guarded(context, () => _v.createRoot({
-      'name': details['name'], 'source': src, 'maxBytes': maxBytes,
-      'isDataAllowed': details['data'] == 'true', 'isRepoAllowed': details['repo'] == 'true',
-    }));
-    if (created != null) {
-      _key.currentState?.refresh();
-      if (mounted) toast(context, 'Location created.');
-    }
-  }
-
   Future<void> _edit(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
     if (!kSourceSchemas.containsKey(scheme)) return toast(context, 'Unknown connection type.', error: true);
