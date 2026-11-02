@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/api_client.dart';
 import '../../core/session.dart';
+import '../../core/util.dart';
 import '../../core/wake.dart';
 import '../../core/widgets/vaulton_logo.dart';
 import 'temporary_password_change_page.dart';
@@ -316,26 +317,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   _error = null;
                                 });
                               } else if (action == 'remove') {
-                                final remove = await showDialog<bool>(
-                                  context: ctx,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Remove Server?'),
-                                    content: Text(
-                                      'Remove ${_hostFor(e.key)} and its saved accounts from this device?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(dialogContext, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () =>
-                                            Navigator.pop(dialogContext, true),
-                                        child: const Text('Remove'),
-                                      ),
-                                    ],
-                                  ),
+                                final remove = await confirm(
+                                  ctx,
+                                  'Remove Server?',
+                                  'Remove ${_hostFor(e.key)} and its saved accounts from this device? You will need to enter the server details again to connect.',
+                                  ok: 'Remove Server',
+                                  danger: true,
                                 );
                                 if (remove == true) {
                                   for (final account in e.value) {
