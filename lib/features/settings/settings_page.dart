@@ -206,19 +206,22 @@ class SettingsPage extends ConsumerWidget {
                     context,
                     'Change Password',
                     [
-                    const FieldSpec(
-                      'cur',
-                      'Current Password',
-                      kind: 'secret',
-                      required: true,
-                    ),
-                    const FieldSpec(
-                      'new',
-                      'New Password',
-                      kind: 'secret',
-                      required: true,
-                    ),
-                  ]);
+                      const FieldSpec(
+                        'cur',
+                        'Current Password',
+                        kind: 'secret',
+                        required: true,
+                      ),
+                      const FieldSpec(
+                        'new',
+                        'New Password',
+                        kind: 'secret',
+                        required: true,
+                      ),
+                    ],
+                    ok: 'Change Password',
+                    intro: 'Choose a password with at least 8 characters. Changing it signs out your other sessions and also updates the password used for SMB shares.',
+                  );
                   if (f == null) return;
                   if (f['new']!.length < 8) {
                     return toast(
