@@ -364,7 +364,9 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
           insetPadding: const EdgeInsets.all(16),
           content: SizedBox(
             width: double.maxFinite,
-            height: MediaQuery.sizeOf(ctx).height * 0.6,
+            height: (MediaQuery.sizeOf(ctx).height - 200)
+                .clamp(120.0, 520.0)
+                .toDouble(),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
