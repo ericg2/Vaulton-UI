@@ -167,18 +167,76 @@ class _StatusTab extends ConsumerWidget {
                           icon: const Icon(Icons.info_outline),
                           onPressed: () => showDialog<void>(
                             context: ctx,
-                            builder: (dialogContext) => AlertDialog(
-                              title: const Text('Backend Error'),
-                              content: SingleChildScrollView(
-                                child: SelectableText(backendError),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dialogContext),
-                                  child: const Text('Close'),
+                            builder: (dialogContext) {
+                              final theme = Theme.of(dialogContext);
+                              final colors = theme.colorScheme;
+                              return AlertDialog(
+                                insetPadding: const EdgeInsets.all(16),
+                                title: const Text('Backend Diagnostics'),
+                                content: SizedBox(
+                                  width: 560,
+                                  height: (MediaQuery.sizeOf(dialogContext).height -
+                                          MediaQuery.viewInsetsOf(dialogContext).bottom -
+                                          220)
+                                      .clamp(160.0, 560.0)
+                                      .toDouble(),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: colors.errorContainer,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(Icons.warning_amber_rounded, color: colors.onErrorContainer),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                'The backend reported an error. Share these details with an administrator if you need help.',
+                                                style: TextStyle(color: colors.onErrorContainer),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Expanded(
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: colors.surfaceContainerHigh,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: SingleChildScrollView(
+                                            child: SelectableText(
+                                              backendError,
+                                              style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                                actions: [
+                                  TextButton.icon(
+                                    onPressed: () => copyText(dialogContext, backendError, 'Diagnostics copied.'),
+                                    icon: const Icon(Icons.copy_outlined),
+                                    label: const Text('Copy Details'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(dialogContext),
+                                    child: const Text('Close'),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                 ),
