@@ -576,14 +576,73 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
   void _info(Node n) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        final path = n.pathIn(_cur);
+        final theme = Theme.of(ctx);
+        Widget detail(String label, String value, {bool selectable = false}) =>
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  selectable
+                      ? SelectableText(value)
+                      : Text(value),
+                ],
+              ),
+            );
+        return AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
         title: Text(n.name, overflow: TextOverflow.ellipsis),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SelectableText('Path: ${n.pathIn(_cur)}'),
-          if (!n.isDir) Text('Size: ${fmtBytes(n.bytes)}'),
-          Text('Modified: ${n.modified == null ? 'Not available' : fmtDate(n.modified)}'),
-          Text('Snapshot: ${_snapLabel(_snap!)}'),
-        ]),
+        content: SizedBox(
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(n.isDir ? Icons.folder_outlined : iconFor(n.name)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        n.isDir ? 'Folder in this snapshot' : 'File in this snapshot',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              detail('Path', path, selectable: true),
+              if (!n.isDir) detail('Size', fmtBytes(n.bytes)),
+              detail('Modified', n.modified == null ? 'Not available' : fmtDate(n.modified)),
+              detail('Snapshot', _snapLabel(_snap!)),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => copyText(ctx, path, 'Path copied.'),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Copy Path'),
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
           OutlinedButton.icon(
@@ -603,7 +662,8 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
             },
           ),
         ],
-      ),
+        );
+      },
     );
   }
 
