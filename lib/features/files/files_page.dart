@@ -183,9 +183,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final pt = _point;
     if (pt == null) return;
     try {
-      final pg = await _v.datas(limit: 200);
-      final fresh = pg.items.where((x) => x.id == pt.id).firstOrNull;
-      if (fresh != null && mounted) setState(() => _point = fresh);
+      final fresh = await _v.data(pt.id);
+      if (mounted && _point?.id == pt.id) setState(() => _point = fresh);
     } catch (_) {}
   }
 
