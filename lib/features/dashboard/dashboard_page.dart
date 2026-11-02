@@ -132,6 +132,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget build(BuildContext context) {
     ref.listen(epochProvider, (_, _) => _load());
     final u = ref.watch(userProvider)!;
+    final canManageRoots = u.has(Scopes.rootsManage);
     final d = _data;
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
@@ -249,10 +250,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         const SizedBox(height: 8),
                         _SetupStep(
                           title: 'Create a Location',
-                          subtitle: 'Choose where Vaulton stores files and backups.',
+                          subtitle: canManageRoots
+                              ? 'Choose where Vaulton stores files and backups.'
+                              : 'Ask an administrator to add a location.',
                           complete: d.roots.isNotEmpty,
                           actionLabel: 'Set Up',
-                          onPressed: d.roots.isEmpty ? () => widget.onNavigate?.call('Locations') : null,
+                          onPressed: canManageRoots && d.roots.isEmpty
+                              ? () => widget.onNavigate?.call('Locations')
+                              : null,
                         ),
                         _SetupStep(
                           title: 'Create a Data Folder',

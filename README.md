@@ -63,6 +63,7 @@ Vaulton only shows management features your account is allowed to use. Your serv
 ## Helpful Notes
 
 - The app needs a running Vaulton server. It does not store or serve your files by itself.
+- On Linux, run `./install-desktop.sh` once from the extracted release bundle to register the app icon and application-menu entry. Relaunch Vaulton from the application menu on Wayland.
 - Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
 - Android background tasks are scheduled by the operating system. Battery-saving settings can delay photo backups and other background work.
