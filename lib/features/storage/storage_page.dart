@@ -217,7 +217,7 @@ const typeLabels = <String, String>{
   'webdav': 'WebDAV Server', 'pcloud': 'pCloud', 'alluxio': 'Alluxio',
   'cos': 'Cloud Object Storage', 'd1': 'Cloudflare D1', 'dbfs': 'Databricks File System',
 };
-String _sourceLabel(String scheme) => {"fs":"Local Disk","s3":"Amazon S3","azblob":"Azure Blob Storage","azdls":"Azure Data Lake Storage","azfile":"Azure Files","b2":"Backblaze B2","gcs":"Google Cloud Storage","gdrive":"Google Drive","onedrive":"Microsoft OneDrive","dropbox":"Dropbox","ftp":"FTP Server","webdav":"WebDAV Server","pcloud":"pCloud","alluxio":"Alluxio","cos":"Cloud Object Storage","d1":"Cloudflare D1","dbfs":"Databricks File System"}[scheme] ?? pretty(scheme);
+String _sourceLabel(String scheme) => typeLabels[scheme] ?? pretty(scheme);
 String _sourceDescription(String scheme) => {"fs":"Use a directory on the Vaulton server. Select a folder under /mnt.","s3":"Connect to an S3-compatible object storage service.","azblob":"Store files in an Azure Blob Storage container.","azdls":"Connect to an Azure Data Lake Storage filesystem.","azfile":"Connect to an Azure file share.","b2":"Connect to a Backblaze B2 bucket.","gcs":"Connect to a Google Cloud Storage bucket.","gdrive":"Connect to a Google Drive account.","onedrive":"Connect to a Microsoft OneDrive account.","dropbox":"Connect to a Dropbox account.","ftp":"Connect to an FTP server.","webdav":"Connect to a WebDAV server.","pcloud":"Connect to pCloud storage.","alluxio":"Connect to an Alluxio filesystem.","cos":"Connect to a compatible cloud object storage service.","d1":"Connect to a Cloudflare D1 database.","dbfs":"Connect to a Databricks File System."}[scheme] ?? 'Connect an external storage service.';
 
 class RootsTab extends ConsumerStatefulWidget {
