@@ -606,32 +606,56 @@ class _TwoFactorDialogState extends State<_TwoFactorDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Enter this secret in your authenticator app:'),
-          const SizedBox(height: 8),
-          SelectableText(
-            _secret!,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 18, letterSpacing: 1.5),
-          ),
-          const SizedBox(height: 8),
           Text(
-            _uri ?? '',
-            style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            '1. Open your authenticator app and add a new account.',
+            style: t.bodyMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+          Text(
+            '2. Enter this setup key, then type the six-digit code from the app.',
+            style: t.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SelectableText(
+              _secret!,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 18,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => copyText(context, _secret!, 'Setup key copied.'),
+              icon: const Icon(Icons.copy_outlined),
+              label: const Text('Copy Setup Key'),
+            ),
+          ),
           TextField(
             controller: _code,
             autofocus: true,
             keyboardType: TextInputType.number,
+            maxLength: 6,
             decoration: const InputDecoration(
               labelText: 'Six-digit code',
               prefixIcon: Icon(Icons.shield_outlined),
+              counterText: '',
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: _enable,
             icon: const Icon(Icons.check),
-            label: const Text('Enable Two-Factor'),
+            label: const Text('Verify and Enable'),
           ),
         ],
       );
