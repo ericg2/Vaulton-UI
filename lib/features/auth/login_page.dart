@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/api_client.dart';
 import '../../core/session.dart';
 import '../../core/wake.dart';
+import '../../core/widgets/vaulton_logo.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -770,11 +771,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ),
                                     child: child,
                                   ),
-                                  child: Icon(
-                                    Icons.lock_outline_rounded,
-                                    size: 22,
-                                    color: cs.onPrimaryContainer,
-                                  ),
+                                  child: const VaultonLogo(size: 44),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

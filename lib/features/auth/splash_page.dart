@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
+import '../../core/widgets/vaulton_logo.dart';
 
 /// Shown while a saved session is being verified on app start. It replaces the
 /// old behaviour of flashing the login form before jumping to the home screen.
@@ -60,7 +61,7 @@ class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProvid
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(shape: BoxShape.circle, color: cs.primaryContainer),
-                  child: Icon(Icons.lock_outline_rounded, size: 38, color: cs.onPrimaryContainer),
+                  child: const VaultonLogo(size: 72),
                 ),
               ]),
             ),

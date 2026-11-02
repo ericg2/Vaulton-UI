@@ -1,107 +1,31 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ericg2/Vaulton/main/assets/vaulton-mark.svg" alt="Vaulton" width="96" height="96">
+  <img src="assets/branding/vaulton-mark.svg" alt="Vaulton shield logo" width="112">
 </p>
 
 <h1 align="center">Vaulton</h1>
-<p align="center"><strong>Your private cloud. Your control.</strong></p>
-<p align="center">The companion app for your own Vaulton server.</p>
+<p align="center"><strong>Your files. Your backups. Your server.</strong></p>
+<p align="center">A simple way to manage your files and keep your data protected on a server you control.</p>
 <p align="center">
-  <a href="https://github.com/ericg2/Vaulton/releases">Download Vaulton</a> ·
-  <a href="https://github.com/ericg2/Vaulton">Server and installation guide</a>
+  <a href="https://github.com/ericg2/Vaulton-UI/releases">Download the App</a> ·
+  <a href="https://github.com/ericg2/Vaulton">Vaulton Server</a> ·
+  <a href="https://github.com/ericg2/Vaulton-UI/issues">Get Help</a>
 </p>
 
-Vaulton brings your files, backups, and shared storage together on Android, Windows, and Linux, with a web client also available. Connect to a server you control and manage your data from the devices you use every day.
+Vaulton gives you one place to browse files, manage backups, keep folders in sync, and check on your server. Your data stays on your own server, and you choose## Features
 
-## Features
-
-- Browse, search, upload, download, move, and organise files.
-- Schedule backups and sync folders to your server.
-- Explore previous backups and restore files or folders.
-- Manage accounts, sharing, and access permissions.
-- Protect sign-in with two-factor authentication and scoped API tokens.
-- Monitor transfers, backup jobs, and server health.
-
-## Setup and development
-
-This section is for contributors building the app from source. Most users should download an installer from [GitHub Releases](https://github.com/ericg2/Vaulton-UI/releases).
-
-
-Requires **Flutter ≥ 3.47** (Dart ≥ 3.13). The Android toolchain matches what Flutter 3.47 is verified against:
-Java 17, Gradle 9.3.1, Android Gradle Plugin 9.1.0, Kotlin 2.4.0 (compileSdk/targetSdk 36, minSdk 24).
-
-```bash
-flutter pub get                   # also writes android/local.properties for your machine
-flutter run                       # pick your Android device
-flutter build apk --release       # or: flutter build appbundle
-```
-
-`dart run tool/setup.dart` additionally creates the Windows/Linux runners if you want them
-(`flutter run -d windows | linux | chrome`).
-
-Native prerequisites: **Android** SDK platform 36 (and 37 if Gradle asks for it – newer plugins such as
-`flutter_secure_storage` 11 compile against it); **Linux** `libsecret-1-dev libjsoncpp-dev`;
-**Windows** Visual Studio "Desktop development with C++" (+ ATL).
-Web: serve over HTTPS (or localhost) and enable CORS for your origin on the server.
-
-To pick up newer package releases later: `flutter pub upgrade --major-versions`.
-
-### Android notes
-
-* `android/app/src/main/AndroidManifest.xml` declares `INTERNET` (a release build cannot reach any server without it),
-  the media permissions used by photo backup, WorkManager permissions, and predictive back.
-* `res/xml/network_security_config.xml` allows plain `http://` servers (typical for a home server on your LAN) and
-  certificates from a private CA that you installed on the phone. Tighten it there if you only use public HTTPS.
-* Release signing: create `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`).
-  Easiest: run `.\tool\setup-signing.ps1` once (it creates a persistent key outside the repo). Back that folder up.
-  Without it the release build is signed with the debug key so `flutter run --release` still works.
-* `gradle.properties` keeps `android.builtInKotlin=false` (Flutter's default while plugins migrate to AGP 9), so the app
-  module applies the Kotlin plugin itself. Once every plugin supports built-in Kotlin, set it to `true` and remove
-  `id("org.jetbrains.kotlin.android")` from `android/app/build.gradle.kts`.
-* Downloads are stored in the app's own storage (scoped storage forbids writing to arbitrary folders). Open a finished
-  download from the Transfers tab to view, share or save it elsewhere. Folder upload and the custom download folder are
-  desktop-only for the same reason.
-* The Android application ID is `com.ericg2.vaulton`.
-
-### Android updates and publishing releases
-
-Android, Windows, and Linux check GitHub Releases on launch and prompt before installing a newer version. You can also check manually from **Settings → About → Check for Updates**. Every downloaded package is streamed to disk while its SHA-256 digest is computed, so large packages never sit in memory, and is verified against its published checksum. Android opens the system package installer and requires confirmation; Windows downloads the setup installer and replaces the app after it exits; Linux downloads the release bundle and uses a helper process to replace the app files after exit. Web deployments update when the website hosting the Flutter app is redeployed; a browser app cannot update its own hosted files.
-
-Updates install over the existing app only when the APK has the same application ID (**com.ericg2.vaulton**) and is signed with the same signing key as the installed version. Keep your signing key safe and use the same Windows PC for releases if you are relying on that PC's default debug signing key. For a long-term/public distribution, configure a persistent private release keystore in `android/key.properties` and back it up securely; never commit the keystore or passwords.
-
-To publish a release from Windows, install and authenticate the [GitHub CLI](https://cli.github.com/) once (`gh auth login`), make sure your local `main` branch is up to date, and commit or stash all other changes. Then run this from the repository root in PowerShell:
-
-```powershell
-.\tool\publish-release.ps1
-```
-
-The script increments the patch version and build number, builds the Android APK and checksum locally, commits and pushes the version update, and publishes a GitHub Release. GitHub Actions then builds and attaches the Windows setup installer and portable ZIP, plus the Linux archive and installer script. Desktop assets appear a few minutes after the release is published. The script does **not** publish on every commit. To supply release notes, run `.\tool\publish-release.ps1 -ReleaseNotes "Your release notes"`.
-
-For Android updates, the installed app and release APK must share the application ID (**com.ericg2.vaulton**) and signing key. Keep your release keystore safe and configure `android/key.properties`; without it, builds use the debug key and updates are only compatible with installs signed by that same key.
-
-**Windows install:** download `Vaulton-Windows-Setup.exe` from the latest GitHub Release and run it. The installer installs per-user, adds a Start menu shortcut, and optionally a desktop shortcut. `Vaulton-Windows.zip` is also available for portable use.
-
-**Linux install:** download `Vaulton-Linux-Install.sh` from the latest GitHub Release and run `bash Vaulton-Linux-Install.sh`. It downloads the latest Linux bundle, verifies its SHA-256 checksum, installs to `~/.local/opt/vaulton`, and adds an application-menu entry. The bundle requires standard Flutter/GTK runtime libraries. You can also download `Vaulton-Linux.tar.gz` for manual installation. Windows and Linux assets are built by GitHub Actions on release publication, so wait for those assets to appear before downloading.
-
-## Features
-
-| Area | What you get |
+| Feature | What it helps you do |
 |---|---|
-| Auth | Sign-in with server URL + recent-accounts list, temporary-password flow (`newPassword`), TOTP two-factor prompt (`twoFactorCode`), single-use refresh-token rotation (shared across isolates), tokens in Keychain/Keystore/libsecret |
-| Account security | Settings → Two-Factor Authentication (enroll, recovery codes, regenerate, disable) and Settings → API Tokens (create scoped `vlt_` tokens, set expiry, revoke) |
-| Files | Browse/search/sort, breadcrumbs, multi-select, bulk download (folders are expanded recursively), bulk move/copy (between data points, with job polling), recursive delete, rename, new folder, previews (images/text), drag-and-drop upload (desktop/web), folder upload (desktop) |
-| Transfers | Uploads appear as rows in the file list with their own progress ring; downloads open a bottom sheet (progress, Open, Show in Folder). Persistent queue, parallel transfers, resumable downloads (HTTP Range), auto-retry with back-off, overwrite prompt on 409, per-item cancel/retry |
-| Background (Android) | If you leave the app with transfers running they are handed to a WorkManager worker and keep going with the app closed; the UI re-attaches when you return |
-| Photo backup (Android) | Google-Photos-style: periodic WorkManager job, album selection, year/month folders, Wi‑Fi / charging constraints, dedupe by HEAD + size, resumable, "back up now" |
-| Folder sync (desktop) | One-way mirror of local folders into a data point on a schedule while the app is open/minimised; closing with active transfers offers "minimise" |
-| Storage | Roots (all 17 connector types, forms generated from the spec), data points, repositories |
-| Root sharing | Searchable user dropdown (name / user name / e-mail) that skips the owner and people who already have access, per-user quota with validation, allocation bar vs. the root's capacity, unsaved-changes guard. Without `Users.List` it falls back to typing the exact user name |
-| Repositories | **Browse snapshots** like a file manager (snapshot picker, folders, search, preview), download files or whole folders, restore any file/folder to a data point; every repo card has Browse / Snapshots / Jobs / Schedules buttons |
-| Recent Jobs (`Jobs.Manage`) | Snapshots (lock/unlock/delete), backup/restore/check/retention, cron schedules with preview, job history with status filters, job detail page (overview + live log with level filter/search/history paging) |
-| Messages | Inbox/sent, unread filter, reply, mark read, broadcast (`Messages.Broadcast`) |
-| Admin | System status, users (create/scopes/lock/reset/revoke/delete), all jobs, VFS, health events, backend logs, audit trail with filters, self-backup status/run – tabs appear only for scopes you hold |
-| Theming | Material 3, Material You on Android, light/dark/system; Windows (Segoe UI, compact, small radii), Linux (GNOME-like rounding), predictive back on Android |
+| File management | Browse, search, upload, download, move, copy, rename, and preview files. |
+| Backups | Create scheduled backups, browse saved snapshots, and restore files or folders. |
+| Folder sync | Keep selected folders in sync with a storage location. |
+| Storage | Connect storage locations and manage access and quotas. |
+| Transfers | Track uploads and downloads, retry failed transfers, and view progress. |
+| Account security | Use two-factor authentication and scoped API tokens. |
+| Server management | Check server health, manage users, review jobs, and view activity when your account has permission. |
+| Mobile photo backup | Back up selected photos on Android with configurable conditions. |
 
-Scope-gated UI: `Users.List/Manage`, `Roots.Manage`, `Jobs.Manage`, `Admin.Vfs`, `Admin.Logs`, `Admin.Settings`, `Messages.Broadcast` (see `lib/core/scopes.dart`). The server remains the authority; 403s are shown as messages.
+Vaulton only shows management features your account is allowed to use. Your server remains in control of access and permissions.
+
 
 ## Layout
 
