@@ -68,7 +68,7 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     if (_repo == null) {
       _reloadRepo();
     }
-    _usageTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+    _usageTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
       if (!mounted || !TickerMode.valuesOf(context).enabled) return;
       try {
         final fresh = await _v.repo(widget.repoId);

@@ -182,7 +182,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   void initState() {
     super.initState();
     _load();
-    _poll = Timer.periodic(const Duration(seconds: 2), (_) => _refreshStatus());
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && TickerMode.valuesOf(context).enabled) _refreshStatus();
+    });
     _desktopSchedule = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _runDueDesktop(),

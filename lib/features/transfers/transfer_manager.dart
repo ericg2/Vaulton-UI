@@ -462,7 +462,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
 
   void _watchBackground() {
     _watch?.cancel();
-    _watch = Timer.periodic(const Duration(seconds: 2), (_) async {
+    _watch = Timer.periodic(const Duration(seconds: 5), (_) async {
       await _prefs.reload();
       final hb = _prefs.getInt(kBgHeartbeat) ?? 0;
       final fresh = DateTime.now().millisecondsSinceEpoch - hb < 25000;

@@ -68,18 +68,29 @@ if ! mv "$stage" "$target"; then
 fi
 [[ ! -e "$backup" ]] || rm -rf "$backup"
 
-if [[ "$mode" == "install" ]]; then
-  mkdir -p "${HOME}/.local/share/applications"
-  cat > "${HOME}/.local/share/applications/vaulton.desktop" <<EOF
+icon_source="${target}/data/flutter_assets/assets/branding/vaulton-mark.svg"
+[[ -f "$icon_source" ]] || { echo "The Vaulton Linux icon is missing from the application bundle." >&2; exit 1; }
+icon_dir="${HOME}/.local/share/icons/hicolor/scalable/apps"
+applications_dir="${HOME}/.local/share/applications"
+mkdir -p "$icon_dir" "$applications_dir"
+install -m 644 "$icon_source" "$icon_dir/vaulton.svg"
+cat > "${applications_dir}/vaulton.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Vaulton
 Comment=Vaulton client
 Exec="${target}/vaulton"
+Icon=vaulton
 Terminal=false
 Categories=Utility;Network;
+StartupWMClass=com.ericg2.vaulton
 EOF
-  chmod 644 "${HOME}/.local/share/applications/vaulton.desktop"
+chmod 644 "${applications_dir}/vaulton.desktop"
+if command -v gtk-update-icon-cache >/dev/null; then
+  gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+fi
+
+if [[ "$mode" == "install" ]]; then
   echo "Vaulton installed to $target. You can launch it from your application menu."
 else
   echo "Vaulton updated successfully."

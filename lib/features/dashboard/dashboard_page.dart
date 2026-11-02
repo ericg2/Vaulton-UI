@@ -77,7 +77,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   void initState() {
     super.initState();
     _load();
-    _t = Timer.periodic(const Duration(seconds: 5), (_) {
+    _t = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted && TickerMode.valuesOf(context).enabled) _load();
     });
   }

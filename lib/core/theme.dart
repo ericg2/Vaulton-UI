@@ -19,9 +19,9 @@ ThemeData buildTheme(ColorScheme scheme) {
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    fontFamily: isWin ? 'Segoe UI' : null,
-    fontFamilyFallback: isLinux ? const ['Cantarell', 'Ubuntu', 'Noto Sans', 'DejaVu Sans'] : null,
-    visualDensity: (isWin || isLinux) ? VisualDensity.compact : VisualDensity.standard,
+    fontFamily: isWin ? 'Segoe UI' : (isLinux ? 'Noto Sans' : null),
+    fontFamilyFallback: isLinux ? const ['Cantarell', 'Ubuntu', 'DejaVu Sans'] : null,
+    visualDensity: VisualDensity.standard,
     scaffoldBackgroundColor: scheme.surface,
     // Clear press and hover feedback on every button, card and list row.
     splashFactory: InkRipple.splashFactory,
@@ -44,7 +44,7 @@ ThemeData buildTheme(ColorScheme scheme) {
       // Soft blue outline, shared by every card so the app reads as one piece.
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radius),
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.22)),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.55)),
       ),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
     ),
@@ -62,7 +62,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        minimumSize: Size(0, isWin || isLinux ? 40 : 44),
+        minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         iconSize: 18,
         splashFactory: InkRipple.splashFactory,
@@ -87,7 +87,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        minimumSize: Size.square(isWin || isLinux ? 40 : 48),
+        minimumSize: const Size.square(48),
         padding: EdgeInsets.zero,
         splashFactory: InkRipple.splashFactory,
       ),
@@ -104,7 +104,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     bottomSheetTheme: const BottomSheetThemeData(showDragHandle: true),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: inputRadius),
-      isDense: isWin || isLinux,
+      isDense: false,
     ),
     snackBarTheme: SnackBarThemeData(shape: shape),
     navigationBarTheme: NavigationBarThemeData(
