@@ -297,22 +297,19 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
   bool get _manage => ref.read(userProvider)!.has(Scopes.usersManage);
 
   Future<void> _create() async {
-    final f = await formDialog(context, 'New User', [
-      const FieldSpec('u', 'Username', required: true),
-      const FieldSpec('first', 'First Name'),
-      const FieldSpec('last', 'Last Name'),
-      const FieldSpec('email', 'Email'),
-      const FieldSpec('welcome', 'Send Welcome Email', kind: 'bool'),
-    ], ok: 'Create');
-    if (f == null) return;
+    final draft = await showDialog<_NewUserDraft>(
+      context: context,
+      builder: (_) => const _NewUserDialog(),
+    );
+    if (draft == null || !mounted) return;
     final r = await guarded(
       context,
       () => _v.addUser({
-        'username': f['u'],
-        if (f['first']!.isNotEmpty) 'firstName': f['first'],
-        if (f['last']!.isNotEmpty) 'lastName': f['last'],
-        if (f['email']!.isNotEmpty) 'email': f['email'],
-        'sendWelcomeEmail': f['welcome'] == 'true',
+        'username': draft.username,
+        if (draft.firstName.isNotEmpty) 'firstName': draft.firstName,
+        if (draft.lastName.isNotEmpty) 'lastName': draft.lastName,
+        if (draft.email.isNotEmpty) 'email': draft.email,
+        'sendWelcomeEmail': draft.sendWelcomeEmail,
       }),
     );
     if (r == null || !mounted) return;
@@ -1134,6 +1131,170 @@ class _MaintenanceTab extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+
+class _NewUserDraft {
+  const _NewUserDraft({
+    required this.username,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.sendWelcomeEmail,
+  });
+
+  final String username;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final bool sendWelcomeEmail;
+}
+
+class _NewUserDialog extends StatefulWidget {
+  const _NewUserDialog();
+
+  @override
+  State<_NewUserDialog> createState() => _NewUserDialogState();
+}
+
+class _NewUserDialogState extends State<_NewUserDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _username = TextEditingController();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
+  final _email = TextEditingController();
+  bool _sendWelcomeEmail = false;
+
+  @override
+  void dispose() {
+    _username.dispose();
+    _firstName.dispose();
+    _lastName.dispose();
+    _email.dispose();
+    super.dispose();
+  }
+
+  void _create() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _NewUserDraft(
+        username: _username.text.trim(),
+        firstName: _firstName.text.trim(),
+        lastName: _lastName.text.trim(),
+        email: _email.text.trim(),
+        sendWelcomeEmail: _sendWelcomeEmail,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return AlertDialog(
+      insetPadding: const EdgeInsets.all(16),
+      title: const Text('Create User'),
+      content: SizedBox(
+        width: 480,
+        height: (MediaQuery.sizeOf(context).height - 220)
+            .clamp(220.0, 500.0)
+            .toDouble(),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.person_add_alt_1_outlined, color: cs.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Create a Vaulton account. A temporary password will be generated and shown once after creation.',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text('Account', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _username,
+                autofocus: true,
+                textCapitalization: TextCapitalization.none,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  prefixIcon: Icon(Icons.alternate_email),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Enter a username.'
+                    : null,
+              ),
+              const SizedBox(height: 18),
+              Text('Profile', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _firstName,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'First Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _lastName,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Last Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.mail_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Send Welcome Email'),
+                subtitle: const Text('Email the account details if an address is provided.'),
+                value: _sendWelcomeEmail,
+                onChanged: (value) => setState(() => _sendWelcomeEmail = value),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _create,
+          icon: const Icon(Icons.person_add_alt_1),
+          label: const Text('Create User'),
+        ),
+      ],
     );
   }
 }
