@@ -102,7 +102,13 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
     final point = _point;
     final path = _path;
     if (point == null) return;
-    final name = await promptText(context, 'New Folder', 'Folder name', ok: 'Create');
+    final name = await promptText(
+      context,
+      'New Folder',
+      'Folder name',
+      ok: 'Create',
+      intro: 'Create a folder inside the directory you are currently viewing.',
+    );
     if (name == null || name.trim().isEmpty) return;
     try {
       await ref.read(vaultonProvider).mkdir(point.id, joinPath(path, name.trim()));
