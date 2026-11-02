@@ -402,7 +402,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: Text(existing == null ? 'New Sync' : 'Sync Settings'),
+          title: Text(existing == null ? 'Create Sync' : 'Edit Sync'),
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 24,
@@ -478,17 +478,18 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   value: skipIfRunning,
                   onChanged: (v) => set(() => skipIfRunning = v),
                 ),
-                const SizedBox(height: 12),
                 const SizedBox(height: 14),
                 _syncEditorHeading(ctx, 'Device & Safety', 'Choose when syncs may run and how destination files are handled.'),
                 if (backgroundSupported) ...[
                   _SettingSwitch(
                     title: 'Wi-Fi / Unmetered Only',
+                    subtitle: 'Pause automatic syncs when the connection is metered.',
                     value: wifiOnly,
                     onChanged: (v) => set(() => wifiOnly = v),
                   ),
                   _SettingSwitch(
                     title: 'Only While Charging',
+                    subtitle: 'Wait until the device is connected to power.',
                     value: chargingOnly,
                     onChanged: (v) => set(() => chargingOnly = v),
                   ),
@@ -506,7 +507,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   onChanged: (v) => set(() => deleteExtras = v),
                 ),
                 _SettingSwitch(
-                  title: 'Enabled',
+                  title: 'Enable Automatic Sync',
+                  subtitle: 'Turn this off to keep the sync profile without running it.',
                   value: enabled,
                   onChanged: (v) => set(() => enabled = v),
                 ),
@@ -522,27 +524,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
             FilledButton(
               onPressed: () async {
                 if (remoteDir.trim() == '/' && deleteExtras) {
-                  final proceed = await showDialog<bool>(
-                    context: ctx,
-                    builder: (warningCtx) => AlertDialog(
-                      title: const Text('Confirm Root Destination'),
-                      content: const Text(
-                        'Mirror is enabled for the Data Folder root. '
-                        'Files outside the source may be permanently deleted.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(warningCtx, false),
-                          child: const Text('Cancel'),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.pop(warningCtx, true),
-                          child: const Text('Continue'),
-                        ),
-                      ],
-                    ),
+                  final proceed = await confirm(
+                    ctx,
+                    'Mirror the Entire Data Folder?',
+                    'Mirror is enabled for the Data Folder root. Files outside the source may be permanently deleted. Choose a specific destination folder if you do not intend to mirror the entire data folder.',
+                    ok: 'Continue',
+                    danger: true,
                   );
-                  if (proceed != true) return;
+                  if (!proceed) return;
                 }
                 final scheduleCron = cronCtl.text.trim();
                 try {
@@ -587,7 +576,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   }
                 }
               },
-              child: const Text('Save'),
+              child: Text(existing == null ? 'Create Sync' : 'Save Changes'),
             ),
           ],
         ),
