@@ -634,10 +634,22 @@ class _TwoFactorDialogState extends State<_TwoFactorDialog> {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => copyText(context, _secret!, 'Setup key copied.'),
-              icon: const Icon(Icons.copy_outlined),
-              label: const Text('Copy Setup Key'),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: () => copyText(context, _secret!, 'Setup key copied.'),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Copy Setup Key'),
+                ),
+                if (_uri != null)
+                  TextButton.icon(
+                    onPressed: () => copyText(context, _uri!, 'Setup link copied.'),
+                    icon: const Icon(Icons.link),
+                    label: const Text('Copy Setup Link'),
+                  ),
+              ],
             ),
           ),
           TextField(
