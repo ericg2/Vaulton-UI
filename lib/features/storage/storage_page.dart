@@ -269,20 +269,45 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           final total = toInt(current?['capacityBytes']);
           return AlertDialog(
             insetPadding: const EdgeInsets.all(16),
-            title: const Text('Choose Directory'),
+            title: const Text('Choose Server Directory'),
             content: SizedBox(
               width: double.maxFinite,
-              height: (MediaQuery.sizeOf(context).height - 200)
+              height: (MediaQuery.sizeOf(ctx).height -
+                      MediaQuery.viewInsetsOf(ctx).bottom -
+                      200)
                   .clamp(120.0, 420.0)
                   .toDouble(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    path.isEmpty ? 'Drives' : path,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(ctx).textTheme.titleSmall,
+                    'Select a folder on the server for this storage connection.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.folder_open_outlined),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            path.isEmpty ? 'Server Drives' : path,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(ctx).textTheme.titleSmall,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   if (available > 0)
                     Padding(
