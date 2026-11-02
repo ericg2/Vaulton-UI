@@ -272,7 +272,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
             title: const Text('Choose Directory'),
             content: SizedBox(
               width: double.maxFinite,
-              height: MediaQuery.sizeOf(context).height * 0.6,
+              height: (MediaQuery.sizeOf(context).height - 200)
+                  .clamp(120.0, 420.0)
+                  .toDouble(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
