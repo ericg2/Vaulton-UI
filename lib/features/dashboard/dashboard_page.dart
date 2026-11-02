@@ -203,7 +203,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     Flexible(
                       child: Text(
                         failedPoints > 0
-                            ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention.'
+                            ? '$failedPoints data folder${failedPoints == 1 ? '' : 's'} or backup vault${failedPoints == 1 ? '' : 's'} need attention.'
                             : (failed > 0
                                 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours.'
                                 : (healthBad ? 'System health is ${healthStatus.toLowerCase()}.' : 'Everything looks healthy.')),

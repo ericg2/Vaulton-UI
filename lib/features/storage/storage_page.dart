@@ -637,7 +637,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         key: _key,
         empty: 'No locations yet.',
         emptyHint: canCreate
-            ? 'A location is where your data lives: a disk, network share or cloud account.'
+            ? 'Add a location first. A location is the disk, network share or cloud account where your files and backups will live.'
             : 'Ask an administrator to share a location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 8),
@@ -884,8 +884,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         key: _key,
         empty: 'No ${widget.repo ? 'backup vaults' : 'data folders'} yet.',
         emptyHint: widget.repo
-            ? 'A backup vault stores your backups.'
-            : 'A data folder stores your files.',
+            ? 'Create a backup vault in a storage location. You can choose it when you back up a data folder.'
+            : 'Create a data folder in a storage location. You can upload files to it and choose it as the source for backups.',
         emptyIcon: widget.repo
             ? Icons.inventory_2_outlined
             : Icons.folder_outlined,
