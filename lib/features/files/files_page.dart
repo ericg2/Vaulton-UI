@@ -618,38 +618,74 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.upload_file),
-              title: const Text('Upload Files'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickFiles();
-              },
+      constraints: const BoxConstraints(maxWidth: 560),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final colors = theme.colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Add to This Folder', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(
+                  'Choose what you want to add to the current location.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: colors.secondaryContainer,
+                    child: Icon(Icons.upload_file, color: colors.onSecondaryContainer),
+                  ),
+                  title: const Text('Upload Files'),
+                  subtitle: const Text('Choose one or more files from this device.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickFiles();
+                  },
+                ),
+                if (isDesktop)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: colors.secondaryContainer,
+                      child: Icon(Icons.drive_folder_upload_outlined, color: colors.onSecondaryContainer),
+                    ),
+                    title: const Text('Upload Folder'),
+                    subtitle: const Text('Upload a folder and its contents.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickFolder();
+                    },
+                  ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: colors.secondaryContainer,
+                    child: Icon(Icons.create_new_folder_outlined, color: colors.onSecondaryContainer),
+                  ),
+                  title: const Text('New Folder'),
+                  subtitle: const Text('Create an empty folder here.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _newFolder();
+                  },
+                ),
+              ],
             ),
-            if (isDesktop)
-              ListTile(
-                leading: const Icon(Icons.drive_folder_upload_outlined),
-                title: const Text('Upload Folder'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickFolder();
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.create_new_folder_outlined),
-              title: const Text('New Folder'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _newFolder();
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
