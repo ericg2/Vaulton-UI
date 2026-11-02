@@ -298,11 +298,15 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       FieldSpec('tz', 'Time Zone', kind: 'choice', options: timeZoneOptions(device: deviceTz, extra: s?.timeZone), initial: s?.timeZone.isNotEmpty == true ? s!.timeZone : (deviceTz ?? 'UTC')),
       FieldSpec('enabled', 'Enabled', kind: 'bool', initial: '${s?.enabled ?? true}'),
       FieldSpec('skip', 'Skip if Already Running', kind: 'bool', initial: '${s?.skipIfRunning ?? true}'),
-    ], ok: 'Save', pick: (v) async {
+    ],
+      ok: isNew ? 'Create Schedule' : 'Save Changes',
+      pick: (v) async {
       final d = dataMap[v['data']];
       final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose Folder to Backup');
       return r?.path;
-    }, intro: 'Times follow the selected time zone.${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}');
+    },
+      intro: 'Choose what Vaulton should run and when. Times follow the selected time zone.${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}',
+    );
     if (f == null || !mounted) return;
     try {
       final mode = s == null ? (f['mode'] == 'Backup' ? 'backup' : (f['mode'] == 'Clean Up Snapshots' ? 'retention' : 'check')) : s.mode;
