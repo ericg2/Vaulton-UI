@@ -1032,6 +1032,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         context,
                         'Delete Source Files?',
                         'This permanently deletes ${selected.length} file${selected.length == 1 ? '' : 's'} from the source device. The Vaulton copies remain.',
+                        ok: 'Delete Source Files',
+                        danger: true,
                       );
                       if (!ok) return;
                       var removed = 0;
