@@ -251,7 +251,10 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 onTap: () => showDialog<void>(
                   context: context,
-                  builder: (_) => _ApiTokensDialog(v: v),
+                  builder: (_) => _ApiTokensDialog(
+                    v: v,
+                    availableScopes: u?.scopes ?? const [],
+                  ),
                 ),
               ),
               ListTile(
@@ -591,8 +594,9 @@ class _TwoFactorDialogState extends State<_TwoFactorDialog> {
 }
 
 class _ApiTokensDialog extends StatefulWidget {
-  const _ApiTokensDialog({required this.v});
+  const _ApiTokensDialog({required this.v, required this.availableScopes});
   final Vaulton v;
+  final List<String> availableScopes;
 
   @override
   State<_ApiTokensDialog> createState() => _ApiTokensDialogState();
@@ -628,17 +632,28 @@ class _ApiTokensDialogState extends State<_ApiTokensDialog> {
   }
 
   Future<void> _create() async {
-    final f = await formDialog(context, 'New API Token', [
-      const FieldSpec('name', 'Name', required: true),
-      const FieldSpec('days', 'Expires in days (optional)'),
-    ]);
-    if (f == null) return;
-
-    final days = int.tryParse(f['days'] ?? '');
     try {
+      final allScopes = await widget.v.scopes();
+      if (!mounted) return;
+      final allowedScopes = allScopes
+          .where((scope) => widget.availableScopes.contains(scope.name))
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      if (allowedScopes.isEmpty) {
+        toast(context, 'No API token permissions are available for this account.', error: true);
+        return;
+      }
+
+      final draft = await showDialog<_ApiTokenDraft>(
+        context: context,
+        builder: (_) => _CreateApiTokenDialog(scopes: allowedScopes),
+      );
+      if (draft == null || !mounted) return;
+
       final created = await widget.v.createApiToken(
-        f['name']!,
-        expiresInDays: days,
+        draft.name,
+        scopes: draft.scopes,
+        expiresInDays: draft.expiresInDays,
       );
       if (!mounted) return;
       final secret = '${created['secret']}';
@@ -684,7 +699,6 @@ class _ApiTokensDialogState extends State<_ApiTokensDialog> {
       if (mounted) toast(context, ApiException.from(e).message, error: true);
     }
   }
-
   Future<void> _revoke(Map<String, dynamic> token) async {
     if (!await confirm(
       context,
@@ -766,6 +780,158 @@ class _ApiTokensDialogState extends State<_ApiTokensDialog> {
           onPressed: _create,
           icon: const Icon(Icons.add),
           label: const Text('New Token'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ApiTokenDraft {
+  const _ApiTokenDraft({
+    required this.name,
+    required this.scopes,
+    required this.expiresInDays,
+  });
+
+  final String name;
+  final List<String> scopes;
+  final int? expiresInDays;
+}
+
+class _CreateApiTokenDialog extends StatefulWidget {
+  const _CreateApiTokenDialog({required this.scopes});
+
+  final List<({String name, String description})> scopes;
+
+  @override
+  State<_CreateApiTokenDialog> createState() => _CreateApiTokenDialogState();
+}
+
+class _CreateApiTokenDialogState extends State<_CreateApiTokenDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _days = TextEditingController();
+  final Set<String> _selected = {};
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _days.dispose();
+    super.dispose();
+  }
+
+  void _create() {
+    if (!_formKey.currentState!.validate() || _selected.isEmpty) return;
+    final scopes = _selected.toList()..sort();
+    Navigator.of(context).pop(
+      _ApiTokenDraft(
+        name: _name.text.trim(),
+        scopes: scopes,
+        expiresInDays: int.tryParse(_days.text.trim()),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.68;
+
+    return AlertDialog(
+      title: const Text('New API Token'),
+      content: SizedBox(
+        width: 520,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _name,
+                    autofocus: true,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Token Name',
+                      hintText: 'For example, nightly backup',
+                    ),
+                    validator: (value) =>
+                        value == null || value.trim().isEmpty
+                            ? 'Enter a name for this token.'
+                            : null,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Permissions',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose only the access this integration needs. '
+                    'The token cannot have more permissions than your account.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final scope in widget.scopes)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _selected.contains(scope.name),
+                      title: Text(scope.name),
+                      subtitle: Text(scope.description),
+                      onChanged: (checked) => setState(() {
+                        if (checked == true) {
+                          _selected.add(scope.name);
+                        } else {
+                          _selected.remove(scope.name);
+                        }
+                      }),
+                    ),
+                  if (_selected.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Select at least one permission.',
+                        style: TextStyle(color: colors.error),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _days,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'Expires In Days (Optional)',
+                      helperText: 'Leave blank for no expiration. Use 1–365 days.',
+                    ),
+                    validator: (value) {
+                      final raw = value?.trim() ?? '';
+                      if (raw.isEmpty) return null;
+                      final days = int.tryParse(raw);
+                      return days == null || days < 1 || days > 365
+                          ? 'Enter a value from 1 to 365.'
+                          : null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _selected.isEmpty ? null : _create,
+          child: const Text('Create Token'),
         ),
       ],
     );

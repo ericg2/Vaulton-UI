@@ -138,6 +138,7 @@ class _StatusTab extends ConsumerWidget {
           ),
         );
         final ok = toBool(s['backendReachable']);
+        final backendError = toStr(s['backendError']);
         final cs = Theme.of(ctx).colorScheme;
         return RefreshIndicator(
           onRefresh: reload,
@@ -155,10 +156,31 @@ class _StatusTab extends ConsumerWidget {
                         : 'Storage Backend Unreachable',
                   ),
                   subtitle: Text(
-                    'Version ${s['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}${s['backendError'] != null ? '\n${s['backendError']}' : ''}',
-                    maxLines: 3,
+                    'Version ${s['version']} · ${s['environment']} · up ${fmtDuration(Duration(seconds: toInt(s['uptimeSeconds'])))}',
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  trailing: backendError == null || backendError.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'View Backend Error',
+                          icon: const Icon(Icons.info_outline),
+                          onPressed: () => showDialog<void>(
+                            context: ctx,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text('Backend Error'),
+                              content: SingleChildScrollView(
+                                child: SelectableText(backendError),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
               ),
               Section(
@@ -611,8 +633,35 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Read/Write' : 'Read-Only'}${err != null ? '\n$err' : ''}',
+                      '${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Read/Write' : 'Read-Only'}',
                     ),
+                    if (err != null && err.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          onPressed: () => showDialog<void>(
+                            context: ctx,
+                            builder: (dialogContext) => AlertDialog(
+                              title: Text('Storage Error · ${p['name']}'),
+                              content: SingleChildScrollView(
+                                child: SelectableText(err),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          icon: const Icon(Icons.info_outline, size: 18),
+                          label: const Text('View Error'),
+                        ),
+                      ),
                     if (narrow && remote)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
