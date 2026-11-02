@@ -348,20 +348,54 @@ Future<void> _showRecoveryCodes(
   await showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
+      insetPadding: const EdgeInsets.all(16),
       title: const Text('Recovery Codes'),
       content: SizedBox(
-        width: 380,
+        width: 420,
+        height: (MediaQuery.sizeOf(ctx).height -
+                MediaQuery.viewInsetsOf(ctx).bottom -
+                220)
+            .clamp(180.0, 520.0)
+            .toDouble(),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Store these somewhere safe. Each code works once and they are shown only now.',
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_outlined),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Save these codes somewhere private. Each code works once, and they cannot be viewed again after closing this window.',
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            SelectableText(
-              codes.join('\n'),
-              style: const TextStyle(fontFamily: 'monospace', height: 1.5),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    codes.join('\\n'),
+                    style: const TextStyle(fontFamily: 'monospace', height: 1.7),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
