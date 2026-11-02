@@ -41,6 +41,8 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
   String _path = '/';
   List<Node>? _dirs;
   Object? _error;
+  bool _loadingPoints = true;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -51,15 +53,23 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
       setState(() {
         _points = p;
         _point = p.where((x) => x.id == widget.initialPointId).firstOrNull ?? p.firstOrNull;
+        _loadingPoints = false;
+        if (_point == null) _dirs = [];
       });
       _load();
     }).catchError((e) {
-      if (mounted) setState(() => _error = e);
+      if (mounted) setState(() {
+        _error = e;
+        _loadingPoints = false;
+      });
     });
   }
 
   Future<void> _load() async {
-    if (_point == null) return;
+    final point = _point;
+    if (point == null) return;
+    final path = _path;
+    final generation = ++_loadGeneration;
     setState(() {
       _dirs = null;
       _error = null;
@@ -69,22 +79,24 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
       final dirs = <Node>[];
       String? cursor;
       do {
-        final page = await v.list(_point!.id, _path, cursor: cursor, limit: 200);
+        final page = await v.list(point.id, path, cursor: cursor, limit: 200);
         dirs.addAll(page.items.where((n) => n.isDir));
         cursor = page.hasMore ? page.nextCursor : null;
       } while (cursor != null);
-      if (mounted) setState(() => _dirs = dirs);
+      if (mounted && generation == _loadGeneration) setState(() => _dirs = dirs);
     } catch (e) {
-      if (mounted) setState(() => _error = e);
+      if (mounted && generation == _loadGeneration) setState(() => _error = e);
     }
   }
 
   Future<void> _createFolder() async {
-    if (_point == null) return;
+    final point = _point;
+    final path = _path;
+    if (point == null) return;
     final name = await promptText(context, 'New Folder', 'Folder name', ok: 'Create');
     if (name == null || name.trim().isEmpty) return;
     try {
-      await ref.read(vaultonProvider).mkdir(_point!.id, joinPath(_path, name.trim()));
+      await ref.read(vaultonProvider).mkdir(point.id, joinPath(path, name.trim()));
       await _load();
     } catch (e) {
       if (mounted) toastError(context, e);
@@ -98,17 +110,45 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
       content: SizedBox(
         width: 460,
         height: (MediaQuery.sizeOf(context).height * 0.6).clamp(260.0, 420.0).toDouble(),
-        child: _point == null && _error == null
+        child: _loadingPoints
             ? const Center(child: CircularProgressIndicator())
-            : Column(children: [
+            : _point == null && _error != null
+                ? ErrorView(_error!, onRetry: () {
+                    setState(() {
+                      _loadingPoints = true;
+                      _error = null;
+                    });
+                    loadAllPoints(ref).then((points) {
+                      if (!mounted) return;
+                      setState(() {
+                        _points = points;
+                        _point = points.where((x) => x.id == widget.initialPointId).firstOrNull ?? points.firstOrNull;
+                        _loadingPoints = false;
+                        if (_point == null) _dirs = [];
+                      });
+                      _load();
+                    }).catchError((e) {
+                      if (mounted) setState(() {
+                        _error = e;
+                        _loadingPoints = false;
+                      });
+                    });
+                  })
+                : _point == null
+                    ? const EmptyView('Create a data folder before choosing a location.', icon: Icons.folder_off_outlined)
+                    : Column(children: [
                 DropdownButtonFormField<String>(
                   isExpanded: true,
                   initialValue: _point?.id,
                   decoration: const InputDecoration(labelText: 'Data Folder'),
                   items: [for (final p in _points) DropdownMenuItem(value: p.id, child: Text(p.name))],
                   onChanged: (id) {
-                    _point = _points.firstWhere((p) => p.id == id);
-                    _path = '/';
+                    final selected = _points.where((p) => p.id == id).firstOrNull;
+                    if (selected == null) return;
+                    setState(() {
+                      _point = selected;
+                      _path = '/';
+                    });
                     _load();
                   },
                 ),
