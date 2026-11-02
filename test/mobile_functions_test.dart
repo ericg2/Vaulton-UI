@@ -61,6 +61,13 @@ class _FuncApi extends Vaulton {
   }) async => Paged(points, null, false);
 
   @override
+  Future<Paged<Root>> roots({
+    String? search,
+    String? cursor,
+    int limit = 50,
+  }) async => Paged(const [], null, false);
+
+  @override
   Future<Paged<RepoJob>> jobs({
     String? repoId,
     String? dataId,
