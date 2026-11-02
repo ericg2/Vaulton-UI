@@ -371,6 +371,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                     'New Folder',
                                     'Folder Name',
                                     ok: 'Create Folder',
+                                    intro: 'Create a directory inside the selected server folder.',
                                   );
                                   if (name == null ||
                                       name.trim().isEmpty ||
