@@ -6,6 +6,7 @@ import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
 import '../../core/util.dart';
+import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
 import '../backups/backup_flow.dart';
 import '../backups/job_detail_page.dart';
@@ -14,9 +15,10 @@ import '../files/files_page.dart';
 import '../shell/server_badge.dart';
 
 class _Data {
-  _Data(this.datas, this.repos, this.jobs);
+  _Data(this.datas, this.repos, this.jobs, this.health);
   final List<Point> datas, repos;
   final List<RepoJob> jobs;
+  final Json? health;
 }
 
 /// Landing screen: health, storage, running work, recent jobs and quick actions.
@@ -38,6 +40,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   bool get _canJobs => ref.read(userProvider)?.has(Scopes.jobsManage) ?? false;
   bool get _canPower => ref.read(userProvider)?.has(Scopes.serverPower) ?? false;
+  bool get _canSeeHealth => ref.read(userProvider)?.hasAny([Scopes.adminLogs, Scopes.adminSettings]) ?? false;
+
+  /// Health is informational: the dashboard still loads when the probe is
+  /// unreachable or a proxy returns a non-JSON error page.
+  Future<Json?> _health(Vaulton v) async {
+    try {
+      return await v.healthStatus();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> _requestPowerAction(String action, String label) async {
     final confirmed = await showDialog<bool>(
@@ -99,10 +112,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         v.datas(limit: 200),
         v.repos(limit: 200),
         if (_canJobs) v.jobs(limit: 12) else Future.value(Paged<RepoJob>([], null, false)),
+        if (_canSeeHealth) _health(v) else Future.value(null),
       ]);
       if (!mounted) return;
       setState(() {
-        _data = _Data((r[0] as Paged<Point>).items, (r[1] as Paged<Point>).items, (r[2] as Paged<RepoJob>).items);
+        _data = _Data((r[0] as Paged<Point>).items, (r[1] as Paged<Point>).items, (r[2] as Paged<RepoJob>).items, r[3] as Json?);
         _error = null;
       });
     } catch (e) {
@@ -138,6 +152,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final cutoff = DateTime.now().subtract(const Duration(hours: 24));
       final failed = d.jobs.where((j) => j.phase == JobPhase.failed && (j.endDate ?? j.createdAt ?? cutoff).isAfter(cutoff)).length;
       final lastOk = d.jobs.where((j) => j.kind == 'backup' && j.phase == JobPhase.succeeded).firstOrNull;
+      final lastCheck = d.jobs.where((j) => j.kind == 'check').firstOrNull;
+      final health = d.health;
+      final healthStatus = '${health?['status'] ?? ''}';
+      final healthBad = healthStatus == 'Degraded' || healthStatus == 'Unhealthy';
+      final healthChecks = (health?['checks'] as List? ?? const []).map(toJson).toList();
+      final attention = failedPoints > 0 || failed > 0 || healthBad;
       final used = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.usedBytes);
       final cap = [...d.datas, ...d.repos].fold<int>(0, (a, p) => a + p.maxBytes);
 
@@ -146,6 +166,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup Vaults')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
+        if (_canJobs) _Stat(Icons.verified_outlined, lastCheck == null ? '—' : fmtShort(lastCheck.endDate ?? lastCheck.startDate), 'Last Verified', () => widget.onNavigate?.call('Activity'), highlight: lastCheck?.phase == JobPhase.succeeded),
+        if (healthStatus.isNotEmpty)
+          _Stat(
+            healthBad ? Icons.warning_amber_rounded : Icons.health_and_safety_outlined,
+            healthStatus,
+            'System Health',
+            () => widget.onNavigate?.call('Administration'),
+            highlight: healthStatus == 'Healthy',
+            bad: healthStatus == 'Unhealthy',
+          ),
       ];
 
       body = RefreshIndicator(
@@ -167,15 +197,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 const SizedBox(height: 4),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  child: Row(key: ValueKey(failedPoints > 0 || failed > 0), children: [
-                    Icon((failedPoints > 0 || failed > 0) ? Icons.warning_amber_rounded : Icons.check_circle_outline, size: 16, color: (failedPoints > 0 || failed > 0) ? cs.error : cs.primary),
+                  child: Row(key: ValueKey(attention), children: [
+                    Icon(attention ? Icons.warning_amber_rounded : Icons.check_circle_outline, size: 16, color: attention ? cs.error : cs.primary),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         failedPoints > 0
                             ? '$failedPoints storage item${failedPoints == 1 ? ' needs' : 's need'} attention.'
-                            : (failed > 0 ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours.' : 'Everything looks healthy.'),
-                        style: t.bodyMedium?.copyWith(color: (failedPoints > 0 || failed > 0) ? cs.error : cs.onSurfaceVariant),
+                            : (failed > 0
+                                ? '$failed job${failed == 1 ? '' : 's'} failed in the last 24 hours.'
+                                : (healthBad ? 'System health is ${healthStatus.toLowerCase()}.' : 'Everything looks healthy.')),
+                        style: t.bodyMedium?.copyWith(color: attention ? cs.error : cs.onSurfaceVariant),
                       ),
                     ),
                   ]),
@@ -267,8 +299,41 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           const SizedBox(height: 4),
                           Text('Last backup: ${fmtDate(lastOk.endDate ?? lastOk.startDate)}', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         ],
+                        if (lastCheck != null) ...[
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            Icon(
+                              lastCheck.phase == JobPhase.succeeded ? Icons.verified : Icons.report_problem_outlined,
+                              size: 14,
+                              color: lastCheck.phase == JobPhase.succeeded ? cs.primary : cs.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'Last verification: ${fmtDate(lastCheck.endDate ?? lastCheck.startDate)}'
+                                '${lastCheck.phase == JobPhase.succeeded ? ' · passed' : lastCheck.phase == JobPhase.failed ? ' · failed' : ''}',
+                                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ),
+                          ]),
+                        ],
                       ]),
                     ),
+                  ),
+                ),
+              ]),
+            if (_canSeeHealth && health != null && healthChecks.isNotEmpty)
+              Section('System Health', children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    child: Column(children: [
+                      for (var i = 0; i < healthChecks.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        _HealthRow(check: healthChecks[i]),
+                      ],
+                    ]),
                   ),
                 ),
               ]),
@@ -316,6 +381,62 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
+class _HealthRow extends StatelessWidget {
+  const _HealthRow({required this.check});
+  final Json check;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+    final status = '${check['status'] ?? 'Unknown'}';
+    final healthy = status == 'Healthy';
+    final degraded = status == 'Degraded';
+    final color = healthy ? cs.primary : (degraded ? cs.tertiary : cs.error);
+    final icon = healthy ? Icons.check_circle_outline : (degraded ? Icons.warning_amber_rounded : Icons.error_outline);
+    final description = '${check['description'] ?? ''}'.trim();
+    final disk = _diskSummary(check);
+    final details = [if (description.isNotEmpty) description, ?disk].join('\n');
+
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Row(children: [
+        Expanded(child: Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall)),
+        const SizedBox(width: 8),
+        Text(status, style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+      ]),
+      subtitle: details.isEmpty ? null : Text(details, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+    );
+  }
+}
+
+String _healthName(String name) => switch (name) {
+      'database' => 'Database',
+      'storage-backend' => 'Storage Backend',
+      'disk-space' => 'Disk Space',
+      'smb' => 'SMB',
+      _ => name.isEmpty ? 'Health Check' : name,
+    };
+
+/// Formats the per-path disk data attached by the API's disk health check.
+String? _diskSummary(Json check) {
+  if ('${check['name']}' != 'disk-space') return null;
+  final data = check['data'];
+  if (data is! Map) return null;
+
+  final parts = <String>[];
+  data.forEach((path, value) {
+    if (value is! Map) return;
+    final free = (value['freeBytes'] as num?)?.toInt();
+    final total = (value['totalBytes'] as num?)?.toInt();
+    final percent = (value['freePercent'] as num?)?.toDouble();
+    if (free == null || total == null) return;
+    parts.add('$path: ${fmtBytes(free)} free of ${fmtBytes(total)}'
+        '${percent == null ? '' : ' (${percent.toStringAsFixed(1)}%)'}');
+  });
+  return parts.isEmpty ? null : parts.join('\n');
+}
+
 class _Stat extends StatelessWidget {
   const _Stat(this.icon, this.value, this.label, this.onTap, {this.highlight = false, this.bad = false});
   final IconData icon;
@@ -334,16 +455,24 @@ class _Stat extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(children: [
-            Icon(icon, color: fg, size: 26),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: fg.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: fg, size: 23),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 // Numbers count up when they first appear and whenever they change.
                 Builder(builder: (_) {
                   final n = int.tryParse(value);
-                  final style = Theme.of(context).textTheme.titleLarge?.copyWith(color: fg, height: 1.1);
+                  final style = Theme.of(context).textTheme.headlineSmall?.copyWith(color: fg, height: 1.05, fontWeight: FontWeight.w600);
                   if (n == null) return Text(value, style: style);
                   return TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: n.toDouble()),
@@ -352,7 +481,7 @@ class _Stat extends StatelessWidget {
                     builder: (_, v, _) => Text('${v.round()}', style: style),
                   );
                 }),
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg)),
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg.withValues(alpha: 0.8))),
               ]),
             ),
           ]),

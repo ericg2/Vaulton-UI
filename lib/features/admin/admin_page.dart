@@ -22,6 +22,8 @@ class AdminPage extends ConsumerWidget {
       if (u.has(Scopes.jobsManage)) ('All Jobs', const JobsList(admin: true)),
       if (u.has(Scopes.adminVfs)) ('VFS', const _VfsTab()),
       if (u.has(Scopes.adminLogs)) ('Logs', const _LogsTab()),
+      if (u.has(Scopes.adminLogs)) ('Audit', const _AuditTab()),
+      if (u.has(Scopes.adminSettings)) ('Maintenance', const _MaintenanceTab()),
       if (u.userName.toLowerCase() == 'admin')
         ('Configuration', const ConfigurationTab()),
     ];
@@ -766,6 +768,273 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ------------------------------------------------------------------ audit
+class _AuditTab extends ConsumerStatefulWidget {
+  const _AuditTab();
+  @override
+  ConsumerState<_AuditTab> createState() => _AuditTabState();
+}
+
+class _AuditTabState extends ConsumerState<_AuditTab> {
+  final _key = GlobalKey<CursorListState<Json>>();
+  final _user = TextEditingController();
+  final _path = TextEditingController();
+  String _userFilter = '';
+  String _pathFilter = '';
+
+  Vaulton get _v => ref.read(vaultonProvider);
+
+  @override
+  void dispose() {
+    _user.dispose();
+    _path.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    setState(() {
+      _userFilter = _user.text.trim();
+      _pathFilter = _path.text.trim();
+    });
+    _key.currentState?.refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _user,
+                  decoration: const InputDecoration(
+                    labelText: 'User',
+                    prefixIcon: Icon(Icons.person_outline),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _apply(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: _path,
+                  decoration: const InputDecoration(
+                    labelText: 'Path contains',
+                    prefixIcon: Icon(Icons.route_outlined),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _apply(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Apply filters',
+                onPressed: _apply,
+                icon: const Icon(Icons.filter_alt_outlined),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: CursorList<Json>(
+            key: _key,
+            empty: 'No Audit Entries',
+            emptyHint: 'Mutating requests and sign-in attempts are recorded here.',
+            fetch: (c) => _v.auditPage(
+              cursor: c,
+              user: _userFilter.isEmpty ? null : _userFilter,
+              path: _pathFilter.isEmpty ? null : _pathFilter,
+            ),
+            itemBuilder: (ctx, e, i) {
+              final status = toInt(e['statusCode']);
+              final bad = status >= 400;
+              final method = '${e['method'] ?? ''}';
+              return ListTile(
+                dense: true,
+                leading: Icon(
+                  switch (method) {
+                    'GET' => Icons.visibility_outlined,
+                    'POST' => Icons.add_circle_outline,
+                    'PUT' || 'PATCH' => Icons.edit_outlined,
+                    'DELETE' => Icons.delete_outline,
+                    _ => Icons.bolt_outlined,
+                  },
+                  color: bad ? cs.error : cs.primary,
+                ),
+                title: Text(
+                  '$method ${e['path']}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                ),
+                subtitle: Text(
+                  '${e['userName'] ?? 'anonymous'} · ${e['remoteIp'] ?? '—'} · '
+                  '${fmtDate(toDate(e['at']))} · ${toInt(e['durationMs'])} ms'
+                  '${e['detail'] != null ? '\n${e['detail']}' : ''}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                isThreeLine: e['detail'] != null,
+                trailing: Text(
+                  '$status',
+                  style: TextStyle(
+                    color: bad ? cs.error : cs.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------------------ maintenance
+class _MaintenanceTab extends ConsumerWidget {
+  const _MaintenanceTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final v = ref.read(vaultonProvider);
+    final cs = Theme.of(context).colorScheme;
+    return AsyncBody<Json>(
+      load: v.selfBackupStatus,
+      builder: (ctx, data, reload) {
+        final status = toJson(data['status']);
+        final backups = (data['backups'] as List? ?? const [])
+            .map(toJson)
+            .toList();
+        final success = status['lastSuccess'] == true;
+        final lastRun = toDate(status['lastRun']);
+        final enabled = toBool(data['enabled']);
+
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            children: [
+              Card(
+                color: success || status['lastRun'] == null
+                    ? null
+                    : cs.errorContainer,
+                child: ListTile(
+                  leading: Icon(
+                    status['lastRun'] == null
+                        ? Icons.schedule
+                        : success
+                        ? Icons.check_circle_outline
+                        : Icons.error_outline,
+                  ),
+                  title: Text(
+                    status['lastRun'] == null
+                        ? 'No Self-Backup Yet'
+                        : success
+                        ? 'Last Self-Backup Succeeded'
+                        : 'Last Self-Backup Failed',
+                  ),
+                  subtitle: Text(
+                    [
+                      if (lastRun != null) fmtDate(lastRun),
+                      if (status['lastDurationMs'] != null)
+                        '${toInt(status['lastDurationMs'])} ms',
+                      if (status['lastPath'] != null)
+                        '${status['lastPath']}',
+                      if (status['lastError'] != null)
+                        '${status['lastError']}',
+                    ].join(' · '),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              Section(
+                'Automatic Copies',
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: const Text('Interval'),
+                    trailing: Text(
+                      enabled
+                          ? 'Every ${toInt(data['intervalHours'])} h'
+                          : 'Disabled',
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('Keep'),
+                    trailing: Text('${toInt(data['retain'])} copies'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.folder_outlined),
+                    title: const Text('Directory'),
+                    subtitle: Text('${data['directory'] ?? ''}'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.update),
+                    title: const Text('Next Run'),
+                    trailing: Text(
+                      status['nextRun'] == null
+                          ? 'After the next API start'
+                          : fmtDate(toDate(status['nextRun'])),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.backup_outlined),
+                    label: const Text('Run Backup Now'),
+                    onPressed: () async {
+                      final r = await guarded(ctx, v.runSelfBackup);
+                      if (r == null || !ctx.mounted) return;
+                      toast(ctx, 'Self-backup written to ${r['path']}');
+                      await reload();
+                    },
+                  ),
+                ),
+              ),
+              Section(
+                'Copies On Disk',
+                children: backups.isEmpty
+                    ? [
+                        const ListTile(
+                          leading: Icon(Icons.inbox_outlined),
+                          title: Text('No copies yet'),
+                        ),
+                      ]
+                    : [
+                        for (final b in backups)
+                          ListTile(
+                            leading: const Icon(Icons.inventory_2_outlined),
+                            title: Text('${b['name']}'),
+                            subtitle: Text(
+                              '${fmtBytes(toInt(b['bytes']))} · '
+                              '${fmtDate(toDate(b['createdAt']))}',
+                            ),
+                          ),
+                      ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -19,7 +19,11 @@ class TransferEngine {
       if (_knownDirs.contains(key)) continue;
       try {
         await api.dio.post('/files/$pointId/directories', data: {'path': cur});
-      } on DioException catch (_) {}
+      } on DioException catch (e) {
+        // 409 means the folder already exists. Anything else (auth, network,
+        // server error) must fail the transfer instead of being cached as done.
+        if (e.response?.statusCode != 409) rethrow;
+      }
       _knownDirs.add(key);
     }
   }

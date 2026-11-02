@@ -1,7 +1,7 @@
 import '../../core/api_client.dart';
 
-/// Server errors sometimes arrive as "error: <text>\nMessage:  " with an empty
-/// "Message:" line. Strip that noise so only the useful text is shown.
+/// Server errors sometimes arrive as `"error: <text>\nMessage:  "` with an
+/// empty "Message:" line. Strip that noise so only the useful text is shown.
 String cleanJobError(String? raw) {
   if (raw == null) return '';
   raw = friendlyStorageError(raw);

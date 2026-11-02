@@ -329,19 +329,52 @@ Future<bool> _runUpdateDownload(Map<String, dynamic>? input, SharedPreferences p
     if (await partial.exists()) await partial.delete();
     await report('Downloading Vaulton $version…', percent: 0);
     var lastReported = DateTime.fromMillisecondsSinceEpoch(0);
-    final response = await dio.download(url, partial.path, deleteOnError: true, onReceiveProgress: (received, total) {
-      if (total <= 0) return;
-      final now = DateTime.now();
-      if (now.difference(lastReported) < const Duration(milliseconds: 350) && received < total) return;
-      lastReported = now;
-      final percent = (received * 100 / total).floor().clamp(0, 100);
-      unawaited(report('Downloading Vaulton $version…', percent: percent));
-    });
-    if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) throw const FormatException('The update download did not complete successfully.');
-    final bytes = await partial.readAsBytes();
-    if (bytes.isEmpty) throw const FormatException('The download was empty.');
+
+    // Stream straight to disk while hashing, so a multi-hundred-megabyte package never sits in
+    // memory. The digest is finalized after the last chunk and compared with the release checksum.
+    final response = await dio.get<ResponseBody>(
+      url,
+      options: Options(
+        responseType: ResponseType.stream,
+        followRedirects: true,
+        validateStatus: (_) => true,
+      ),
+    );
+    if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) {
+      throw const FormatException('The update download did not complete successfully.');
+    }
+    final body = response.data;
+    if (body == null) throw const FormatException('The update download was empty.');
+    final total = int.tryParse(response.headers.value(Headers.contentLengthHeader) ?? '') ?? 0;
+
+    final sink = partial.openWrite();
+    final digest = _DigestCollector();
+    final hasher = sha256.startChunkedConversion(digest);
+    var received = 0;
+    try {
+      await for (final chunk in body.stream) {
+        hasher.add(chunk);
+        sink.add(chunk);
+        received += chunk.length;
+        if (total <= 0) continue;
+        final now = DateTime.now();
+        if (now.difference(lastReported) < const Duration(milliseconds: 350) && received < total) continue;
+        lastReported = now;
+        final percent = (received * 100 / total).floor().clamp(0, 100);
+        unawaited(report('Downloading Vaulton $version…', percent: percent));
+      }
+      await sink.flush();
+    } finally {
+      await sink.close();
+    }
+    hasher.close();
+
+    if (received == 0) {
+      await partial.delete();
+      throw const FormatException('The download was empty.');
+    }
     await report('Verifying update…');
-    if (sha256.convert(bytes).toString() != expected) {
+    if (digest.value.toString() != expected) {
       await partial.delete();
       throw const FormatException('The SHA-256 checksum did not match. The download was discarded.');
     }
@@ -484,4 +517,15 @@ Future<void> scheduleDrain() async {
     constraints: Constraints(networkType: NetworkType.connected),
     outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
   );
+}
+
+/// Collects the single digest produced by `Hash.startChunkedConversion`.
+class _DigestCollector implements Sink<Digest> {
+  Digest? value;
+
+  @override
+  void add(Digest data) => value = data;
+
+  @override
+  void close() {}
 }

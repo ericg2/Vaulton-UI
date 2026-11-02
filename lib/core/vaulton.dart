@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'models.dart';
@@ -36,29 +37,91 @@ class Vaulton {
       {'cursor': cursor, 'limit': limit.clamp(1, 200), 'order': _ord(order), ...?more};
 
   // ---------------------------------------------------------------- auth
-  Future<AuthTokens> signIn(String user, String pass, {String? newPassword, CancelToken? cancelToken}) async {
+  Future<AuthTokens> signIn(String user, String pass, {String? newPassword, String? twoFactorCode, CancelToken? cancelToken}) async {
+    final newPw = (newPassword?.isNotEmpty ?? false) ? newPassword : null;
+    final otp = (twoFactorCode?.isNotEmpty ?? false) ? twoFactorCode : null;
     final d = await _req('POST', '/auth/token',
-        body: {'username': user, 'password': pass, if (newPassword != null && newPassword.isNotEmpty) 'newPassword': newPassword},
+        body: {
+          'username': user,
+          'password': pass,
+          'newPassword': ?newPw,
+          'twoFactorCode': ?otp,
+        },
         noAuth: true, cancelToken: cancelToken);
     throwIfCancelled(cancelToken);
     return AuthTokens.fromJson(toJson(d));
   }
 
-  Future<void> signOut() async {
-    final rt = api.session.refreshToken;
+  Future<void> signOut({String? refreshToken, Duration timeout = const Duration(seconds: 5)}) async {
+    final rt = refreshToken ?? api.session.refreshToken;
     if (rt == null) return;
     try {
-      await _req('POST', '/auth/logout', body: {'refreshToken': rt}, noAuth: true);
-    } catch (_) {}
+      await _req('POST', '/auth/logout', body: {'refreshToken': rt}, noAuth: true).timeout(timeout);
+    } catch (_) {
+      // Local sign-out must still succeed when the server is offline.
+    }
   }
 
   Future<void> logoutAll() => _req('POST', '/auth/logout-all');
+
+  /// The detailed health report is written with an HTTP 503 when the server is
+  /// degraded or unhealthy, so keep the response body instead of throwing.
+  Future<Json> healthStatus() async {
+    try {
+      final r = await _d.request('/health/status', options: Options(method: 'GET', validateStatus: (_) => true));
+      return toJson(r.data);
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+  }
 
   Future<Json> wakeConfig({CancelToken? cancelToken}) async => toJson(await _req('GET', '/wake/config', cancelToken: cancelToken));
 
   Future<AuthTokens> changePassword(String current, String next) async {
     final d = await _req('POST', '/auth/change-password', body: {'currentPassword': current, 'newPassword': next});
     return AuthTokens.fromJson(toJson(d));
+  }
+
+  // ------------------------------------------------------------ two-factor
+  Future<Json> twoFactorStatus() async => toJson(await _req('GET', '/auth/2fa'));
+  Future<Json> setupTwoFactor() async => toJson(await _req('POST', '/auth/2fa/setup'));
+  Future<List<String>> enableTwoFactor(String code) async {
+    final d = toJson(await _req('POST', '/auth/2fa/enable', body: {'code': code}));
+    return (d['recoveryCodes'] as List).map((e) => '$e').toList();
+  }
+  Future<List<String>> regenerateRecoveryCodes(String password) async {
+    final d = toJson(await _req('POST', '/auth/2fa/recovery-codes', body: {'password': password}));
+    return (d['recoveryCodes'] as List).map((e) => '$e').toList();
+  }
+  Future<void> disableTwoFactor(String password, String code) =>
+      _req('POST', '/auth/2fa/disable', body: {'password': password, 'code': code});
+
+  // ------------------------------------------------------------ api tokens
+  Future<List<Json>> apiTokens() async => (await _req('GET', '/auth/tokens') as List).map(toJson).toList();
+  Future<Json> createApiToken(String name, {List<String>? scopes, int? expiresInDays}) async =>
+      toJson(await _req('POST', '/auth/tokens', body: {
+        'name': name,
+        if (scopes != null && scopes.isNotEmpty) 'scopes': scopes,
+        'expiresInDays': ?expiresInDays,
+      }));
+  Future<void> revokeApiToken(String id) => _req('DELETE', '/auth/tokens/$id');
+  Future<void> revokeAllApiTokens() => _req('DELETE', '/auth/tokens/all');
+
+  // ------------------------------------------------------------ operator
+  Future<Json> selfBackupStatus() async => toJson(await _req('GET', '/admin/self-backup'));
+  Future<Json> runSelfBackup() async => toJson(await _req('POST', '/admin/self-backup/run'));
+  Future<Paged<Json>> auditPage({String? cursor, int limit = 100, String? user, String? method, String? path, int? status}) async {
+    final d = toJson(await _req('GET', '/admin/audit', q: {
+      'limit': limit,
+      'before': cursor,
+      'user': user,
+      'method': method,
+      'path': path,
+      'status': status,
+    }));
+    final items = (d['items'] as List? ?? const []).map(toJson).toList();
+    final next = d['nextBefore']?.toString();
+    return Paged(items, next, next != null);
   }
 
   // --------------------------------------------------------------- users

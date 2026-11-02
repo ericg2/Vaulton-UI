@@ -334,6 +334,13 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
 
   if (profile.deleteExtras) {
     final sourcePaths = localBy.keys.toSet();
+    // A local file replacing a remote directory is removed recursively by the
+    // upload step. Its old descendants must not also become delete entries:
+    // they would run after the replacement and fail because they no longer exist.
+    final replaceRoots = {
+      for (final e in localBy.values)
+        if (!e.isDir && remoteBy[e.relative]?.isDir == true) e.relative,
+    };
     final deleteRoots = <String>{};
     for (final r in remoteBy.values) {
       if (sourcePaths.contains(r.relative)) continue;
@@ -342,7 +349,7 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
       var covered = false;
       for (var i = 0; i < parts.length - 1; i++) {
         prefix = prefix.isEmpty ? parts[i] : '$prefix/${parts[i]}';
-        if (deleteRoots.contains(prefix)) {
+        if (deleteRoots.contains(prefix) || replaceRoots.contains(prefix)) {
           covered = true;
           break;
         }
@@ -363,7 +370,9 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     ..totalFiles = sourceFileCount
     ..totalBytes = local.where((e) => !e.isDir).fold(0, (a, e) => a + e.size)
     ..newFiles = changes.where((x) => x.kind == SyncChangeKind.add).length
-    ..updatedFiles = changes.where((x) => x.kind == SyncChangeKind.update || x.kind == SyncChangeKind.replace).length
+    ..updatedFiles = changes.where((x) =>
+        x.kind == SyncChangeKind.update ||
+        (x.kind == SyncChangeKind.replace && x.source?.isDir == false)).length
     ..deletedFiles = changes.where((x) => x.kind == SyncChangeKind.delete).length
     ..unchangedFiles = sourceFileCount - plannedFileChanges
     ..bytesTotal = changes.where((x) => x.kind != SyncChangeKind.delete && x.kind != SyncChangeKind.mkdir).fold(0, (a, x) => a + x.bytes)
@@ -457,6 +466,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
       x.kind == SyncChangeKind.add ||
       x.kind == SyncChangeKind.update ||
       (x.kind == SyncChangeKind.replace && x.source?.isDir == false)).toList();
+  final transfer = TransferEngine(api);
 
   try {
     var next = 0;
@@ -475,7 +485,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
           if (x.kind == SyncChangeKind.replace) await v.deleteEntry(profile.pointId, remote);
           final stream = await source.openRead(src);
           var sentSoFar = 0;
-          await TransferEngine(api).uploadStream(
+          await transfer.uploadStream(
             pointId: profile.pointId,
             remotePath: remote,
             stream: stream,

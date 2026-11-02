@@ -27,8 +27,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
   final _pass = TextEditingController();
   final _new = TextEditingController();
   final _new2 = TextEditingController();
+  final _otp = TextEditingController();
   final _key = GlobalKey<FormState>();
   bool _busy = false, _temp = false, _show = false, _rememberPassword = false;
+  bool _needsOtp = false;
   int _attemptGeneration = 0;
   CancelToken? _attemptCancelToken;
   // Server details stay tucked away after a server is selected.
@@ -48,7 +50,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     _attemptCancelToken?.cancel('Login screen closed');
     _breath.dispose();
     _passFocus.dispose();
-    for (final c in [_host, _port, _user, _pass, _new, _new2]) {
+    for (final c in [_host, _port, _user, _pass, _new, _new2, _otp]) {
       c.dispose();
     }
     super.dispose();
@@ -142,6 +144,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
       _user.text = a.user;
       _pass.clear();
       _temp = false;
+      _needsOtp = false;
+      _otp.clear();
       _error = null;
       _rememberPassword = false;
     });
@@ -162,6 +166,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
       _user.clear();
       _pass.clear();
       _temp = false;
+      _needsOtp = false;
+      _otp.clear();
       _error = null;
       _rememberPassword = false;
       _editServer = true;
@@ -179,6 +185,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
       _editServer = _previousEditServer;
       _addingServer = false;
       _temp = false;
+      _needsOtp = false;
+      _otp.clear();
       _error = null;
       _rememberPassword = false;
     });
@@ -447,6 +455,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
         username,
         _pass.text,
         newPassword: _temp ? _new.text : null,
+        twoFactorCode: _needsOtp ? _otp.text.trim() : null,
         cancelToken: cancelToken,
       );
       if (generation != _attemptGeneration || cancelToken.isCancelled) return;
@@ -469,6 +478,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
           // The server wants a permanent password before it will sign this account in.
           _temp = true;
           _pwTitle = 'Password Change Required';
+          _error = null;
+        } else if (ex.status == 403 && text.contains('two-factor')) {
+          // The password is correct; ask for the authenticator or recovery code.
+          _needsOtp = true;
           _error = null;
         } else if (ex.status == 401) {
           _error = 'Incorrect username or password.';
@@ -862,6 +875,36 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               validator: (v) => (v == null || v.isEmpty)
                                   ? 'Enter your password.'
                                   : null,
+                            ),
+                            // Two-factor field slides open when the server asks for a code.
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 260),
+                              curve: Curves.easeOutCubic,
+                              alignment: Alignment.topCenter,
+                              child: !_needsOtp
+                                  ? const SizedBox(width: double.infinity)
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: TextFormField(
+                                        controller: _otp,
+                                        autofocus: true,
+                                        keyboardType: TextInputType.number,
+                                        textInputAction: TextInputAction.done,
+                                        autocorrect: false,
+                                        onFieldSubmitted: (_) => _submit(),
+                                        decoration: const InputDecoration(
+                                          labelText: 'Authentication Code',
+                                          helperText:
+                                              'Six digits from your authenticator app, or a recovery code.',
+                                          prefixIcon: Icon(Icons.shield_outlined),
+                                        ),
+                                        validator: (v) =>
+                                            _needsOtp &&
+                                                (v == null || v.trim().isEmpty)
+                                            ? 'Enter your authentication code.'
+                                            : null,
+                                      ),
+                                    ),
                             ),
                             // Password-change section slides open when the server asks for it.
                             AnimatedSize(

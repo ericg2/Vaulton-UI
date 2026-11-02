@@ -143,10 +143,10 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> signIn(String url, String user, String pass, {String? newPassword, CancelToken? cancelToken}) async {
+  Future<void> signIn(String url, String user, String pass, {String? newPassword, String? twoFactorCode, CancelToken? cancelToken}) async {
     await _s.setBaseUrl(url);
     throwIfCancelled(cancelToken);
-    final t = await _v.signIn(user, pass, newPassword: newPassword, cancelToken: cancelToken);
+    final t = await _v.signIn(user, pass, newPassword: newPassword, twoFactorCode: twoFactorCode, cancelToken: cancelToken);
     try {
       throwIfCancelled(cancelToken);
       await _s.setTokens(t);
@@ -173,11 +173,19 @@ class AuthController extends Notifier<AuthState> {
   Future<void> signOut() async {
     // Signing out is a local action and must work even when the server is offline.
     // Clear credentials before any optional network cleanup can delay navigation.
+    _restoreGeneration++;
+    final refresh = _s.refreshToken;
     await _s.clear();
     state = const AuthState(AuthStatus.signedOut);
+    if (refresh != null) {
+      // Revoke the refresh token on the server too. The request has its own
+      // timeout and failures are ignored, so sign-out never waits on the network.
+      unawaited(_v.signOut(refreshToken: refresh));
+    }
   }
 
   void sessionExpired() {
+    _restoreGeneration++;
     state = const AuthState(AuthStatus.signedOut, message: 'Your session expired. Please sign in again.');
   }
 }

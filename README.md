@@ -42,7 +42,7 @@ To pick up newer package releases later: `flutter pub upgrade --major-versions`.
 
 ### Android updates and publishing releases
 
-Android, Windows, and Linux check GitHub Releases on launch and prompt before installing a newer version. You can also check manually from **Settings → About → Check for Updates**. Every downloaded package is verified against its published SHA-256 checksum. Android opens the system package installer and requires confirmation; Windows downloads the setup installer and replaces the app after it exits; Linux downloads the release bundle and uses a helper process to replace the app files after exit. Web deployments update when the website hosting the Flutter app is redeployed; a browser app cannot update its own hosted files.
+Android, Windows, and Linux check GitHub Releases on launch and prompt before installing a newer version. You can also check manually from **Settings → About → Check for Updates**. Every downloaded package is streamed to disk while its SHA-256 digest is computed, so large packages never sit in memory, and is verified against its published checksum. Android opens the system package installer and requires confirmation; Windows downloads the setup installer and replaces the app after it exits; Linux downloads the release bundle and uses a helper process to replace the app files after exit. Web deployments update when the website hosting the Flutter app is redeployed; a browser app cannot update its own hosted files.
 
 Updates install over the existing app only when the APK has the same application ID (**com.ericg2.vaulton**) and is signed with the same signing key as the installed version. Keep your signing key safe and use the same Windows PC for releases if you are relying on that PC's default debug signing key. For a long-term/public distribution, configure a persistent private release keystore in `android/key.properties` and back it up securely; never commit the keystore or passwords.
 
@@ -64,7 +64,8 @@ For Android updates, the installed app and release APK must share the applicatio
 
 | Area | What you get |
 |---|---|
-| Auth | Sign-in with server URL + recent-accounts list, temporary-password flow (`newPassword`), single-use refresh-token rotation (shared across isolates), tokens in Keychain/Keystore/libsecret |
+| Auth | Sign-in with server URL + recent-accounts list, temporary-password flow (`newPassword`), TOTP two-factor prompt (`twoFactorCode`), single-use refresh-token rotation (shared across isolates), tokens in Keychain/Keystore/libsecret |
+| Account security | Settings → Two-Factor Authentication (enroll, recovery codes, regenerate, disable) and Settings → API Tokens (create scoped `vlt_` tokens, set expiry, revoke) |
 | Files | Browse/search/sort, breadcrumbs, multi-select, bulk download (folders are expanded recursively), bulk move/copy (between data points, with job polling), recursive delete, rename, new folder, previews (images/text), drag-and-drop upload (desktop/web), folder upload (desktop) |
 | Transfers | Uploads appear as rows in the file list with their own progress ring; downloads open a bottom sheet (progress, Open, Show in Folder). Persistent queue, parallel transfers, resumable downloads (HTTP Range), auto-retry with back-off, overwrite prompt on 409, per-item cancel/retry |
 | Background (Android) | If you leave the app with transfers running they are handed to a WorkManager worker and keep going with the app closed; the UI re-attaches when you return |
@@ -75,10 +76,10 @@ For Android updates, the installed app and release APK must share the applicatio
 | Repositories | **Browse snapshots** like a file manager (snapshot picker, folders, search, preview), download files or whole folders, restore any file/folder to a data point; every repo card has Browse / Snapshots / Jobs / Schedules buttons |
 | Recent Jobs (`Jobs.Manage`) | Snapshots (lock/unlock/delete), backup/restore/check/retention, cron schedules with preview, job history with status filters, job detail page (overview + live log with level filter/search/history paging) |
 | Messages | Inbox/sent, unread filter, reply, mark read, broadcast (`Messages.Broadcast`) |
-| Admin | System status, users (create/scopes/lock/reset/revoke/delete), all jobs, VFS, health events, backend logs – tabs appear only for scopes you hold |
+| Admin | System status, users (create/scopes/lock/reset/revoke/delete), all jobs, VFS, health events, backend logs, audit trail with filters, self-backup status/run – tabs appear only for scopes you hold |
 | Theming | Material 3, Material You on Android, light/dark/system; Windows (Segoe UI, compact, small radii), Linux (GNOME-like rounding), predictive back on Android |
 
-Scope-gated UI: `Users.List/Manage`, `Roots.Manage`, `Jobs.Manage`, `Admin.Vfs`, `Admin.Logs`, `Messages.Broadcast` (see `lib/core/scopes.dart`). The server remains the authority; 403s are shown as messages.
+Scope-gated UI: `Users.List/Manage`, `Roots.Manage`, `Jobs.Manage`, `Admin.Vfs`, `Admin.Logs`, `Admin.Settings`, `Messages.Broadcast` (see `lib/core/scopes.dart`). The server remains the authority; 403s are shown as messages.
 
 ## Layout
 

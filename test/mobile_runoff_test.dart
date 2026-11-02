@@ -151,6 +151,25 @@ class _FakeVaulton extends Vaulton {
   };
 
   @override
+  Future<Json> healthStatus() async => {
+    'status': 'Healthy',
+    'totalDurationMs': 4.2,
+    'checks': [
+      {'name': 'database', 'status': 'Healthy', 'description': 'Database is reachable.', 'data': null},
+      {'name': 'storage-backend', 'status': 'Healthy', 'description': null, 'data': null},
+      {
+        'name': 'disk-space',
+        'status': 'Healthy',
+        'description': 'Disk space is above the configured thresholds.',
+        'data': {
+          '/data': {'freeBytes': 120 * 1024 * 1024 * 1024, 'totalBytes': 500 * 1024 * 1024 * 1024, 'freePercent': 24.0},
+        },
+      },
+      {'name': 'smb', 'status': 'Healthy', 'description': 'SMB is disabled.', 'data': null},
+    ],
+  };
+
+  @override
   Future<Json> wolSettings() async {
     if (failSettings) throw Exception('settings unreachable');
     return {};

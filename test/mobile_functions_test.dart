@@ -167,6 +167,14 @@ class _FuncApi extends Vaulton {
   Future<int> unreadCount() async => 0;
 
   @override
+  Future<Json> healthStatus() async => {
+        'status': 'Healthy',
+        'checks': [
+          {'name': 'database', 'status': 'Healthy', 'description': null},
+        ],
+      };
+
+  @override
   Future<List<DateTime>> previewCron(
     String cron, {
     String? tz,
