@@ -409,7 +409,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ),
           content: SizedBox(
             width: 520,
-            height: (MediaQuery.sizeOf(ctx).height - 200)
+            height: (MediaQuery.sizeOf(ctx).height - MediaQuery.viewInsetsOf(ctx).bottom - 200)
                 .clamp(120.0, 560.0)
                 .toDouble(),
             child: ListView(
