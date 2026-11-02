@@ -209,6 +209,9 @@ class StorageTabStrip extends StatelessWidget {
 }
 
 // ================================================================== ROOTS
+String _sourceLabel(String scheme) => {"fs":"Local Disk","s3":"Amazon S3","azblob":"Azure Blob Storage","azdls":"Azure Data Lake Storage","azfile":"Azure Files","b2":"Backblaze B2","gcs":"Google Cloud Storage","gdrive":"Google Drive","onedrive":"Microsoft OneDrive","dropbox":"Dropbox","ftp":"FTP Server","webdav":"WebDAV Server","pcloud":"pCloud","alluxio":"Alluxio","cos":"Cloud Object Storage","d1":"Cloudflare D1","dbfs":"Databricks File System"}[scheme] ?? pretty(scheme);
+String _sourceDescription(String scheme) => {"fs":"Use a directory on the Vaulton server. Select a folder under /mnt.","s3":"Connect to an S3-compatible object storage service.","azblob":"Store files in an Azure Blob Storage container.","azdls":"Connect to an Azure Data Lake Storage filesystem.","azfile":"Connect to an Azure file share.","b2":"Connect to a Backblaze B2 bucket.","gcs":"Connect to a Google Cloud Storage bucket.","gdrive":"Connect to a Google Drive account.","onedrive":"Connect to a Microsoft OneDrive account.","dropbox":"Connect to a Dropbox account.","ftp":"Connect to an FTP server.","webdav":"Connect to a WebDAV server.","pcloud":"Connect to pCloud storage.","alluxio":"Connect to an Alluxio filesystem.","cos":"Connect to a compatible cloud object storage service.","d1":"Connect to a Cloudflare D1 database.","dbfs":"Connect to a Databricks File System."}[scheme] ?? 'Connect an external storage service.';
+
 class RootsTab extends ConsumerStatefulWidget {
   const RootsTab({super.key});
   @override
@@ -469,7 +472,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     final fields = kSourceSchemas[scheme]!;
     final r = await formDialog(
       context,
-      '${scheme.toUpperCase()} Connection',
+      '${_sourceLabel(scheme)} Connection',
       [
         for (final f in fields)
           FieldSpec(
@@ -488,9 +491,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           ),
       ],
       ok: existing != null ? 'Save Connection' : 'Continue',
-      intro: existing != null
-          ? 'Update the connection. Leave secret fields blank to keep saved credentials.'
-          : 'Enter the details Vaulton needs to connect to this location.',
+      intro: '${_sourceDescription(scheme)} ${existing != null ? 'Leave secret fields blank to keep saved credentials.' : 'Enter the connection details below.'}',
       pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
@@ -524,8 +525,8 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           'scheme',
           'Storage Type',
           kind: 'choice',
-          options: kSourceSchemas.keys.toList(),
-          initial: 'fs',
+          options: kSourceSchemas.keys.map(_sourceLabel).toList(),
+          initial: _sourceLabel('fs'),
         ),
         const FieldSpec(
           'data',
@@ -544,10 +545,11 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       intro: 'A location stores data folders and backup vaults. Each gets its own capacity limit.',
     );
     if (details == null || !mounted) return;
-    final src = await _sourceForm(details['scheme']!, null);
+    final scheme = typeLabels.entries.firstWhere((e) => e.value == details['scheme'], orElse: () => const MapEntry('fs', 'Local Disk')).key;
+    final src = await _sourceForm(scheme, null);
     if (src == null || !mounted) return;
     Json? detected;
-    if (details['scheme'] == 'fs') {
+    if (scheme == 'fs') {
       detected = await guarded(
         context,
         () => _v.browseLocal(src['root'] as String?),
@@ -598,57 +600,123 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     }
   }
 
-  Future<void> _edit(Root root) async {
-    final r = await formDialog(
-      context,
-      'Edit ${root.name}',
-      [
-      FieldSpec('name', 'Name', initial: root.name, required: true),
-      FieldSpec(
-        'capacity',
-        'Capacity',
-        kind: 'capacity',
-        initial: bytesToGb(root.maxBytes),
-        required: true,
-        initialBytes: root.maxBytes,
+  Future<int?> _capacityDialog({required int currentBytes, Json? detected, required bool isLocal}) async {
+    final available = toInt(detected?['availableBytes']);
+    final total = toInt(detected?['capacityBytes']);
+    if (!isLocal || available <= 0) {
+      final result = await formDialog(
+        context, 'Location Capacity',
+        [FieldSpec('capacity', 'Capacity (GiB)', kind: 'capacity',
+          initial: bytesToCapacity(currentBytes, 'GiB'), required: true,
+          initialBytes: currentBytes, initialUnit: 'GiB')],
+        ok: 'Save Capacity',
+        intro: 'Remote storage capacity is a manual allocation limit. Vaulton cannot reliably detect the provider’s total capacity.',
+      );
+      if (result == null) return null;
+      return int.tryParse(result['capacity'] ?? '');
+    }
+    var override = currentBytes > available;
+    var value = currentBytes.clamp(1, available).toDouble();
+    final custom = TextEditingController(text: bytesToGb(currentBytes));
+    final result = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Location Capacity'),
+          content: SizedBox(width: 440, child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Detected free space: ${fmtBytes(available)} of ${fmtBytes(total)}.'),
+              const SizedBox(height: 12),
+              Row(children: [const Expanded(child: Text('Allocated capacity')), Text(fmtBytes(override ? (int.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024 : value.round()))]),
+              Slider(value: value, min: 1, max: available.toDouble().clamp(2, double.maxFinite),
+                onChanged: override ? null : (v) => setDialogState(() => value = v)),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero, title: const Text('Allow a custom limit'),
+                subtitle: const Text('The limit may exceed currently available disk space.'),
+                value: override, onChanged: (v) => setDialogState(() => override = v),
+              ),
+              if (override) TextField(
+                controller: custom, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Custom capacity', suffixText: 'GiB'),
+              ),
+              if (override) Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Warning: Vaulton may allocate more space than the disk currently has free.',
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+              ),
+            ],
+          ))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(onPressed: () {
+              final bytes = override
+                ? ((double.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024).round()
+                : value.round();
+              if (bytes <= 0) return;
+              Navigator.pop(dialogContext, bytes);
+            }, child: const Text('Save')),
+          ],
+        ),
       ),
-      FieldSpec(
-        'data',
-        'Allow Data Folders',
-        kind: 'bool',
-        initial: '${root.isDataAllowed}',
-      ),
-      FieldSpec(
-        'repo',
-        'Allow Backup Vaults',
-        kind: 'bool',
-        initial: '${root.isRepoAllowed}',
-      ),
-      ],
-      ok: 'Save Location',
-      intro: 'Update the location name, capacity limit, and which types of Vaulton storage it can contain.',
     );
-    if (r == null) return;
-    await guarded(
-      context,
-      () => _v.patchRoot(root.id, {
-        'name': r['name'],
-        'maxBytes': int.tryParse(r['capacity'] ?? '') ?? 0,
-        'isDataAllowed': r['data'] == 'true',
-        'isRepoAllowed': r['repo'] == 'true',
-      }),
-    );
-    _key.currentState?.refresh();
+    custom.dispose();
+    return result;
   }
 
-  Future<void> _editSource(Root root) async {
-    final scheme = '${root.source?['scheme'] ?? ''}';
-    if (!kSourceSchemas.containsKey(scheme)) {
-      return toast(context, 'Unknown connection type.', error: true);
+  Future<void> _create() async {
+    final details = await formDialog(context, 'New Location', [
+      const FieldSpec('name', 'Name', required: true),
+      FieldSpec('scheme', 'Storage Type', kind: 'choice',
+        options: kSourceSchemas.keys.map(_sourceLabel).toList(), initial: _sourceLabel('fs')),
+      const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
+      const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
+    ], ok: 'Continue',
+      intro: 'A location connects Vaulton to storage. Choose the type that matches where your files will live.');
+    if (details == null || !mounted) return;
+    final scheme = typeLabels.entries.firstWhere((e) => e.value == details['scheme'], orElse: () => const MapEntry('fs', 'Local Disk')).key;
+    final src = await _sourceForm(scheme, null);
+    if (src == null || !mounted) return;
+    Json? detected;
+    if (scheme == 'fs') {
+      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
+      if (detected == null || !mounted) return;
     }
+    final maxBytes = await _capacityDialog(currentBytes: toInt(detected?['availableBytes']),
+      detected: detected, isLocal: scheme == 'fs');
+    if (maxBytes == null || maxBytes <= 0 || !mounted) return;
+    final created = await guarded(context, () => _v.createRoot({
+      'name': details['name'], 'source': src, 'maxBytes': maxBytes,
+      'isDataAllowed': details['data'] == 'true', 'isRepoAllowed': details['repo'] == 'true',
+    }));
+    if (created != null) {
+      _key.currentState?.refresh();
+      if (mounted) toast(context, 'Location created.');
+    }
+  }
+
+  Future<void> _edit(Root root) async {
+    final scheme = '${root.source?['scheme'] ?? ''}';
+    if (!kSourceSchemas.containsKey(scheme)) return toast(context, 'Unknown connection type.', error: true);
     final src = await _sourceForm(scheme, root.source);
-    if (src == null) return;
-    await guarded(context, () => _v.patchRoot(root.id, {'source': src}));
+    if (src == null || !mounted) return;
+    Json? detected;
+    if (scheme == 'fs') {
+      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
+      if (detected == null || !mounted) return;
+    }
+    final r = await formDialog(context, 'Edit ${root.name}', [
+      FieldSpec('name', 'Name', initial: root.name, required: true),
+      FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: '${root.isDataAllowed}'),
+      FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
+    ], ok: 'Save Location', intro: 'Update the connection and location settings.');
+    if (r == null || !mounted) return;
+    final maxBytes = await _capacityDialog(currentBytes: root.maxBytes, detected: detected, isLocal: scheme == 'fs');
+    if (maxBytes == null || maxBytes <= 0 || !mounted) return;
+    await guarded(context, () => _v.patchRoot(root.id, {
+      'name': r['name'], 'source': src, 'maxBytes': maxBytes,
+      'isDataAllowed': r['data'] == 'true', 'isRepoAllowed': r['repo'] == 'true',
+    }));
     _key.currentState?.refresh();
   }
 
@@ -679,7 +747,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           vaulton: _v,
           onShare: () => then(() => _shares(root)),
           onEdit: () => then(() => _edit(root)),
-          onEditConnection: () => then(() => _editSource(root)),
           onDelete: () => then(() => _delete(root)),
         );
       },
@@ -757,8 +824,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                               switch (a) {
                                 case 'edit':
                                   _edit(r);
-                                case 'src':
-                                  _editSource(r);
                                 case 'share':
                                   _shares(r);
                                 case 'del':
@@ -767,10 +832,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                             },
                             itemBuilder: (_) => const [
                               PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                value: 'src',
-                                child: Text('Edit Connection'),
-                              ),
                               PopupMenuItem(
                                 value: 'share',
                                 child: Text('Share'),
@@ -1823,12 +1884,11 @@ class _RootSheet extends StatefulWidget {
     required this.vaulton,
     required this.onShare,
     required this.onEdit,
-    required this.onEditConnection,
     required this.onDelete,
   });
   final Root root;
   final Vaulton vaulton;
-  final VoidCallback onShare, onEdit, onEditConnection, onDelete;
+  final VoidCallback onShare, onEdit, onDelete;
   @override
   State<_RootSheet> createState() => _RootSheetState();
 }
@@ -2003,12 +2063,7 @@ class _RootSheetState extends State<_RootSheet> {
                 OutlinedButton.icon(
                   onPressed: widget.onEdit,
                   icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Edit Details'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: widget.onEditConnection,
-                  icon: const Icon(Icons.link),
-                  label: const Text('Edit Connection'),
+                  label: const Text('Edit Location'),
                 ),
                 TextButton.icon(
                   onPressed: widget.onDelete,

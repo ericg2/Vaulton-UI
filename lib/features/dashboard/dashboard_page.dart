@@ -504,8 +504,12 @@ class _HealthRow extends StatelessWidget {
       title: Row(children: [
         Expanded(child: Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall)),
         const SizedBox(width: 8),
-        Flexible(
-          child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis,
+        Container(
+          constraints: const BoxConstraints(minWidth: 76, maxWidth: 104),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+          alignment: Alignment.center,
+          child: Text(status, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
         ),
       ]),
@@ -535,8 +539,8 @@ String? _diskSummary(Json check) {
     final total = (value['totalBytes'] as num?)?.toInt();
     final percent = (value['freePercent'] as num?)?.toDouble();
     if (free == null || total == null) return;
-    parts.add('$path: ${fmtBytes(free)} free of ${fmtBytes(total)}'
-        '${percent == null ? '' : ' (${percent.toStringAsFixed(1)}%)'}');
+    parts.add('${path.split('/').last}: ${fmtBytes(free)} free / ${fmtBytes(total)}'
+        '${percent == null ? '' : ' · ${percent.toStringAsFixed(0)}% free'}');
   });
   return parts.isEmpty ? null : parts.join('\n');
 }
