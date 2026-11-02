@@ -33,6 +33,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   Json _email = {};
   Json _rateLimits = {};
   Json _limits = {};
+  Json _startup = {};
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -43,6 +44,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       final email = await _v.emailSettings();
       final rateLimits = await _v.rateLimitSettings();
       final limits = await _v.operationalLimits();
+      final startup = await _v.startupSettings();
       if (!mounted) return;
       setState(() {
         _enabled = toBool(data['enabled']);
@@ -60,6 +62,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         _email = email;
         _rateLimits = rateLimits;
         _limits = limits;
+        _startup = startup;
         _loaded = true;
         _loadError = null;
       });
@@ -176,6 +179,66 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (saved == null || !mounted) return;
     setState(() => _limits = saved);
     toast(context, 'Operational limits saved.');
+  }
+
+  Future<void> _editStartupSettings() async {
+    final paths = (_startup['monitorPaths'] as List? ?? const []).join(', ');
+    final f = await formDialog(context, 'Advanced Server Settings', [
+      FieldSpec('receive', 'gRPC Receive Limit (Bytes)', initial: '${_startup['maxReceiveMessageSizeBytes'] ?? 33554432}'),
+      FieldSpec('send', 'gRPC Send Limit (Bytes)', initial: '${_startup['maxSendMessageSizeBytes'] ?? 33554432}'),
+      FieldSpec('chunk', 'Upload Chunk Size (Bytes)', initial: '${_startup['chunkSizeBytes'] ?? 1048576}'),
+      FieldSpec('poll', 'Backend Poll Interval (Milliseconds)', initial: '${_startup['pollIntervalMs'] ?? 1000}'),
+      FieldSpec('sync', 'VFS Sync Interval (Milliseconds)', initial: '${_startup['vfsSyncIntervalMs'] ?? 30000}'),
+      FieldSpec('timeout', 'gRPC Call Timeout (Seconds)', initial: '${_startup['callTimeoutSeconds'] ?? 30}'),
+      FieldSpec('paths', 'Storage Monitor Paths (comma separated)', initial: paths),
+      FieldSpec('freePercent', 'Minimum Free Space (Percent)', initial: '${_startup['minimumFreePercent'] ?? 5}'),
+      FieldSpec('freeBytes', 'Minimum Free Space (Bytes)', initial: '${_startup['minimumFreeBytes'] ?? 1073741824}'),
+      FieldSpec('alertInterval', 'Storage Alert Interval (Minutes)', initial: '${_startup['alertIntervalMinutes'] ?? 15}'),
+      FieldSpec('backupEnabled', 'Enable Automatic Self-Backups', kind: 'bool', initial: '${_startup['selfBackupEnabled'] != false}'),
+      FieldSpec('backupInterval', 'Self-Backup Interval (Hours)', initial: '${_startup['selfBackupIntervalHours'] ?? 24}'),
+      FieldSpec('backupRetain', 'Self-Backup Copies to Keep', initial: '${_startup['selfBackupRetain'] ?? 7}'),
+      FieldSpec('backupDirectory', 'Self-Backup Directory', initial: '${_startup['selfBackupDirectory'] ?? 'App_Data/backups'}'),
+      FieldSpec('backupDelay', 'Self-Backup Startup Delay (Seconds)', initial: '${_startup['selfBackupStartupDelaySeconds'] ?? 60}'),
+      FieldSpec('auditEnabled', 'Enable Audit Logging', kind: 'bool', initial: '${_startup['auditEnabled'] != false}'),
+      FieldSpec('auditRetention', 'Audit Retention (Days, 0 = Forever)', initial: '${_startup['auditRetentionDays'] ?? 180}'),
+      FieldSpec('auditReads', 'Include Successful Read Requests', kind: 'bool', initial: '${_startup['auditIncludeReads'] == true}'),
+      FieldSpec('metricsEnabled', 'Enable Metrics Endpoint', kind: 'bool', initial: '${_startup['metricsEnabled'] == true}'),
+      FieldSpec('metricsPaths', 'Include Route Labels in Metrics', kind: 'bool', initial: '${_startup['metricsIncludePaths'] == true}'),
+      FieldSpec('logLevel', 'Minimum Log Level', kind: 'choice', initial: '${_startup['logLevel'] ?? 'Information'}',
+        options: const ['Verbose', 'Debug', 'Information', 'Warning', 'Error', 'Fatal']),
+    ], ok: 'Save Server Settings',
+      intro: 'These advanced settings control backend performance, storage alerts, self-backups, audit, metrics, and logging. Changes are saved immediately but require an API restart to take effect.');
+    if (f == null || !mounted) return;
+    int? number(String key) => int.tryParse(f[key] ?? '');
+    final receive = number('receive'), send = number('send'), chunk = number('chunk');
+    final poll = number('poll'), sync = number('sync'), timeout = number('timeout');
+    final freeBytes = number('freeBytes'), alert = number('alertInterval');
+    final backupInterval = number('backupInterval'), backupRetain = number('backupRetain');
+    final backupDelay = number('backupDelay'), auditRetention = number('auditRetention');
+    final freePercent = double.tryParse(f['freePercent'] ?? '');
+    if ([receive, send, chunk, poll, sync, timeout, freeBytes, alert, backupInterval,
+      backupRetain, backupDelay, auditRetention].any((v) => v == null) || freePercent == null) {
+      toast(context, 'Enter valid numeric values for all server settings.', error: true);
+      return;
+    }
+    final saved = await guarded(context, () => _v.saveStartupSettings({
+      'maxReceiveMessageSizeBytes': receive, 'maxSendMessageSizeBytes': send,
+      'chunkSizeBytes': chunk, 'pollIntervalMs': poll, 'vfsSyncIntervalMs': sync,
+      'callTimeoutSeconds': timeout,
+      'monitorPaths': (f['paths'] ?? '').split(',').map((x) => x.trim()).where((x) => x.isNotEmpty).toList(),
+      'minimumFreePercent': freePercent, 'minimumFreeBytes': freeBytes,
+      'alertIntervalMinutes': alert,
+      'selfBackupEnabled': f['backupEnabled'] == 'true',
+      'selfBackupIntervalHours': backupInterval, 'selfBackupRetain': backupRetain,
+      'selfBackupDirectory': f['backupDirectory'], 'selfBackupStartupDelaySeconds': backupDelay,
+      'auditEnabled': f['auditEnabled'] == 'true', 'auditRetentionDays': auditRetention,
+      'auditIncludeReads': f['auditReads'] == 'true',
+      'metricsEnabled': f['metricsEnabled'] == 'true', 'metricsIncludePaths': f['metricsPaths'] == 'true',
+      'logLevel': f['logLevel'],
+    }));
+    if (saved == null || !mounted) return;
+    setState(() => _startup = saved);
+    toast(context, 'Server settings saved. Restart the API to apply them.');
   }
 
   Future<void> _editWake() async {
@@ -600,6 +663,21 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
                   onPressed: _editLimits, icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
+              ),
+            ]),
+          ),
+          Card(
+            child: Column(children: [
+              const ListTile(
+                leading: Icon(Icons.tune_outlined),
+                title: Text('Advanced Server Settings'),
+                subtitle: Text('gRPC, storage alerts, self-backups, audit, metrics, and logging. Requires an API restart.'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
+                  onPressed: _editStartupSettings,
+                  icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
               ),
             ]),
           ),
