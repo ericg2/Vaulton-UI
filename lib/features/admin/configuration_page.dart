@@ -239,8 +239,16 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       FieldSpec('metricsPaths', 'Include Route Labels in Metrics', kind: 'bool', initial: '${_startup['metricsIncludePaths'] == true}'),
       FieldSpec('logLevel', 'Minimum Log Level', kind: 'choice', initial: '${_startup['logLevel'] ?? 'Information'}',
         options: const ['Verbose', 'Debug', 'Information', 'Warning', 'Error', 'Fatal']),
+      FieldSpec('corsOrigins', 'Allowed Browser Origins (comma separated)', initial: ((_startup['corsOrigins'] as List?) ?? const []).join(', ')),
+      FieldSpec('forwardedHeaders', 'Trust Reverse Proxy Headers', kind: 'bool', initial: '${_startup['useForwardedHeaders'] == true}'),
+      FieldSpec('knownProxies', 'Trusted Proxy IP Addresses (comma separated)', initial: ((_startup['knownProxies'] as List?) ?? const []).join(', ')),
+      FieldSpec('exposeOpenApi', 'Expose OpenAPI Documentation', kind: 'bool', initial: '${_startup['exposeOpenApi'] == true}'),
+      FieldSpec('smbEnabled', 'Enable SMB File Sharing', kind: 'bool', initial: '${_startup['smbEnabled'] != false}'),
+      FieldSpec('smbBindAddress', 'SMB Bind Address', initial: '${_startup['smbBindAddress'] ?? '0.0.0.0'}'),
+      FieldSpec('accessTokenMinutes', 'Access Token Lifetime (Minutes)', initial: '${_startup['accessTokenMinutes'] ?? 30}'),
+      FieldSpec('refreshTokenDays', 'Refresh Token Lifetime (Days)', initial: '${_startup['refreshTokenDays'] ?? 14}'),
     ], ok: 'Save Server Settings',
-      intro: 'These settings control backend performance, storage alerts, self-backups, audit, metrics, and logging. Changes require an API restart. Deployment environment variables override saved values. The metrics endpoint is unauthenticated; expose it only on a trusted network.');
+      intro: 'These settings control backend performance, storage alerts, self-backups, audit, metrics, logging, browser access, reverse proxies, SMB, and token lifetimes. Changes require an API restart. Deployment environment variables override saved values. The metrics and OpenAPI endpoints can expose operational details; use them only on trusted networks. A wildcard CORS origin allows every website. Only trust proxy IPs you control.');
     if (f == null || !mounted) return;
     int? number(String key) => int.tryParse(f[key] ?? '');
     final receive = number('receive'), send = number('send'), chunk = number('chunk');
@@ -268,6 +276,13 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       'auditIncludeReads': f['auditReads'] == 'true',
       'metricsEnabled': f['metricsEnabled'] == 'true', 'metricsIncludePaths': f['metricsPaths'] == 'true',
       'logLevel': f['logLevel'],
+      'corsOrigins': (f['corsOrigins'] ?? '').split(',').map((x) => x.trim()).where((x) => x.isNotEmpty).toList(),
+      'useForwardedHeaders': f['forwardedHeaders'] == 'true',
+      'knownProxies': (f['knownProxies'] ?? '').split(',').map((x) => x.trim()).where((x) => x.isNotEmpty).toList(),
+      'exposeOpenApi': f['exposeOpenApi'] == 'true',
+      'smbEnabled': f['smbEnabled'] == 'true', 'smbBindAddress': f['smbBindAddress'],
+      'accessTokenMinutes': int.tryParse(f['accessTokenMinutes'] ?? '') ?? 30,
+      'refreshTokenDays': int.tryParse(f['refreshTokenDays'] ?? '') ?? 14,
     }));
     if (saved == null || !mounted) return;
     setState(() => _startup = saved);
@@ -721,7 +736,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               const ListTile(
                 leading: Icon(Icons.tune_outlined),
                 title: Text('Advanced Server Settings'),
-                subtitle: Text('gRPC, storage alerts, self-backups, audit, metrics, and logging. Requires an API restart.'),
+                subtitle: Text('gRPC, storage alerts, self-backups, audit, metrics, logging, security, SMB, and token lifetimes. Requires an API restart.'),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
