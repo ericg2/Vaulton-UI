@@ -239,21 +239,47 @@ Future<Map<String, String>?> formDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
         title: Text(title),
         content: SizedBox(
           width: 460,
           child: Form(
             key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (intro != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(intro),
-                    ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (MediaQuery.sizeOf(ctx).height -
+                        MediaQuery.viewInsetsOf(ctx).bottom -
+                        180)
+                    .clamp(120.0, 600.0)
+                    .toDouble(),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (intro != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(ctx).colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: Theme.of(ctx).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(intro)),
+                          ],
+                        ),
+                      ),
                   for (final f in fields)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -359,6 +385,7 @@ Future<Map<String, String>?> formDialog(
                       },
                     ),
                 ],
+                ),
               ),
             ),
           ),
@@ -418,7 +445,11 @@ Future<Map<String, String>?> formDialog(
         ],
       ),
     ),
-  );
+  ).whenComplete(() {
+    for (final controller in ctrls.values) {
+      controller.dispose();
+    }
+  });
 }
 
 const _capacityFactors = <String, double>{
