@@ -83,17 +83,61 @@ class UpdateService {
       if (!context.mounted) return;
       final install = await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Update Available'),
-          content: Text(
-            'Vaulton $latestVersion is ready to install. Your current version is $currentVersion. '
-            'Continue to download and verify the update?',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Later')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Update')),
-          ],
-        ),
+        builder: (dialogContext) {
+          final theme = Theme.of(dialogContext);
+          final colors = theme.colorScheme;
+          return AlertDialog(
+            insetPadding: const EdgeInsets.all(16),
+            title: const Text('Update Available'),
+            content: SizedBox(
+              width: 440,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: colors.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.system_update_alt, size: 30, color: colors.onSecondaryContainer),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Vaulton $latestVersion', style: theme.textTheme.titleMedium?.copyWith(color: colors.onSecondaryContainer)),
+                              Text('Currently installed: $currentVersion', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSecondaryContainer)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('The update will be downloaded and verified before installation.'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'You can choose Later and install it when you are ready.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Later')),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Download Update'),
+              ),
+            ],
+          );
+        },
       );
       if (install != true || !context.mounted) return;
 
