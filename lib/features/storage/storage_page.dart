@@ -637,7 +637,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
               Text('Detected free space: ${fmtBytes(available)} of ${fmtBytes(total)}.'),
               const SizedBox(height: 12),
               Row(children: [const Expanded(child: Text('Allocated capacity')), Text(fmtBytes(override ? (int.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024 : value.round()))]),
-              Slider(value: value, min: 1, max: available.toDouble().clamp(2, double.maxFinite),
+              Slider(value: value, min: 1, max: available.toDouble().clamp(2, double.maxFinite).toDouble(),
                 onChanged: override ? null : (v) => setDialogState(() => value = v)),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero, title: const Text('Allow a custom limit'),

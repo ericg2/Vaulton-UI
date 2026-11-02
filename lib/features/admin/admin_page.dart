@@ -24,8 +24,8 @@ class AdminPage extends ConsumerWidget {
       if (u.has(Scopes.adminLogs)) ('Logs', const _LogsTab()),
       if (u.has(Scopes.adminLogs)) ('Audit', const _AuditTab()),
       if (u.has(Scopes.adminSettings)) ('Maintenance', const _MaintenanceTab()),
-      if (u.userName.toLowerCase() == 'admin')
-        ('Configuration', const ConfigurationTab()),
+      if (u.has(Scopes.adminSettings))
+        ('Server Settings', const ConfigurationTab()),
     ];
     return DefaultTabController(
       length: tabs.length,
