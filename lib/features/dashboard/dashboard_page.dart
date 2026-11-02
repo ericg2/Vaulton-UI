@@ -15,8 +15,9 @@ import '../files/files_page.dart';
 import '../shell/server_badge.dart';
 
 class _Data {
-  _Data(this.datas, this.repos, this.jobs, this.health);
+  _Data(this.datas, this.repos, this.roots, this.jobs, this.health);
   final List<Point> datas, repos;
+  final List<Root> roots;
   final List<RepoJob> jobs;
   final Json? health;
 }
@@ -107,12 +108,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final r = await Future.wait([
         v.datas(limit: 200),
         v.repos(limit: 200),
+        v.roots(limit: 200),
         if (_canJobs) v.jobs(limit: 12) else Future.value(Paged<RepoJob>([], null, false)),
         if (_canSeeHealth) _health(v) else Future.value(null),
       ]);
       if (!mounted) return;
       setState(() {
-        _data = _Data((r[0] as Paged<Point>).items, (r[1] as Paged<Point>).items, (r[2] as Paged<RepoJob>).items, r[3] as Json?);
+        _data = _Data((r[0] as Paged<Point>).items, (r[1] as Paged<Point>).items, (r[2] as Paged<Root>).items, (r[3] as Paged<RepoJob>).items, r[4] as Json?);
         _error = null;
       });
     } catch (e) {
@@ -169,7 +171,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             healthStatus,
             'System Health',
             () => widget.onNavigate?.call('Administration'),
-            highlight: healthStatus == 'Healthy',
             bad: healthStatus == 'Unhealthy',
           ),
       ];
@@ -182,11 +183,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
           children: [
             if (MediaQuery.sizeOf(context).width < 800)
-              FadeSlideIn(key: const ValueKey('badge'), child: const Card(margin: EdgeInsets.fromLTRB(16, 4, 16, 4), child: ServerBadge(inline: true))),
-            FadeSlideIn(
-              key: const ValueKey('greet'),
-              delay: const Duration(milliseconds: 60),
-              child: Padding(
+              const Card(margin: EdgeInsets.fromLTRB(16, 4, 16, 4), child: ServerBadge(inline: true)),
+            Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('$greet, ${u.displayName}', style: t.titleLarge),
@@ -210,25 +208,21 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ]),
               ),
-            ),
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: LayoutBuilder(key: const ValueKey('stats'), builder: (ctx, c) {
-                final cols = c.maxWidth > 700 ? stats.length : 2;
+              child: LayoutBuilder(builder: (ctx, c) {
+                final cols = c.maxWidth >= 900 ? 3 : (c.maxWidth >= 520 ? 2 : 1);
                 final w = (c.maxWidth - 10 * (cols - 1)) / cols;
                 return Wrap(spacing: 10, runSpacing: 10, children: [
                   for (var i = 0; i < stats.length; i++)
-                    FadeSlideIn(key: ValueKey('stat$i'), delay: Duration(milliseconds: 120 + 70 * i), child: SizedBox(width: w, child: stats[i])),
+                    SizedBox(width: w, child: stats[i]),
                 ]);
               }),
             ),
             const SizedBox(height: 4),
-            if (d.datas.isEmpty || d.repos.isEmpty || (_canJobs && lastOk == null))
-              FadeSlideIn(
-                key: const ValueKey('firstrun'),
-                delay: const Duration(milliseconds: 300),
-                child: Card(
+            if (d.roots.isEmpty || d.datas.isEmpty || d.repos.isEmpty || (_canJobs && lastOk == null))
+              Card(
                   color: cs.tertiaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -249,23 +243,30 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Complete these steps to start storing files and protecting them with backups.',
+                          'Add a location, create a data folder, and set up a backup vault.',
                           style: TextStyle(color: cs.onTertiaryContainer),
                         ),
                         const SizedBox(height: 8),
+                        _SetupStep(
+                          title: 'Create a Location',
+                          subtitle: 'Choose where Vaulton stores files and backups.',
+                          complete: d.roots.isNotEmpty,
+                          actionLabel: 'Set Up',
+                          onPressed: d.roots.isEmpty ? () => widget.onNavigate?.call('Locations') : null,
+                        ),
                         _SetupStep(
                           title: 'Create a Data Folder',
                           subtitle: 'Choose where your files will be stored.',
                           complete: d.datas.isNotEmpty,
                           actionLabel: 'Set Up',
-                          onPressed: d.datas.isEmpty ? () => widget.onNavigate?.call('Data Folders') : null,
+                          onPressed: d.roots.isNotEmpty && d.datas.isEmpty ? () => widget.onNavigate?.call('Data Folders') : null,
                         ),
                         _SetupStep(
                           title: 'Create a Backup Vault',
                           subtitle: 'Choose where your backups will be kept.',
                           complete: d.repos.isNotEmpty,
                           actionLabel: 'Set Up',
-                          onPressed: d.repos.isEmpty ? () => widget.onNavigate?.call('Backup Vaults') : null,
+                          onPressed: d.roots.isNotEmpty && d.repos.isEmpty ? () => widget.onNavigate?.call('Backup Vaults') : null,
                         ),
                         if (_canJobs)
                           _SetupStep(
@@ -281,7 +282,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     ),
                   ),
                 ),
-              ),
             if (_canPower)
               Section('Server Power', children: [
                 Padding(
@@ -413,7 +413,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 980),
-          child: AnimatedSwitcher(duration: const Duration(milliseconds: 160), child: body),
+          child: body,
         ),
       ),
     );
@@ -569,15 +569,18 @@ class _Stat extends StatelessWidget {
                 Builder(builder: (_) {
                   final n = int.tryParse(value);
                   final style = Theme.of(context).textTheme.headlineSmall?.copyWith(color: fg, height: 1.05, fontWeight: FontWeight.w600);
-                  if (n == null) return Text(value, style: style);
+                  if (n == null) {
+                      return Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: fg, fontWeight: FontWeight.w600));
+                    }
                   return TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: n.toDouble()),
                     duration: const Duration(milliseconds: 700),
                     curve: Curves.easeOutCubic,
-                    builder: (_, v, _) => Text('${v.round()}', style: style),
+                    builder: (_, v, _) => Text('${v.round()}', maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
                   );
                 }),
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg.withValues(alpha: 0.8))),
+                Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg.withValues(alpha: 0.8))),
               ]),
             ),
           ]),

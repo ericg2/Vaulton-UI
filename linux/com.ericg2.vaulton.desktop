@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vaulton
+Comment=Manage Vaulton storage, files, and backups.
+Exec=vaulton
+Icon=com.ericg2.vaulton
+Terminal=false
+Categories=Utility;System;
+StartupNotify=true
+StartupWMClass=com.ericg2.vaulton

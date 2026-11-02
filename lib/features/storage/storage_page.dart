@@ -224,12 +224,17 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     var loading = true;
     var started = false;
     String? error;
-    final startPath = initialPath?.trim() ?? '';
+    bool allowedPath(String path) =>
+        (path == '/mnt' || path.startsWith('/mnt/')) &&
+        !path.split('/').contains('..');
+    final requestedPath = initialPath?.trim() ?? '';
+    final startPath = allowedPath(requestedPath) ? requestedPath : '/mnt';
 
     Future<void> load(
       String? path,
       void Function(void Function()) update,
     ) async {
+      if (path != null && !allowedPath(path)) return;
       update(() {
         loading = true;
         error = null;
@@ -262,6 +267,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           }
           final dirs = (current?['directories'] as List? ?? const [])
               .map(toJson)
+              .where((d) => allowedPath('${d['path'] ?? ''}'))
               .toList();
           final path = '${current?['currentPath'] ?? ''}';
           final parent = toStr(current?['parentPath']);
@@ -281,7 +287,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Select a folder on the server for this storage connection.',
+                    'Choose a folder under /mnt. System directories are excluded.',
                     style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                       color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                     ),
@@ -300,7 +306,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            path.isEmpty ? 'Server Drives' : path,
+                            path.isEmpty ? '/mnt' : path,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(ctx).textTheme.titleSmall,
@@ -391,7 +397,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       spacing: 8,
                       children: [
                         TextButton.icon(
-                          onPressed: parent == null || parent.isEmpty
+                          onPressed: path == '/mnt' || parent == null || parent.isEmpty || !allowedPath(parent)
                               ? null
                               : () => load(parent, update),
                           icon: const Icon(Icons.arrow_upward),
@@ -443,7 +449,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                 child: const Text('Cancel'),
               ),
               FilledButton.icon(
-                onPressed: path.isEmpty
+                onPressed: !allowedPath(path)
                     ? null
                     : () => Navigator.pop(dialogContext, path),
                 icon: const Icon(Icons.check),
@@ -488,6 +494,14 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
+    if (scheme == 'fs') {
+      final root = r['root']?.trim() ?? '';
+      final valid = (root == '/mnt' || root.startsWith('/mnt/')) && !root.split('/').contains('..');
+      if (!valid) {
+        toast(context, 'Choose a directory under /mnt.', error: true);
+        return null;
+      }
+    }
     final src = <String, dynamic>{'scheme': scheme};
     for (final f in fields) {
       final val = r[f.key]!;

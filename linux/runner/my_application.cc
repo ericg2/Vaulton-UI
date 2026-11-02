@@ -7,6 +7,8 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
+
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
@@ -24,7 +26,23 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
-  gtk_window_set_icon_name(window, "vaulton");
+  g_autofree gchar* executable_path = g_file_read_link("/proc/self/exe", nullptr);
+  g_autofree gchar* executable_dir = executable_path ? g_path_get_dirname(executable_path) : nullptr;
+  g_autofree gchar* icon_path = executable_dir
+      ? g_build_filename(executable_dir, "data", "vaulton-mark.svg", nullptr)
+      : nullptr;
+  if (icon_path != nullptr) {
+    g_autoptr(GError) icon_error = nullptr;
+    GdkPixbuf* icon = gdk_pixbuf_new_from_file(icon_path, &icon_error);
+    if (icon != nullptr) {
+      gtk_window_set_icon(window, icon);
+      g_object_unref(icon);
+    } else {
+      gtk_window_set_icon_name(window, "com.ericg2.vaulton");
+    }
+  } else {
+    gtk_window_set_icon_name(window, "com.ericg2.vaulton");
+  }
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu

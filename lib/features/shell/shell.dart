@@ -36,6 +36,7 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
+  final GlobalKey _dashboardKey = GlobalKey();
   int _index = 0;
   String? _selectedLabel = 'Dashboard';
   bool _wasWide = true;
@@ -152,8 +153,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _goto(String label, List<_Dest> dests, bool wide) {
-    if (label == 'Data Folders' || label == 'Backup Vaults') {
-      _storageTab = label == 'Data Folders' ? 0 : 1;
+    if (label == 'Data Folders' || label == 'Backup Vaults' || label == 'Locations') {
+      _storageTab = label == 'Data Folders' ? 0 : (label == 'Backup Vaults' ? 1 : 2);
       final storage = dests.indexWhere((d) => d.label == 'Storage');
       if (storage >= 0) {
         if (wide) {
@@ -184,6 +185,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       Icons.dashboard_outlined,
       Icons.dashboard,
       () => DashboardPage(
+        key: _dashboardKey,
         onNavigate: (l) =>
             _goto(l, _dests(ref.read(userProvider)!, wide), wide),
       ),
