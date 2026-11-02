@@ -34,6 +34,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   Json _rateLimits = {};
   Json _limits = {};
   Json _startup = {};
+  Json _notifications = {};
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -45,6 +46,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       final rateLimits = await _v.rateLimitSettings();
       final limits = await _v.operationalLimits();
       final startup = await _v.startupSettings();
+      final notifications = await _v.notificationSettings();
       if (!mounted) return;
       setState(() {
         _enabled = toBool(data['enabled']);
@@ -63,6 +65,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         _rateLimits = rateLimits;
         _limits = limits;
         _startup = startup;
+        _notifications = notifications;
         _loaded = true;
         _loadError = null;
       });
@@ -179,6 +182,36 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (saved == null || !mounted) return;
     setState(() => _limits = saved);
     toast(context, 'Operational limits saved.');
+  }
+
+  Future<void> _editNotifications() async {
+    final f = await formDialog(context, 'Webhook Notifications', [
+      FieldSpec('url', 'Webhook URL', initial: '${_notifications['webhookUrl'] ?? ''}',
+        hint: 'HTTP or HTTPS endpoint. Leave blank to disable webhooks.'),
+      FieldSpec('secret', 'Signing Secret', kind: 'secret',
+        hint: _notifications['hasWebhookSecret'] == true ? 'Leave blank to keep the saved secret.' : 'Optional. Requests are signed with HMAC-SHA256.'),
+      FieldSpec('jobs', 'Notify on Job Failures', kind: 'bool', initial: '${_notifications['notifyJobFailures'] != false}'),
+      FieldSpec('backups', 'Notify on Self-Backup Failures', kind: 'bool', initial: '${_notifications['notifySelfBackupFailures'] != false}'),
+      FieldSpec('timeout', 'Request Timeout (Seconds)', initial: '${_notifications['timeoutSeconds'] ?? 10}'),
+      FieldSpec('attempts', 'Maximum Attempts', initial: '${_notifications['maxAttempts'] ?? 3}'),
+    ], ok: 'Save Notifications',
+      intro: 'Vaulton sends JSON webhooks for configured failure events. The signing secret is encrypted at rest.');
+    if (f == null || !mounted) return;
+    final timeout = int.tryParse(f['timeout'] ?? '');
+    final attempts = int.tryParse(f['attempts'] ?? '');
+    if (timeout == null || attempts == null) {
+      toast(context, 'Enter valid timeout and retry values.', error: true);
+      return;
+    }
+    final saved = await guarded(context, () => _v.saveNotificationSettings({
+      'webhookUrl': f['url'], 'webhookSecret': f['secret'],
+      'notifyJobFailures': f['jobs'] == 'true',
+      'notifySelfBackupFailures': f['backups'] == 'true',
+      'timeoutSeconds': timeout, 'maxAttempts': attempts,
+    }));
+    if (saved == null || !mounted) return;
+    setState(() => _notifications = saved);
+    toast(context, 'Notification settings saved.');
   }
 
   Future<void> _editStartupSettings() async {
@@ -663,6 +696,23 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
                   onPressed: _editLimits, icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
+              ),
+            ]),
+          ),
+          Card(
+            child: Column(children: [
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Webhook Notifications'),
+                subtitle: Text((_notifications['webhookUrl'] ?? '').toString().isEmpty
+                    ? 'Disabled'
+                    : '${_notifications['webhookUrl']}'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
+                  onPressed: _editNotifications,
+                  icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
               ),
             ]),
           ),
