@@ -284,7 +284,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final deviceTz = await deviceTimeZone();
     if (!mounted) return;
     final isNew = s == null;
-    final curRepo = repos.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.items.first;
+    final curRepo = repos.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.first;
     final curData = datas.where((d) => d.id == s?.dataId).firstOrNull;
     final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
