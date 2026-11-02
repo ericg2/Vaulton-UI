@@ -30,6 +30,9 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   bool _hasPowerAgentKey = false;
   Json? _powerAgentStatus;
   Object? _loadError;
+  Json _email = {};
+  Json _rateLimits = {};
+  Json _limits = {};
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -37,6 +40,9 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     try {
       final data = await _v.wolSettings();
       final power = await _v.powerSettings();
+      final email = await _v.emailSettings();
+      final rateLimits = await _v.rateLimitSettings();
+      final limits = await _v.operationalLimits();
       if (!mounted) return;
       setState(() {
         _enabled = toBool(data['enabled']);
@@ -51,6 +57,9 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
           power['scheduleProtectionMinutes'],
         );
         _hasPowerAgentKey = toBool(power['hasAgentKey']);
+        _email = email;
+        _rateLimits = rateLimits;
+        _limits = limits;
         _loaded = true;
         _loadError = null;
       });
@@ -70,6 +79,103 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   void _retry() {
     setState(() => _loadError = null);
     _load();
+  }
+
+  Future<void> _editEmail() async {
+    final f = await formDialog(context, 'Outgoing Email', [
+      FieldSpec('enabled', 'Enable Email', kind: 'bool', initial: '${_email['enabled'] == true}'),
+      FieldSpec('host', 'SMTP Host', initial: '${_email['host'] ?? ''}'),
+      FieldSpec('port', 'SMTP Port', initial: '${_email['port'] ?? 587}'),
+      FieldSpec('ssl', 'Use STARTTLS', kind: 'bool', initial: '${_email['enableSsl'] != false}'),
+      FieldSpec('username', 'SMTP Username', initial: '${_email['username'] ?? ''}'),
+      FieldSpec('password', 'SMTP Password', kind: 'secret', hint: _email['hasPassword'] == true ? 'Leave blank to keep the saved password.' : 'Stored encrypted.'),
+      FieldSpec('fromEmail', 'Sender Email', initial: '${_email['fromEmail'] ?? ''}'),
+      FieldSpec('fromName', 'Sender Name', initial: '${_email['fromName'] ?? 'Vaulton Alerts'}'),
+      FieldSpec('timeout', 'Timeout (Seconds)', initial: '${_email['timeoutSeconds'] ?? 30}'),
+      FieldSpec('attempts', 'Maximum Attempts', initial: '${_email['maxAttempts'] ?? 3}'),
+    ], ok: 'Save Email Settings',
+      intro: 'Configure SMTP for welcome emails, password resets, and notifications.');
+    if (f == null || !mounted) return;
+    final port = int.tryParse(f['port'] ?? '');
+    final timeout = int.tryParse(f['timeout'] ?? '');
+    final attempts = int.tryParse(f['attempts'] ?? '');
+    if (port == null || timeout == null || attempts == null) {
+      toast(context, 'Enter valid numeric SMTP settings.', error: true);
+      return;
+    }
+    final saved = await guarded(context, () => _v.saveEmailSettings({
+      'enabled': f['enabled'] == 'true', 'host': f['host'], 'port': port,
+      'enableSsl': f['ssl'] == 'true', 'username': f['username'], 'password': f['password'],
+      'fromEmail': f['fromEmail'], 'fromName': f['fromName'],
+      'timeoutSeconds': timeout, 'maxAttempts': attempts,
+    }));
+    if (saved == null || !mounted) return;
+    setState(() => _email = saved);
+    toast(context, 'Email settings saved.');
+  }
+
+  Future<void> _testEmail() async {
+    final ok = await guarded(context, () async { await _v.testEmail(); return true; });
+    if (ok == true && mounted) toast(context, 'Test email sent.');
+  }
+
+  Future<void> _editRateLimits() async {
+    final f = await formDialog(context, 'API Rate Limits', [
+      FieldSpec('authRequests', 'Authentication Requests', initial: '${_rateLimits['authRequests'] ?? 10}'),
+      FieldSpec('authWindow', 'Authentication Window (Seconds)', initial: '${_rateLimits['authWindowSeconds'] ?? 60}'),
+      FieldSpec('messageRequests', 'Message Requests', initial: '${_rateLimits['messageRequests'] ?? 30}'),
+      FieldSpec('messageWindow', 'Message Window (Seconds)', initial: '${_rateLimits['messageWindowSeconds'] ?? 60}'),
+    ], ok: 'Save Rate Limits',
+      intro: 'Authentication is limited per client IP. Messages are limited per signed-in user. Changes apply immediately.');
+    if (f == null || !mounted) return;
+    final auth = int.tryParse(f['authRequests'] ?? '');
+    final authWindow = int.tryParse(f['authWindow'] ?? '');
+    final messages = int.tryParse(f['messageRequests'] ?? '');
+    final messageWindow = int.tryParse(f['messageWindow'] ?? '');
+    if (auth == null || authWindow == null || messages == null || messageWindow == null) {
+      toast(context, 'Enter valid rate-limit values.', error: true);
+      return;
+    }
+    final saved = await guarded(context, () => _v.saveRateLimitSettings({
+      'authRequests': auth, 'authWindowSeconds': authWindow,
+      'messageRequests': messages, 'messageWindowSeconds': messageWindow,
+    }));
+    if (saved == null || !mounted) return;
+    setState(() => _rateLimits = saved);
+    toast(context, 'Rate limits saved.');
+  }
+
+  Future<void> _editLimits() async {
+    final fields = <(String, String, int)>[
+      ('maxSchedulesPerUser', 'Schedules Per User', 50),
+      ('minScheduleIntervalMinutes', 'Minimum Schedule Interval (Minutes)', 5),
+      ('maxPendingJobsPerUser', 'Pending Jobs Per User', 200),
+      ('maxMessageRecipients', 'Message Recipients', 25),
+      ('maxBroadcastRecipients', 'Broadcast Recipients', 5000),
+      ('jobRetentionDays', 'Job Retention (Days, 0 = Forever)', 90),
+      ('messageRetentionDays', 'Message Retention (Days, 0 = Forever)', 0),
+      ('logBufferCapacity', 'Log Event Buffer', 5000),
+      ('pointEventBufferCapacity', 'Point Event Buffer', 2000),
+    ];
+    final f = await formDialog(context, 'Operational Limits', [
+      for (final field in fields)
+        FieldSpec(field.$1, field.$2, initial: '${_limits[field.$1] ?? field.$3}'),
+    ], ok: 'Save Limits',
+      intro: 'Control per-user quotas, retention, and in-memory event history. Use 0 to keep records indefinitely.');
+    if (f == null || !mounted) return;
+    final values = <String, int>{};
+    for (final field in fields) {
+      final value = int.tryParse(f[field.$1] ?? '');
+      if (value == null) {
+        toast(context, 'Enter valid numbers for every limit.', error: true);
+        return;
+      }
+      values[field.$1] = value;
+    }
+    final saved = await guarded(context, () => _v.saveOperationalLimits(values));
+    if (saved == null || !mounted) return;
+    setState(() => _limits = saved);
+    toast(context, 'Operational limits saved.');
   }
 
   Future<void> _editWake() async {
@@ -448,6 +554,54 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 ),
               ],
             ),
+          ),
+          Card(
+            child: Column(children: [
+              ListTile(
+                leading: Icon(_email['enabled'] == true ? Icons.mark_email_read_outlined : Icons.mail_outline),
+                title: const Text('Outgoing Email'),
+                subtitle: Text(_email['enabled'] == true
+                    ? '${_email['host'] ?? 'SMTP configured'} · ${_email['fromEmail'] ?? ''}'
+                    : 'Disabled'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(alignment: Alignment.centerRight, child: Wrap(spacing: 8, children: [
+                  OutlinedButton.icon(onPressed: _email['enabled'] == true ? _testEmail : null,
+                    icon: const Icon(Icons.send_outlined), label: const Text('Send Test')),
+                  FilledButton.tonalIcon(onPressed: _editEmail,
+                    icon: const Icon(Icons.settings_outlined), label: const Text('Configure')),
+                ])),
+              ),
+            ]),
+          ),
+          Card(
+            child: Column(children: [
+              ListTile(
+                leading: const Icon(Icons.speed_outlined),
+                title: const Text('API Rate Limits'),
+                subtitle: Text('Auth: ${_rateLimits['authRequests'] ?? 10} / ${_rateLimits['authWindowSeconds'] ?? 60}s · Messages: ${_rateLimits['messageRequests'] ?? 30} / ${_rateLimits['messageWindowSeconds'] ?? 60}s'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
+                  onPressed: _editRateLimits, icon: const Icon(Icons.tune), label: const Text('Configure'))),
+              ),
+            ]),
+          ),
+          Card(
+            child: Column(children: [
+              ListTile(
+                leading: const Icon(Icons.tune_outlined),
+                title: const Text('Operational Limits'),
+                subtitle: Text('${_limits['maxSchedulesPerUser'] ?? 50} schedules/user · ${_limits['maxPendingJobsPerUser'] ?? 200} pending jobs/user · Job retention: ${_limits['jobRetentionDays'] ?? 90} days'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
+                  onPressed: _editLimits, icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
+              ),
+            ]),
           ),
           Section(
             'Wake-on-LAN',
