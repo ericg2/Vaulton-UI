@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaulton/app.dart';
 import 'package:vaulton/core/providers.dart';
 import 'package:vaulton/core/session.dart';
+import 'package:vaulton/core/widgets/vaulton_logo.dart';
 
 void main() {
   testWidgets('shows the sign-in screen with provider-backed app state', (
@@ -27,4 +28,18 @@ void main() {
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
   });
+  testWidgets('renders the shared Vaulton shield logo without errors', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: Center(child: VaultonLogo(size: 48))),
+      ),
+    );
+
+    expect(find.byType(VaultonLogo), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
+
