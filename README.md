@@ -1,8 +1,30 @@
-# Vaulton – Flutter client
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ericg2/Vaulton/main/assets/vaulton-mark.svg" alt="Vaulton" width="96" height="96">
+</p>
 
-Cross-platform client (Android · Windows · Linux · Web) for the **Vaulton API** (OpenAPI 1.0.0), written in Flutter / Material 3 with Riverpod.
+<h1 align="center">Vaulton</h1>
+<p align="center"><strong>Your private cloud. Your control.</strong></p>
+<p align="center">The companion app for your own Vaulton server.</p>
+<p align="center">
+  <a href="https://github.com/ericg2/Vaulton/releases">Download Vaulton</a> ·
+  <a href="https://github.com/ericg2/Vaulton">Server and installation guide</a>
+</p>
 
-## Setup
+Vaulton brings your files, backups, and shared storage together on Android, Windows, and Linux, with a web client also available. Connect to a server you control and manage your data from the devices you use every day.
+
+## Features
+
+- Browse, search, upload, download, move, and organise files.
+- Schedule backups and sync folders to your server.
+- Explore previous backups and restore files or folders.
+- Manage accounts, sharing, and access permissions.
+- Protect sign-in with two-factor authentication and scoped API tokens.
+- Monitor transfers, backup jobs, and server health.
+
+## Setup and development
+
+This section is for contributors building the app from source. Most users should download an installer from [GitHub Releases](https://github.com/ericg2/Vaulton-UI/releases).
+
 
 Requires **Flutter ≥ 3.47** (Dart ≥ 3.13). The Android toolchain matches what Flutter 3.47 is verified against:
 Java 17, Gradle 9.3.1, Android Gradle Plugin 9.1.0, Kotlin 2.4.0 (compileSdk/targetSdk 36, minSdk 24).
