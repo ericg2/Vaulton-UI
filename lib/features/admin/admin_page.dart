@@ -615,7 +615,8 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                   context,
                                   'Reset Password?',
                                   'A new temporary password is created and all sessions of ${u.userName} end.',
-                                  ok: 'Reset',
+                                  ok: 'Reset Password',
+                                  danger: true,
                                 )) {
                                   final r = await guarded(
                                     context,
