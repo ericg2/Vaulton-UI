@@ -485,22 +485,68 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   void _info(Node n) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        final path = joinPath(_path, n.name);
+        final theme = Theme.of(ctx);
+        Widget detail(String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 2),
+              SelectableText(value),
+            ],
+          ),
+        );
+        return AlertDialog(
         title: Text(n.name, overflow: TextOverflow.ellipsis),
         insetPadding: const EdgeInsets.all(16),
         content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SelectableText('Path: ${joinPath(_path, n.name)}'),
-                if (!n.isDir) SelectableText('Size: ${fmtBytes(n.bytes)}'),
-                SelectableText('Modified: ${fmtDate(n.modified)}'),
-                SelectableText('Created: ${fmtDate(n.created)}'),
-              ],
-            ),
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(n.isDir ? Icons.folder_outlined : iconFor(n.name)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        n.isDir ? 'Folder details' : 'File details',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              detail('Path', path),
+              if (!n.isDir) detail('Size', fmtBytes(n.bytes)),
+              detail('Modified', fmtDate(n.modified)),
+              detail('Created', fmtDate(n.created)),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => copyText(ctx, path, 'Path copied.'),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Copy Path'),
+                ),
+              ),
+            ],
           ),
         ),
         actions: [
@@ -517,7 +563,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
             },
           ),
         ],
-      ),
+        );
+      },
     );
   }
 
