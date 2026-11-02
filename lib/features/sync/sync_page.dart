@@ -899,6 +899,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     context,
                     'Remove Destination Extras?',
                     'This will permanently delete ${plan.deletedFiles} destination item${plan.deletedFiles == 1 ? '' : 's'} so the destination exactly matches the source.',
+                    ok: 'Delete Extras and Sync',
+                    danger: true,
                   );
                   if (!ok) return;
                 }
@@ -1076,6 +1078,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       running
           ? 'This stops the running sync and removes the configuration. Destination files are left untouched.'
           : 'This removes the sync configuration. Destination files are left untouched.',
+      ok: 'Remove Sync',
+      danger: true,
     )) {
       return;
     }
