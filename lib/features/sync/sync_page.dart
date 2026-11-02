@@ -18,14 +18,35 @@ import 'sync_service.dart';
 import 'sync_source.dart';
 import '../files/folder_picker.dart';
 
+Widget _syncEditorHeading(BuildContext context, String title, String help) {
+  final theme = Theme.of(context);
+  return Padding(
+    padding: const EdgeInsets.only(top: 4, bottom: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleSmall),
+        Text(
+          help,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _SettingSwitch extends StatelessWidget {
   const _SettingSwitch({
     required this.title,
     required this.value,
     required this.onChanged,
+    this.subtitle,
   });
 
   final String title;
+  final String? subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -35,7 +56,21 @@ class _SettingSwitch extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: Text(title)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
         Transform.scale(
           scale: 0.82,
           child: Switch(value: value, onChanged: onChanged),
@@ -379,6 +414,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 .toDouble(),
             child: ListView(
               children: [
+                _syncEditorHeading(ctx, 'Folders', 'Choose what to copy and where it should go.'),
                 TextField(
                   controller: nameCtl,
                   decoration: const InputDecoration(labelText: 'Sync Name'),
@@ -416,7 +452,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   const SizedBox(height: 12),
                   const _RootWarning(),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
+                _syncEditorHeading(ctx, 'Schedule', 'Choose when automatic syncing should run.'),
                 CronField(controller: cronCtl),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -434,7 +471,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                     if (v != null) set(() => timeZone = v);
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 18),
+                _syncEditorHeading(ctx, 'Sync Behavior', 'Control how Vaulton handles files during each run.'),
                 _SettingSwitch(
                   title: 'Skip if Already Running',
                   value: skipIfRunning,
@@ -442,6 +480,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
                 const SizedBox(height: 12),
                 if (backgroundSupported) ...[
+                  const SizedBox(height: 14),
+                  _syncEditorHeading(ctx, 'Device Requirements', 'Limit background syncs to suitable conditions.'),
                   _SettingSwitch(
                     title: 'Wi-Fi / Unmetered Only',
                     value: wifiOnly,
@@ -455,11 +495,13 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ],
                 _SettingSwitch(
                   title: 'Wake Server if Asleep',
+                  subtitle: 'Wake the server before syncing when it is offline.',
                   value: wakeServer,
                   onChanged: (v) => set(() => wakeServer = v),
                 ),
                 _SettingSwitch(
-                  title: 'Mirror',
+                  title: 'Mirror Destination',
+                  subtitle: 'Remove destination files that no longer exist in the source.',
                   value: deleteExtras,
                   onChanged: (v) => set(() => deleteExtras = v),
                 ),
