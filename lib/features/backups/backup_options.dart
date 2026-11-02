@@ -200,14 +200,14 @@ class _BackupSheetState extends State<_BackupSheet> {
               _heading('What to skip', 'Leave out files you don’t need to keep.'),
               _kinds(_skipPresets, _skipKinds),
               const SizedBox(height: 12),
-              ChipInput(label: 'Other files or folders to skip', hint: 'For example *.iso or Downloads', values: _customSkip, onChanged: (v) => setState(() => _customSkip = v)),
+              ChipInput(label: 'Other files or folders to skip', hint: 'For example, *.iso or Downloads.', values: _customSkip, onChanged: (v) => setState(() => _customSkip = v)),
               _heading('Skip very large files', 'Files bigger than this won’t be backed up.'),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final c in _sizeChoices)
                   ChoiceChip(label: Text(c.$1), selected: _maxSize == c.$2, onSelected: (_) => setState(() => _maxSize = c.$2)),
               ]),
               _heading('Labels', 'Optional. Add a word or two to help you find this snapshot later.'),
-              ChipInput(label: 'Add a Label', hint: 'For example Before upgrade', values: _labels, onChanged: (v) => setState(() => _labels = v)),
+              ChipInput(label: 'Add a Label', hint: 'For example, Before upgrade.', values: _labels, onChanged: (v) => setState(() => _labels = v)),
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -354,7 +354,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean up old snapshots once', style: t.headlineSmall),
             const SizedBox(height: 4),
-            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Snapshots that do not meet these rules are removed. Vaulton then frees storage used only by those snapshots. Data shared with other snapshots is kept. Locked snapshots and the newest snapshot in each backup series are always kept. Preview cleanup to review what will be removed before confirming.',
+            Text('${widget.forSchedule ? 'This plan runs automatically on a schedule.' : 'This cleanup runs once.'} Snapshots outside the rules are removed. Shared data is kept. Locked snapshots and the newest snapshot in each series are always kept. Preview cleanup before confirming.',
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
             const SizedBox(height: 16),
             for (var i = 0; i < _plans.length; i++)

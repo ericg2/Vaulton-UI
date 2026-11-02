@@ -206,7 +206,7 @@ Future<void> restoreSnapshotFlow({
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'A selected folder is restored into a matching folder inside the destination. Files with the same names may be replaced. Use Preview Only to review the changes first.',
+                    'Folders are restored inside the destination. Files with matching names may be replaced. Use Preview Only to review changes first.',
                     style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ]),

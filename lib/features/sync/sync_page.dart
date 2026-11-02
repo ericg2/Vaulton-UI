@@ -176,8 +176,8 @@ class _RootWarning extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'This syncs to the top level of the data folder. Existing files outside '
-                  'your source may be overwritten or deleted. Choose a subfolder unless you are sure.',
+                  'This syncs to the data folder root. Files outside your source may be overwritten or deleted. '
+                  'Choose a subfolder unless you intend to sync everything.',
                   style: tt.bodySmall?.copyWith(
                     color: cs.onErrorContainer,
                     height: 1.35,

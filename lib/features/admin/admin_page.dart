@@ -1205,7 +1205,7 @@ class _MaintenanceTab extends ConsumerWidget {
                     ? [
                         const ListTile(
                           leading: Icon(Icons.inbox_outlined),
-                          title: Text('No copies yet'),
+                          title: Text('No copies yet.'),
                         ),
                       ]
                     : [
@@ -1314,7 +1314,7 @@ class _NewUserDialogState extends State<_NewUserDialog> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Create a Vaulton account. A temporary password will be generated and shown once after creation.',
+                        'Create a Vaulton account. A temporary password appears once after creation.',
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),

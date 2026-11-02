@@ -489,8 +489,8 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       ],
       ok: existing != null ? 'Save Connection' : 'Continue',
       intro: existing != null
-          ? 'Update the connection details. Leave secret fields blank to keep the existing credentials.'
-          : 'Enter the connection details Vaulton should use to access this storage location.',
+          ? 'Update the connection. Leave secret fields blank to keep saved credentials.'
+          : 'Enter the details Vaulton needs to connect to this location.',
       pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
@@ -541,7 +541,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         ),
       ],
       ok: 'Continue',
-      intro: 'A location is a storage area. Data folders and backup vaults each receive a limit from its capacity.',
+      intro: 'A location stores data folders and backup vaults. Each gets its own capacity limit.',
     );
     if (details == null || !mounted) return;
     final src = await _sourceForm(details['scheme']!, null);
@@ -720,7 +720,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         key: _key,
         empty: 'No locations yet.',
         emptyHint: canCreate
-            ? 'Add a location first. A location is the disk, network share or cloud account where your files and backups will live.'
+            ? 'Add a location to connect a disk, network share, or cloud account.'
             : 'Ask an administrator to share a location with you.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 30),
