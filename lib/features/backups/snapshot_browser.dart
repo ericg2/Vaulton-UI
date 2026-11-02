@@ -141,15 +141,25 @@ Future<void> restoreSnapshotFlow({
         builder: (ctx, set) {
           final cs = Theme.of(ctx).colorScheme;
           return AlertDialog(
+            insetPadding: const EdgeInsets.all(16),
             title: Text('Restore $label'),
             content: SizedBox(
               width: 460,
+              height: (MediaQuery.sizeOf(ctx).height -
+                      MediaQuery.viewInsetsOf(ctx).bottom -
+                      220)
+                  .clamp(160.0, 560.0)
+                  .toDouble(),
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _restoreLocationCard(ctx, label: 'From', value: fromText, icon: Icons.camera_alt_outlined),
+                  Text('Restore Location', style: Theme.of(ctx).textTheme.titleSmall),
                   const SizedBox(height: 8),
-                  _restoreLocationCard(ctx, label: 'To', value: toText, icon: Icons.folder_outlined),
-                  const SizedBox(height: 12),
+                  _restoreLocationCard(ctx, label: 'From Backup', value: fromText, icon: Icons.camera_alt_outlined),
+                  const SizedBox(height: 8),
+                  _restoreLocationCard(ctx, label: 'Destination', value: toText, icon: Icons.folder_outlined),
+                  const SizedBox(height: 16),
+                  Text('Restore Behavior', style: Theme.of(ctx).textTheme.titleSmall),
+                  const SizedBox(height: 4),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Remove Files Not in This Backup'),
@@ -186,6 +196,7 @@ Future<void> restoreSnapshotFlow({
                         ]),
                       ),
                     ),
+                  const Divider(height: 20),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Preview Only'),
