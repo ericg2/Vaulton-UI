@@ -6,7 +6,7 @@ const seedColor = Color(0xFF2F6FED);
 
 /// Builds a Material 3 theme tuned to feel at home on each OS:
 ///  * Android / Web: stock Material 3 (+ Material You dynamic colour on Android).
-///  * Windows: Segoe UI, tighter corners, compact density (Fluent-like).
+///  * Windows: Segoe UI and tighter corners (Fluent-like).
 ///  * Linux: Cantarell/Ubuntu, GNOME-style generous rounding.
 ThemeData buildTheme(ColorScheme scheme) {
   final p = defaultTargetPlatform;
