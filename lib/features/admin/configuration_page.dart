@@ -91,7 +91,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     final f = await formDialog(context, 'Outgoing Email', [
       FieldSpec('enabled', 'Enable Email', kind: 'bool', initial: '${_email['enabled'] == true}'),
       FieldSpec('host', 'SMTP Host', initial: '${_email['host'] ?? ''}'),
-      FieldSpec('port', 'SMTP Port', initial: '${_email['port'] ?? 587}'),
+      FieldSpec('port', 'SMTP Port', initial: '${_email['port'] ?? 587}', hint: 'STARTTLS is supported (usually port 587). Implicit TLS on port 465 is not supported.'),
       FieldSpec('ssl', 'Use STARTTLS', kind: 'bool', initial: '${_email['enableSsl'] != false}'),
       FieldSpec('username', 'SMTP Username', initial: '${_email['username'] ?? ''}'),
       FieldSpec('password', 'SMTP Password', kind: 'secret', hint: _email['hasPassword'] == true ? 'Leave blank to keep the saved password.' : 'Stored encrypted.'),
@@ -240,7 +240,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       FieldSpec('logLevel', 'Minimum Log Level', kind: 'choice', initial: '${_startup['logLevel'] ?? 'Information'}',
         options: const ['Verbose', 'Debug', 'Information', 'Warning', 'Error', 'Fatal']),
     ], ok: 'Save Server Settings',
-      intro: 'These advanced settings control backend performance, storage alerts, self-backups, audit, metrics, and logging. Changes are saved immediately but require an API restart to take effect.');
+      intro: 'These settings control backend performance, storage alerts, self-backups, audit, metrics, and logging. Changes require an API restart. Deployment environment variables override saved values. The metrics endpoint is unauthenticated; expose it only on a trusted network.');
     if (f == null || !mounted) return;
     int? number(String key) => int.tryParse(f[key] ?? '');
     final receive = number('receive'), send = number('send'), chunk = number('chunk');
