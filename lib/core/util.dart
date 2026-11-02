@@ -624,10 +624,15 @@ Future<String?> promptText(
   String label, {
   String initial = '',
   String ok = 'OK',
+  String? intro,
 }) async {
-  final r = await formDialog(c, title, [
-    FieldSpec('v', label, initial: initial, required: true),
-  ], ok: ok);
+  final r = await formDialog(
+    c,
+    title,
+    [FieldSpec('v', label, initial: initial, required: true)],
+    ok: ok,
+    intro: intro,
+  );
   return r?['v'];
 }
 
