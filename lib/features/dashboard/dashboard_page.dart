@@ -165,8 +165,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         _Stat(Icons.folder_outlined, '${d.datas.length}', d.datas.length == 1 ? 'Data Folder' : 'Data Folders', () => widget.onNavigate?.call('Data Folders')),
         _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup Vaults')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
-        if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
-        if (_canJobs) _Stat(Icons.verified_outlined, lastCheck == null ? '—' : fmtShort(lastCheck.endDate ?? lastCheck.startDate), 'Last Verified', () => widget.onNavigate?.call('Activity'), highlight: lastCheck?.phase == JobPhase.succeeded),
+        if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed Jobs (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
+        if (_canJobs) _Stat(Icons.verified_outlined, lastCheck == null ? '—' : fmtShort(lastCheck.endDate ?? lastCheck.startDate), 'Last Check', () => widget.onNavigate?.call('Activity'), highlight: lastCheck?.phase == JobPhase.succeeded),
         if (healthStatus.isNotEmpty)
           _Stat(
             healthBad ? Icons.warning_amber_rounded : Icons.health_and_safety_outlined,
@@ -228,18 +228,61 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               }),
             ),
             const SizedBox(height: 4),
-            if (d.datas.isEmpty)
+            if (d.datas.isEmpty || d.repos.isEmpty || (_canJobs && lastOk == null))
               FadeSlideIn(
                 key: const ValueKey('firstrun'),
                 delay: const Duration(milliseconds: 300),
                 child: Card(
                   color: cs.tertiaryContainer,
-                  child: ListTile(
-                    leading: Icon(Icons.rocket_launch_outlined, color: cs.onTertiaryContainer),
-                    title: Text('Get Started', style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Create a data folder in Storage to start storing files.', style: TextStyle(color: cs.onTertiaryContainer)),
-                    trailing: Icon(Icons.chevron_right, color: cs.onTertiaryContainer),
-                    onTap: () => widget.onNavigate?.call('Data Folders'),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.rocket_launch_outlined, color: cs.onTertiaryContainer),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Finish Setting Up Vaulton',
+                                style: TextStyle(color: cs.onTertiaryContainer, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Complete these steps to start storing files and protecting them with backups.',
+                          style: TextStyle(color: cs.onTertiaryContainer),
+                        ),
+                        const SizedBox(height: 8),
+                        _SetupStep(
+                          title: 'Create a Data Folder',
+                          subtitle: 'Choose where your files will be stored.',
+                          complete: d.datas.isNotEmpty,
+                          actionLabel: 'Set Up',
+                          onPressed: d.datas.isEmpty ? () => widget.onNavigate?.call('Data Folders') : null,
+                        ),
+                        _SetupStep(
+                          title: 'Create a Backup Vault',
+                          subtitle: 'Choose where your backups will be kept.',
+                          complete: d.repos.isNotEmpty,
+                          actionLabel: 'Set Up',
+                          onPressed: d.repos.isEmpty ? () => widget.onNavigate?.call('Backup Vaults') : null,
+                        ),
+                        if (_canJobs)
+                          _SetupStep(
+                            title: 'Run Your First Backup',
+                            subtitle: 'Save a protected copy of your files.',
+                            complete: lastOk != null,
+                            actionLabel: 'Start',
+                            onPressed: d.datas.isNotEmpty && d.repos.isNotEmpty && lastOk == null
+                                ? () => startBackup(context, ref)
+                                : null,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -376,6 +419,63 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           constraints: const BoxConstraints(maxWidth: 980),
           child: AnimatedSwitcher(duration: const Duration(milliseconds: 160), child: body),
         ),
+      ),
+    );
+  }
+}
+
+class _SetupStep extends StatelessWidget {
+  const _SetupStep({
+    required this.title,
+    required this.subtitle,
+    required this.complete,
+    required this.actionLabel,
+    required this.onPressed,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool complete;
+  final String actionLabel;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(
+            complete ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 20,
+            color: complete ? cs.primary : cs.onTertiaryContainer,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: cs.onTertiaryContainer,
+                    fontWeight: FontWeight.w600,
+                    decoration: complete ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onTertiaryContainer.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!complete && onPressed != null)
+            TextButton(onPressed: onPressed, child: Text(actionLabel)),
+        ],
       ),
     );
   }

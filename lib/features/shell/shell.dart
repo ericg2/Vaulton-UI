@@ -487,7 +487,7 @@ class _MorePage extends StatelessWidget {
       children: [
         const HintBanner(
           id: 'more_tab',
-          text: 'Sync, messages, settings and admin tools.',
+          text: 'Backups, folder sync, messages, settings and server administration.',
         ),
         for (final d in items)
           ListTile(
