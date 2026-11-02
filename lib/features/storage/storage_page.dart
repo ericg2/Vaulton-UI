@@ -672,17 +672,38 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     return result;
   }
 
+  Future<String?> _chooseSourceType() => showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Choose Storage Type'),
+      content: SizedBox(
+        width: 440,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final entry in typeLabels.entries)
+              ListTile(
+                leading: Icon(entry.key == 'fs' ? Icons.folder_outlined : Icons.cloud_outlined),
+                title: Text(entry.value),
+                subtitle: Text(_sourceDescription(entry.key)),
+                onTap: () => Navigator.pop(ctx, entry.key),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Future<void> _create() async {
     final details = await formDialog(context, 'New Location', [
       const FieldSpec('name', 'Name', required: true),
-      FieldSpec('scheme', 'Storage Type', kind: 'choice',
-        options: kSourceSchemas.keys.map(_sourceLabel).toList(), initial: _sourceLabel('fs')),
       const FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: 'true'),
       const FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: 'true'),
-    ], ok: 'Continue',
-      intro: 'A location connects Vaulton to storage. Choose the type that matches where your files will live.');
+    ], ok: 'Choose Storage',
+      intro: 'Name this location and choose what it can store.');
     if (details == null || !mounted) return;
-    final scheme = typeLabels.entries.firstWhere((e) => e.value == details['scheme'], orElse: () => const MapEntry('fs', 'Local Disk')).key;
+    final scheme = await _chooseSourceType();
+    if (scheme == null || !mounted) return;
     final src = await _sourceForm(scheme, null);
     if (src == null || !mounted) return;
     Json? detected;
@@ -858,7 +879,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       child: Wrap(
                         children: [
                           if (scheme.isNotEmpty)
-                            chip(ctx, scheme.toUpperCase()),
+                            chip(ctx, _sourceLabel(scheme)),
                           chip(
                             ctx,
                             r.isOwner ? 'Owner' : 'Shared by ${r.userName}',
@@ -1947,7 +1968,8 @@ class _RootSheetState extends State<_RootSheet> {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
     final allocated = r.allocatedBytes;
-    final scheme = '${r.source?['scheme'] ?? ''}'.toUpperCase();
+    final rawScheme = '${r.source?['scheme'] ?? ''}';
+    final scheme = _sourceLabel(rawScheme);
     final holds = [
       if (r.isDataAllowed) 'Data Folders',
       if (r.isRepoAllowed) 'Backup Vaults',
