@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "vaulton" "\0"
+            VALUE "CompanyName", "Vaulton" "\0"
+            VALUE "FileDescription", "Vaulton" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "vaulton" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "InternalName", "Vaulton" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Vaulton. All rights reserved." "\0"
             VALUE "OriginalFilename", "vaulton.exe" "\0"
-            VALUE "ProductName", "vaulton" "\0"
+            VALUE "ProductName", "Vaulton" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

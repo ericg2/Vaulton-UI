@@ -152,7 +152,8 @@ Future<void> restoreSnapshotFlow({
                   const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Delete Extra Files in Destination'),
+                    title: const Text('Remove Files Not in This Backup'),
+                    subtitle: const Text('When enabled, files in the destination that are not in the selected backup may be deleted.'),
                     value: deleteExtras,
                     onChanged: (value) {
                       set(() => deleteExtras = value);
@@ -187,14 +188,14 @@ Future<void> restoreSnapshotFlow({
                     ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Test Run'),
-                    subtitle: const Text('Preview the restore without changing anything.'),
+                    title: const Text('Preview Only'),
+                    subtitle: const Text('Show what would be restored without changing any files.'),
                     value: dryRun,
                     onChanged: (value) => set(() => dryRun = value),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Folders are restored into a subfolder with their own name; existing files with the same name may be overwritten.',
+                    'A selected folder is restored into a matching folder inside the destination. Files with the same names may be replaced. Use Preview Only to review the changes first.',
                     style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ]),
@@ -202,7 +203,7 @@ Future<void> restoreSnapshotFlow({
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, {'delete': deleteExtras, 'dry': dryRun}), child: const Text('Restore')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, {'delete': deleteExtras, 'dry': dryRun}), child: Text(dryRun ? 'Preview Restore' : 'Restore Files')),
             ],
           );
         },
