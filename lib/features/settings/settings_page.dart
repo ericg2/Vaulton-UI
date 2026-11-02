@@ -44,23 +44,26 @@ class SettingsPage extends ConsumerWidget {
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Edit Profile',
                   onPressed: () async {
-                    final f = await formDialog(context, 'Profile', [
-                      FieldSpec(
-                        'first',
-                        'First Name',
-                        initial: u.firstName ?? '',
-                      ),
-                      FieldSpec('last', 'Last Name', initial: u.lastName ?? ''),
-                      FieldSpec('email', 'Email', initial: u.email ?? ''),
-                      FieldSpec(
-                        'notif',
-                        'Email Notifications',
-                        kind: 'bool',
-                        initial: '${u.emailNotifications}',
-                      ),
-                    ],
-                    intro: 'Update the name and email shown to other Vaulton users. Email notifications are optional.',
-                  );
+                    final f = await formDialog(
+                      context,
+                      'Edit Profile',
+                      [
+                        FieldSpec(
+                          'first',
+                          'First Name',
+                          initial: u.firstName ?? '',
+                        ),
+                        FieldSpec('last', 'Last Name', initial: u.lastName ?? ''),
+                        FieldSpec('email', 'Email', initial: u.email ?? ''),
+                        FieldSpec(
+                          'notif',
+                          'Email Notifications',
+                          kind: 'bool',
+                          initial: '${u.emailNotifications}',
+                        ),
+                      ],
+                      intro: 'Update the name and email shown to other Vaulton users. Email notifications are optional.',
+                    );
                     if (f == null) return;
                     await guarded(
                       context,
