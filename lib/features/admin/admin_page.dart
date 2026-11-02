@@ -322,20 +322,53 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
 
   void _showPassword(String title, String pw) => showDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Shown once. The user must change it at first sign-in.'),
-          const SizedBox(height: 12),
-          SelectableText(
-            pw,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 18),
+    builder: (ctx) {
+      final colors = Theme.of(ctx).colorScheme;
+      return AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
+        title: Text(title),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This temporary password is shown only once. The user must change it at first sign-in.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SelectableText(
+                  pw,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 18),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      actions: [
+        ),
+        actions: [
         TextButton(
           onPressed: () => copyText(ctx, pw),
           child: const Text('Copy'),
@@ -345,7 +378,8 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
           child: const Text('Done'),
         ),
       ],
-    ),
+      );
+    },
   );
 
   Future<void> _scopes(UserAccount u) async {
