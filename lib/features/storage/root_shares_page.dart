@@ -325,7 +325,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
         else ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('SHARED WITH (${_rows.length})', style: theme.textTheme.labelMedium?.copyWith(color: cs.primary, letterSpacing: 1)),
+            child: Text('Shared With (${_rows.length})', style: theme.textTheme.titleSmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w600)),
           ),
           for (final r in _rows) _rowTile(context, r, dir),
         ],
