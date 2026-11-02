@@ -717,6 +717,7 @@ class _ApiTokensDialogState extends State<_ApiTokensDialog> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
+          insetPadding: const EdgeInsets.all(16),
           title: const Text('Token Created'),
           content: SizedBox(
             width: 420,
@@ -724,13 +725,37 @@ class _ApiTokensDialogState extends State<_ApiTokensDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Copy this token now. It cannot be shown again.',
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.key_outlined),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Copy this token and store it securely. Vaulton cannot show it again after this dialog closes.',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
-                SelectableText(
-                  secret,
-                  style: const TextStyle(fontFamily: 'monospace'),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SelectableText(
+                    secret,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
                 ),
               ],
             ),
