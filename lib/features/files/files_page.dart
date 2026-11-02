@@ -354,6 +354,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       'New Folder',
       'Folder Name',
       ok: 'Create',
+      intro: 'Create a new folder inside the directory you are currently viewing.',
     );
     if (name == null) return;
     await guarded(context, () => _v.mkdir(_point!.id, joinPath(_path, name)));
@@ -367,6 +368,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       'New Name',
       initial: n.name,
       ok: 'Rename',
+      intro: 'Choose a new name for this file or folder.',
     );
     if (name == null || name == n.name) return;
     await _runTransfers([n], _point!.id, _path, copy: false, rename: name);
