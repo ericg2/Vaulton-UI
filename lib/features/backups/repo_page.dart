@@ -138,7 +138,10 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
     final f = await formDialog(context, 'Update Vault Password', [
       const FieldSpec('cur', 'Current Password', kind: 'secret', required: true),
       const FieldSpec('new', 'New Password', kind: 'secret', required: true),
-    ], intro: 'Updates the password Vaulton uses to open this vault. It doesn’t change the vault’s encryption.');
+    ],
+      ok: 'Update Password',
+      intro: 'Updates the password Vaulton uses to open this vault. It doesn’t change the vault’s encryption.',
+    );
     if (f == null) return;
     await guarded(context, () => _v.changeRepoPassword(widget.repoId, f['cur']!, f['new']!));
     if (mounted) toast(context, 'Password updated.');
