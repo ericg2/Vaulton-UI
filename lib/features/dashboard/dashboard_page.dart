@@ -53,18 +53,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   Future<void> _requestPowerAction(String action, String label) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('$label Server?'),
-        content: Text('This will $action the Vaulton host. You will lose access until it is powered back on.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(label)),
-        ],
-      ),
+    final confirmed = await confirm(
+      context,
+      '$label Server?',
+      'This will $action the Vaulton host. You will lose access until it is powered back on.',
+      ok: label,
+      danger: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     try {
       await ref.read(vaultonProvider).requestPowerAction(action);
       if (mounted) toast(context, '$label request was accepted by the host agent. Check Administration → Configuration for the execution result.');
