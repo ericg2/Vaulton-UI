@@ -374,9 +374,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ),
           content: SizedBox(
             width: 520,
-            height:
-                MediaQuery.sizeOf(ctx).height *
-                (MediaQuery.sizeOf(ctx).height < 620 ? 0.52 : 0.68),
+            height: (MediaQuery.sizeOf(ctx).height - 200)
+                .clamp(120.0, 560.0)
+                .toDouble(),
             child: ListView(
               children: [
                 TextField(
@@ -739,7 +739,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ),
           content: SizedBox(
             width: 560,
-            height: MediaQuery.sizeOf(ctx).height * 0.68,
+            height: (MediaQuery.sizeOf(ctx).height - 200).clamp(120.0, 560.0).toDouble(),
             child: ListView(
               shrinkWrap: true,
               children: [
@@ -951,7 +951,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
           ),
           content: SizedBox(
             width: 620,
-            height: MediaQuery.sizeOf(ctx).height * 0.6,
+            height: (MediaQuery.sizeOf(ctx).height - 200).clamp(120.0, 620.0).toDouble(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
