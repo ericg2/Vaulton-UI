@@ -124,10 +124,40 @@ Future<bool> confirm(
 }) async {
   final r = await showDialog<bool>(
     context: c,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: Text(body),
-      actions: [
+    builder: (ctx) {
+      final colors = Theme.of(ctx).colorScheme;
+      return AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
+        title: Text(title),
+        content: SizedBox(
+          width: 420,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: danger ? colors.errorContainer : colors.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  danger ? Icons.warning_amber_rounded : Icons.help_outline,
+                  color: danger ? colors.onErrorContainer : colors.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    body,
+                    style: TextStyle(
+                      color: danger ? colors.onErrorContainer : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
           child: const Text('Cancel'),
@@ -142,8 +172,9 @@ Future<bool> confirm(
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(ok),
         ),
-      ],
-    ),
+        ],
+      );
+    },
   );
   return r ?? false;
 }
