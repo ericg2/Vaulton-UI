@@ -484,7 +484,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  cancelled ? 'Stopping after the current operation…' : 'Vaulton is deleting the selected items.',
+                  'Use Stop to request cancellation. Vaulton will finish the current file operation first.',
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                   ),
@@ -495,7 +495,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         ),
         actions: [
           TextButton(
-            onPressed: cancelled ? null : () => cancelled = true,
+            onPressed: () => cancelled = true,
             child: const Text('Stop'),
           ),
         ],
