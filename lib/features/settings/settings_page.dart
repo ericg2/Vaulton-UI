@@ -391,7 +391,7 @@ Future<void> _showRecoveryCodes(
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(
-                    codes.join('\\n'),
+                    codes.join('\n'),
                     style: const TextStyle(fontFamily: 'monospace', height: 1.7),
                   ),
                 ),
