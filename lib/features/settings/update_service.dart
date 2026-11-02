@@ -40,6 +40,7 @@ class UpdateService {
       if (release == null) throw const FormatException('GitHub returned an empty release.');
       final tag = (release['tag_name'] as String? ?? '').trim();
       final latestVersion = tag.startsWith('v') ? tag.substring(1) : tag;
+      final releaseNotes = (release['body'] as String? ?? '').trim();
       if (!_isNewer(latestVersion, currentVersion)) {
         if (!quietIfUpToDate && context.mounted) {
           messenger.showSnackBar(const SnackBar(content: Text('Vaulton is up to date.')));
@@ -91,10 +92,14 @@ class UpdateService {
             title: const Text('Update Available'),
             content: SizedBox(
               width: 440,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              height: (MediaQuery.sizeOf(dialogContext).height * 0.62)
+                  .clamp(240.0, 520.0)
+                  .toDouble(),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
@@ -125,7 +130,25 @@ class UpdateService {
                     'You can choose Later and install it when you are ready.',
                     style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
                   ),
-                ],
+                  if (releaseNotes.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    Text('What’s New', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: SelectableText(
+                        releaseNotes,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                  ],
+                ),
               ),
             ),
             actions: [
