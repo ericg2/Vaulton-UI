@@ -420,10 +420,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                 : '${existing![f.key]}',
           ),
       ],
-      ok: 'Continue',
+      ok: existing != null ? 'Save Connection' : 'Continue',
       intro: existing != null
-          ? 'Re-enter secret fields unless the server keeps existing values.'
-          : null,
+          ? 'Update the connection details. Leave secret fields blank to keep the existing credentials.'
+          : 'Enter the connection details Vaulton should use to access this storage location.',
       pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
@@ -524,7 +524,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _edit(Root root) async {
-    final r = await formDialog(context, 'Edit ${root.name}', [
+    final r = await formDialog(
+      context,
+      'Edit ${root.name}',
+      [
       FieldSpec('name', 'Name', initial: root.name, required: true),
       FieldSpec(
         'capacity',
@@ -546,7 +549,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         kind: 'bool',
         initial: '${root.isRepoAllowed}',
       ),
-    ]);
+      ],
+      ok: 'Save Location',
+      intro: 'Update the location name, capacity limit, and which types of Vaulton storage it can contain.',
+    );
     if (r == null) return;
     await guarded(
       context,
