@@ -1291,7 +1291,9 @@ class _NewUserDialogState extends State<_NewUserDialog> {
       title: const Text('Create User'),
       content: SizedBox(
         width: 480,
-        height: (MediaQuery.sizeOf(context).height - MediaQuery.viewInsetsOf(context).bottom - 220)
+        height: (MediaQuery.sizeOf(context).height -
+                MediaQuery.viewInsetsOf(context).bottom -
+                220)
             .clamp(180.0, 500.0)
             .toDouble(),
         child: Form(
@@ -1366,26 +1368,8 @@ class _NewUserDialogState extends State<_NewUserDialog> {
                 validator: (value) {
                   final email = value?.trim() ?? '';
                   if (email.isNotEmpty &&
-                      !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton.icon(
-          onPressed: _create,
-          icon: const Icon(Icons.person_add_alt_1),
-          label: const Text('Create User'),
-        ),
-      ],
-    );
-  }
-}
-).hasMatch(email)) {
+                      (!email.contains('@') ||
+                          !email.split('@').last.contains('.'))) {
                     return 'Enter a valid email address.';
                   }
                   return null;
