@@ -111,7 +111,7 @@ try {
 
         Write-Host ""
         Write-Host "Published Vaulton v$version successfully." -ForegroundColor Green
-        Write-Host "Android assets are available now; Windows and Linux installers are built by GitHub Actions." -ForegroundColor Cyan
+        Write-Host "This script publishes the Android APK only. Build and attach Windows/Linux packages separately." -ForegroundColor Cyan
         Write-Host "Release: https://github.com/ericg2/Vaulton-UI/releases/tag/$tag"
     }
     catch {
