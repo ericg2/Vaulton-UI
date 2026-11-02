@@ -444,14 +444,58 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text('Deleting…'),
-        content: ValueListenableBuilder<int>(
-          valueListenable: progress,
-          builder: (_, n, _) => Text('$n item${n == 1 ? '' : 's'} deleted'),
+        insetPadding: const EdgeInsets.all(16),
+        title: const Text('Deleting Items'),
+        content: SizedBox(
+          width: 420,
+          child: ValueListenableBuilder<int>(
+            valueListenable: progress,
+            builder: (ctx, n, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.onErrorContainer),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Deleted files cannot be recovered from this location.',
+                          style: TextStyle(color: Theme.of(ctx).colorScheme.onErrorContainer),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const LinearProgressIndicator(),
+                const SizedBox(height: 12),
+                Text(
+                  '$n item${n == 1 ? '' : 's'} deleted',
+                  style: Theme.of(ctx).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  cancelled ? 'Stopping after the current operation…' : 'Vaulton is deleting the selected items.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => cancelled = true,
+            onPressed: cancelled ? null : () => cancelled = true,
             child: const Text('Stop'),
           ),
         ],
