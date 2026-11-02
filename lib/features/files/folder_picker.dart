@@ -48,21 +48,30 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
   void initState() {
     super.initState();
     _path = widget.initialPath ?? '/';
-    loadAllPoints(ref).then((p) {
+    _loadPoints();
+  }
+
+  Future<void> _loadPoints() async {
+    setState(() {
+      _loadingPoints = true;
+      _error = null;
+    });
+    try {
+      final points = await loadAllPoints(ref);
       if (!mounted) return;
       setState(() {
-        _points = p;
-        _point = p.where((x) => x.id == widget.initialPointId).firstOrNull ?? p.firstOrNull;
+        _points = points;
+        _point = points.where((x) => x.id == widget.initialPointId).firstOrNull ?? points.firstOrNull;
         _loadingPoints = false;
         if (_point == null) _dirs = [];
       });
       _load();
-    }).catchError((e) {
+    } catch (e) {
       if (mounted) setState(() {
         _error = e;
         _loadingPoints = false;
       });
-    });
+    }
   }
 
   Future<void> _load() async {
@@ -116,27 +125,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
         child: _loadingPoints
             ? const Center(child: CircularProgressIndicator())
             : _point == null && _error != null
-                ? ErrorView(_error!, onRetry: () {
-                    setState(() {
-                      _loadingPoints = true;
-                      _error = null;
-                    });
-                    loadAllPoints(ref).then((points) {
-                      if (!mounted) return;
-                      setState(() {
-                        _points = points;
-                        _point = points.where((x) => x.id == widget.initialPointId).firstOrNull ?? points.firstOrNull;
-                        _loadingPoints = false;
-                        if (_point == null) _dirs = [];
-                      });
-                      _load();
-                    }).catchError((e) {
-                      if (mounted) setState(() {
-                        _error = e;
-                        _loadingPoints = false;
-                      });
-                    });
-                  })
+                ? ErrorView(_error!, onRetry: _loadPoints)
                 : _point == null
                     ? const EmptyView('Create a data folder before choosing a location.', icon: Icons.folder_off_outlined)
                     : Column(children: [
