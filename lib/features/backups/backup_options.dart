@@ -235,7 +235,7 @@ class _BackupSheetState extends State<_BackupSheet> {
               FilledButton.icon(
                 onPressed: _start,
                 icon: const Icon(Icons.backup_outlined),
-                label: Text(_dry ? 'Start Test Run' : 'Start Backup'),
+                label: Text(_dry ? 'Preview Backup' : 'Start Backup'),
               ),
             ],
           ),
@@ -354,7 +354,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean up old snapshots once', style: t.headlineSmall),
             const SizedBox(height: 4),
-            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Snapshots outside these rules are forgotten, then the repository is pruned so only data no remaining snapshot needs is reclaimed. Shared data remains while another snapshot references it; pruning reclaims only data that is no longer needed. Locked snapshots and the newest snapshot in each backup series are always kept. Preview cleanup to see candidate snapshots before deleting anything.',
+            Text('${widget.forSchedule ? 'This plan runs on a schedule, so your vault stays tidy on its own.' : 'This runs once and isn’t remembered. Use automatic cleanup to repeat it.'} Snapshots that do not meet these rules are removed. Vaulton then frees storage used only by those snapshots. Data shared with other snapshots is kept. Locked snapshots and the newest snapshot in each backup series are always kept. Preview cleanup to review what will be removed before confirming.',
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
             const SizedBox(height: 16),
             for (var i = 0; i < _plans.length; i++)
