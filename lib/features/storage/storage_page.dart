@@ -524,82 +524,213 @@ class _RootsTabState extends ConsumerState<RootsTab> {
   }
 
   Future<void> _create() async {
-    final details = await formDialog(
-      context,
-      'New Location',
-      [
-        const FieldSpec('name', 'Name', required: true),
-        FieldSpec(
-          'scheme',
-          'Storage Type',
-          kind: 'choice',
-          options: kSourceSchemas.keys.map(_sourceLabel).toList(),
-          initial: _sourceLabel('fs'),
-        ),
-        const FieldSpec(
-          'data',
-          'Allow Data Folders',
-          kind: 'bool',
-          initial: 'true',
-        ),
-        const FieldSpec(
-          'repo',
-          'Allow Backup Vaults',
-          kind: 'bool',
-          initial: 'true',
-        ),
-      ],
-      ok: 'Continue',
-      intro: 'A location stores data folders and backup vaults. Each gets its own capacity limit.',
+    final name = TextEditingController();
+    var scheme = 'fs';
+    var allowData = true;
+    var allowRepo = true;
+    final details = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      constraints: const BoxConstraints(maxWidth: 640),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final schemes = typeLabels.keys.where((s) => s != 'fs').toList()..sort();
+          schemes.insert(0, 'fs');
+          final cs = Theme.of(ctx).colorScheme;
+          final tt = Theme.of(ctx).textTheme;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              20, 4, 20, MediaQuery.viewInsetsOf(ctx).bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundColor: cs.primaryContainer,
+                        child: Icon(Icons.dns_outlined, color: cs.onPrimaryContainer),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('New Location', style: tt.headlineSmall),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Connect storage for your data folders and backup vaults.',
+                              style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Text('Location Name', style: tt.titleSmall),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: name,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g. Home Storage',
+                      prefixIcon: Icon(Icons.drive_file_rename_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Storage Type', style: tt.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose where Vaulton should store your files.',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 300),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: cs.outlineVariant),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final item in schemes)
+                          RadioListTile<String>(
+                            value: item,
+                            groupValue: scheme,
+                            onChanged: (value) {
+                              if (value != null) setSheetState(() => scheme = value);
+                            },
+                            title: Text(_sourceLabel(item)),
+                            subtitle: Text(
+                              _sourceDescription(item),
+                              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('What Can This Location Hold?', style: tt.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'You can change these permissions later.',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.folder_outlined),
+                    title: const Text('Data Folders'),
+                    subtitle: const Text('Store files that you upload and manage in Vaulton.'),
+                    value: allowData,
+                    onChanged: (value) => setSheetState(() => allowData = value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.inventory_2_outlined),
+                    title: const Text('Backup Vaults'),
+                    subtitle: const Text('Store encrypted backup repositories.'),
+                    value: allowRepo,
+                    onChanged: (value) => setSheetState(() => allowRepo = value),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: name.text.trim().isEmpty
+                              ? null
+                              : () => Navigator.pop(sheetContext, {
+                                  'name': name.text.trim(),
+                                  'scheme': scheme,
+                                  'data': allowData,
+                                  'repo': allowRepo,
+                                }),
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text('Continue'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
+    name.dispose();
     if (details == null || !mounted) return;
-    final scheme = typeLabels.entries.firstWhere((e) => e.value == details['scheme'], orElse: () => const MapEntry('fs', 'Local Disk')).key;
-    final src = await _sourceForm(scheme, null);
+
+    final selectedScheme = details['scheme'] as String;
+    final src = await _sourceForm(selectedScheme, null);
     if (src == null || !mounted) return;
+
     Json? detected;
-    if (scheme == 'fs') {
+    if (selectedScheme == 'fs') {
       detected = await guarded(
         context,
         () => _v.browseLocal(src['root'] as String?),
       );
       if (detected == null || !mounted) return;
     }
+
     final available = toInt(detected?['availableBytes']);
     final total = toInt(detected?['capacityBytes']);
-    final initialCapacity = available > 0
-        ? bytesToCapacity(available, 'GiB')
-        : '';
-    final capacity = await formDialog(
-      context,
-      'Location Capacity',
-      [
-        FieldSpec(
-          'capacity',
-          'Location Capacity',
-          kind: 'capacity',
-          initial: initialCapacity,
-          required: true,
-          initialUnit: 'GiB',
-        ),
-      ],
-      ok: 'Create Location',
-      intro: detected == null
-          ? 'Set the maximum capacity Vaulton may allocate to this location.'
-          : 'Drive: ${fmtBytes(total)} total, ${fmtBytes(available)} free. Set Vaulton’s location capacity; it can exceed the detected free space.',
-    );
-    if (capacity == null || !mounted) return;
-    final maxBytes = int.tryParse(capacity['capacity'] ?? '');
-    if (maxBytes == null || maxBytes <= 0) {
-      return toast(context, 'Enter a valid capacity.', error: true);
+    int? maxBytes;
+    if (selectedScheme == 'fs' && available > 0) {
+      maxBytes = await _capacityDialog(
+        currentBytes: available,
+        detected: detected,
+        isLocal: true,
+      );
+    } else {
+      final capacity = await formDialog(
+        context,
+        'Location Capacity',
+        [
+          FieldSpec(
+            'capacity',
+            'Location Capacity',
+            kind: 'capacity',
+            initial: '',
+            required: true,
+            initialUnit: 'GiB',
+          ),
+        ],
+        ok: 'Create Location',
+        intro: selectedScheme == 'fs'
+            ? 'Vaulton could not detect available disk space. Set the maximum capacity it may allocate.'
+            : 'Set the maximum capacity Vaulton may allocate to this remote location. Provider capacity cannot be detected reliably.',
+      );
+      if (capacity != null) maxBytes = int.tryParse(capacity['capacity'] ?? '');
     }
+    if (maxBytes == null || maxBytes <= 0 || !mounted) return;
+
     final created = await guarded(
       context,
       () => _v.createRoot({
         'name': details['name'],
         'source': src,
         'maxBytes': maxBytes,
-        'isDataAllowed': details['data'] == 'true',
-        'isRepoAllowed': details['repo'] == 'true',
+        'isDataAllowed': details['data'],
+        'isRepoAllowed': details['repo'],
       }),
     );
     if (created != null) {
