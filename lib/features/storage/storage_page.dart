@@ -325,15 +325,50 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                         ? const Center(child: CircularProgressIndicator())
                         : error != null
                         ? Center(
-                            child: Text(
-                              error!,
-                              style: TextStyle(
-                                color: Theme.of(ctx).colorScheme.error,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.folder_off_outlined,
+                                    size: 32,
+                                    color: Theme.of(ctx).colorScheme.error,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Could not load this directory.',
+                                    style: Theme.of(ctx).textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    error!,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () => load(path.isEmpty ? null : path, update),
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Try Again'),
+                                  ),
+                                ],
                               ),
                             ),
                           )
                         : dirs.isEmpty
-                        ? const Center(child: Text('No subdirectories found.'))
+                        ? const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.folder_open_outlined, size: 32),
+                                SizedBox(height: 8),
+                                Text('No subdirectories in this folder.'),
+                              ],
+                            ),
+                          )
                         : ListView.builder(
                             itemCount: dirs.length,
                             itemBuilder: (_, i) {
