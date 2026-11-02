@@ -401,8 +401,8 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
             insetPadding: const EdgeInsets.all(16),
             content: SizedBox(
               width: 520,
-              height: (MediaQuery.sizeOf(ctx).height - 200)
-                  .clamp(180.0, 560.0)
+              height: (MediaQuery.sizeOf(ctx).height - MediaQuery.viewInsetsOf(ctx).bottom - 200)
+                  .clamp(140.0, 560.0)
                   .toDouble(),
               child: Column(
                 children: [
