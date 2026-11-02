@@ -105,11 +105,14 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final dialogHeight = (MediaQuery.sizeOf(context).height - 200)
+        .clamp(120.0, 420.0)
+        .toDouble();
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
         width: 460,
-        height: (MediaQuery.sizeOf(context).height * 0.6).clamp(260.0, 420.0).toDouble(),
+        height: dialogHeight,
         child: _loadingPoints
             ? const Center(child: CircularProgressIndicator())
             : _point == null && _error != null
