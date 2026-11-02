@@ -101,10 +101,19 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
   Future<void> _backup() async {
     final repo = _repo;
     if (repo == null) return;
-    final datas = await guarded(context, () => _v.datas(limit: 200));
+    final datas = await guarded(context, () async {
+      final out = <Point>[];
+      String? cursor;
+      do {
+        final page = await _v.datas(cursor: cursor, limit: 200);
+        out.addAll(page.items);
+        cursor = page.hasMore ? page.nextCursor : null;
+      } while (cursor != null);
+      return out;
+    });
     if (datas == null || !mounted) return;
-    if (datas.items.isEmpty) return toast(context, 'Create a data folder first.', error: true);
-    final req = await showBackupSheet(context, datas: datas.items, repos: [repo], repo: repo);
+    if (datas.isEmpty) return toast(context, 'Create a data folder first.', error: true);
+    final req = await showBackupSheet(context, datas: datas, repos: [repo], repo: repo);
     if (req == null || !mounted) return;
     // Let Rustic report its own live byte total during the backup. A separate
     // source-tree walk here is slow and can disagree with backup filters,
