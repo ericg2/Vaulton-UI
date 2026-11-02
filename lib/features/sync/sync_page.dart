@@ -479,9 +479,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   onChanged: (v) => set(() => skipIfRunning = v),
                 ),
                 const SizedBox(height: 12),
+                const SizedBox(height: 14),
+                _syncEditorHeading(ctx, 'Device & Safety', 'Choose when syncs may run and how destination files are handled.'),
                 if (backgroundSupported) ...[
-                  const SizedBox(height: 14),
-                  _syncEditorHeading(ctx, 'Device Requirements', 'Limit background syncs to suitable conditions.'),
                   _SettingSwitch(
                     title: 'Wi-Fi / Unmetered Only',
                     value: wifiOnly,
