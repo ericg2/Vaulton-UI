@@ -76,6 +76,16 @@ Consistently apply these rules to every user-facing string, including buttons, p
 - Review every card and screen for information density: remove repeated labels, redundant descriptions, and decorative metadata; group related values; use concise summaries; and make additional detail available on demand. Do not solve clutter by hiding information users need to make a safe decision.
 - Keep authentication flows compact and focused. For example, changing a password from the login screen should normally navigate to a dedicated Change Password screen (or a similarly focused full-screen flow) rather than expanding a large form inline and making the login screen excessively tall. Preserve a clear way to return to login and handle validation, loading, and errors within that flow.
 
+## Branding, Logos, and Platform Assets
+
+- Keep Vaulton's visual identity consistent throughout the app and across Windows, Android, web, and any other supported platform. Use the established, approved Vaulton logo and brand assets from the project; do not redraw, approximate, substitute, or introduce a different logo without an explicit design decision.
+- Audit every place the brand appears, including the login and other app screens, navigation, splash/loading screens, app launcher icons, window/taskbar icons, installers, browser favicon, and platform metadata where applicable. Ensure the correct asset is configured and actually included in each platform's packaged output.
+- Use appropriate variants and sizes for each context (full logo/wordmark versus compact app icon). Preserve the logo's proportions, clear space, legibility, and intended colors; never stretch, crop, recolor, or place it on a background that makes it difficult to see.
+- Check logo visibility in both light and dark themes and on different background colors. Provide suitable approved variants or backgrounds where necessary rather than applying ad hoc filters or changing the source artwork.
+- Centralize brand assets and references where practical so screens and platform configurations do not drift or point to duplicate, outdated, or missing files. Follow the platform's asset-generation requirements and keep generated icon resources in sync with the source asset.
+- Verify branding on actual supported platform outputs when practical, not just in source code or a successful compile. Check that icons survive release packaging/tree-shaking and appear correctly in installed/running apps. Report any platform that could not be visually verified; do not claim universal support based only on one platform's build.
+- Keep brand colors, typography, icon style, and component styling coherent across screens. Reuse shared theme tokens and components instead of introducing one-off colors or visual treatments. Branding should feel consistent without making every screen visually repetitive or overly decorated.
+
 ## Navigation and Discoverability
 
 - Make core features and common actions easy to find. Do not bury important functionality several levels deep in nested menus, overflow menus, or unrelated settings pages.
