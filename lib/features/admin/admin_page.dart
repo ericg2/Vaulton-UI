@@ -1199,8 +1199,8 @@ class _NewUserDialogState extends State<_NewUserDialog> {
       title: const Text('Create User'),
       content: SizedBox(
         width: 480,
-        height: (MediaQuery.sizeOf(context).height - 220)
-            .clamp(220.0, 500.0)
+        height: (MediaQuery.sizeOf(context).height - MediaQuery.viewInsetsOf(context).bottom - 220)
+            .clamp(180.0, 500.0)
             .toDouble(),
         child: Form(
           key: _formKey,
