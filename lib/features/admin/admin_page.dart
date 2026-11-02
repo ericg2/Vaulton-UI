@@ -1390,11 +1390,9 @@ class _NewUserDialogState extends State<_NewUserDialog> {
                   }
                   return null;
                 },
-                onChanged: (value) {
-                  if (value.trim().isEmpty && _sendWelcomeEmail) {
-                    setState(() => _sendWelcomeEmail = false);
-                  }
-                },
+                onChanged: (value) => setState(() {
+                  if (value.trim().isEmpty) _sendWelcomeEmail = false;
+                }),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
