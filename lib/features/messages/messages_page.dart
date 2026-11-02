@@ -25,8 +25,17 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   }
 
   Future<List<String>?> _selectRecipients() async {
-    final page = await guarded(context, () => _v.users(limit: 200));
-    if (page == null || !mounted) return null;
+    final directory = await guarded(context, () async {
+      final out = <UserAccount>[];
+      String? cursor;
+      do {
+        final page = await _v.users(cursor: cursor, limit: 200);
+        out.addAll(page.items);
+        cursor = page.hasMore ? page.nextCursor : null;
+      } while (cursor != null);
+      return out;
+    });
+    if (directory == null || !mounted) return null;
     final selected = <String>{};
     String search = '';
 
@@ -35,7 +44,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
           final q = search.toLowerCase();
-          final users = page.items.where((u) {
+          final users = directory.where((u) {
             final text = '${u.displayName} ${u.userName} ${u.email ?? ''}'
                 .toLowerCase();
             return q.isEmpty || text.contains(q);
