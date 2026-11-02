@@ -58,7 +58,9 @@ class SettingsPage extends ConsumerWidget {
                         kind: 'bool',
                         initial: '${u.emailNotifications}',
                       ),
-                    ]);
+                    ],
+                    intro: 'Update the name and email shown to other Vaulton users. Email notifications are optional.',
+                  );
                     if (f == null) return;
                     await guarded(
                       context,
@@ -200,7 +202,10 @@ class SettingsPage extends ConsumerWidget {
                   'Also used for SMB shares. Signs out other sessions.',
                 ),
                 onTap: () async {
-                  final f = await formDialog(context, 'Change Password', [
+                  final f = await formDialog(
+                    context,
+                    'Change Password',
+                    [
                     const FieldSpec(
                       'cur',
                       'Current Password',
@@ -453,9 +458,15 @@ class _TwoFactorDialogState extends State<_TwoFactorDialog> {
   }
 
   Future<void> _regenerate() async {
-    final f = await formDialog(context, 'Regenerate Recovery Codes', [
-      const FieldSpec('password', 'Account Password', kind: 'secret', required: true),
-    ]);
+    final f = await formDialog(
+      context,
+      'Regenerate Recovery Codes',
+      [
+        const FieldSpec('password', 'Account Password', kind: 'secret', required: true),
+      ],
+      ok: 'Regenerate Codes',
+      intro: 'Your current recovery codes will stop working. Store the new codes somewhere safe; they are shown only once.',
+    );
     if (f == null) return;
     try {
       final codes = await widget.v.regenerateRecoveryCodes(f['password']!);
@@ -468,10 +479,16 @@ class _TwoFactorDialogState extends State<_TwoFactorDialog> {
   }
 
   Future<void> _disable() async {
-    final f = await formDialog(context, 'Disable Two-Factor', [
-      const FieldSpec('password', 'Account Password', kind: 'secret', required: true),
-      const FieldSpec('code', 'Authenticator or Recovery Code', required: true),
-    ]);
+    final f = await formDialog(
+      context,
+      'Disable Two-Factor Authentication',
+      [
+        const FieldSpec('password', 'Account Password', kind: 'secret', required: true),
+        const FieldSpec('code', 'Authenticator or Recovery Code', required: true),
+      ],
+      ok: 'Disable Two-Factor',
+      intro: 'This removes the extra sign-in verification from your account. Enter your password and a current authenticator or recovery code to continue.',
+    );
     if (f == null) return;
     try {
       await widget.v.disableTwoFactor(f['password']!, f['code']!);
