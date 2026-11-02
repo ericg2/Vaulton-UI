@@ -59,9 +59,38 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         final r = await showDialog<bool>(
           context: ctx,
           builder: (c) => AlertDialog(
+            insetPadding: const EdgeInsets.all(16),
             title: const Text('Transfers in Progress'),
-            content: const Text(
-              'Minimize Vaulton to keep transfers running, or quit and resume them next time.',
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(c).colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.cloud_sync_outlined),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Some uploads or downloads are still running. Closing Vaulton may interrupt them.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Minimize Vaulton to keep transfers running in the background. Choose Quit to close now and resume them next time.'),
+                ],
+              ),
             ),
             actions: [
               TextButton(
