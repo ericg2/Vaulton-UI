@@ -373,7 +373,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 enabled: !_saving,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: 'Space Limit', isDense: true, errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(maxForRow) ? 'Over remaining capacity' : null)),
+                decoration: InputDecoration(labelText: 'Space Limit', errorText: r.overInvalid ? 'Enter a valid capacity' : (r.overLimit(maxForRow) ? 'Over remaining capacity' : null)),
                 onChanged: (_) {
                   r.textChanged();
                   setState(() {});
@@ -382,7 +382,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
               const SizedBox(width: 6),
               SizedBox(width: 78, child: DropdownButtonFormField<String>(
                 initialValue: r.unit,
-                decoration: const InputDecoration(labelText: 'Unit', isDense: true),
+                decoration: const InputDecoration(labelText: 'Unit'),
                 items: [for (final u in capacityFactors.keys) DropdownMenuItem(value: u, child: Text(u))],
                 onChanged: _saving ? null : (u) {
                   if (u == null) return;
