@@ -161,6 +161,8 @@ class Vaulton {
       Paged.from(await _req('GET', '/datas', q: _pg(cursor, limit, null, {'rootId': rootId, 'search': search})), Point.fromJson);
   Future<Point> data(String id) async => Point.fromJson(toJson(await _req('GET', '/datas/$id')));
   Future<Point> createData(Json body) async => Point.fromJson(toJson(await _req('POST', '/datas', body: body)));
+  Future<bool> dataFolderEncryptionEnabled() async =>
+      toBool(toJson(await _req('GET', '/datas/encryption/status'))['enabled']);
   Future<Point> unlockData(String id, String password) async =>
       Point.fromJson(toJson(await _req('POST', '/datas/${_e(id)}/unlock', body: {'password': password})));
   Future<Point> recoverData(String id, String recoveryKey) async =>
