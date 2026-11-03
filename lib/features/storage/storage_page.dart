@@ -1221,6 +1221,137 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (result == true && mounted) _key.currentState?.refresh();
   }
 
+  Future<void> _changeDataPassword(BuildContext ctx, Point point) async {
+    final currentPassword = TextEditingController();
+    final newPassword = TextEditingController();
+    final confirmPassword = TextEditingController();
+    var busy = false;
+    var error = '';
+
+    final changed = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Change Data Folder Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: currentPassword,
+                obscureText: true,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Current Password'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newPassword,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'New Password'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmPassword,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Confirm New Password'),
+                onSubmitted: (_) async {
+                  if (busy) return;
+                  if (newPassword.text.length < 12) {
+                    setDialogState(() => error = 'Use at least 12 characters.');
+                    return;
+                  }
+                  if (newPassword.text != confirmPassword.text) {
+                    setDialogState(() => error = 'The new passwords do not match.');
+                    return;
+                  }
+                  setDialogState(() {
+                    busy = true;
+                    error = '';
+                  });
+                  try {
+                    await _v.changeDataPassword(
+                      point.id,
+                      currentPassword.text,
+                      newPassword.text,
+                    );
+                    if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                  } catch (e) {
+                    setDialogState(() {
+                      busy = false;
+                      error = e.toString();
+                    });
+                  }
+                },
+              ),
+              if (error.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    error,
+                    style: TextStyle(color: Theme.of(dialogContext).colorScheme.error),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Your files are not re-encrypted. Your existing recovery key remains valid.',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      if (newPassword.text.length < 12) {
+                        setDialogState(() => error = 'Use at least 12 characters.');
+                        return;
+                      }
+                      if (newPassword.text != confirmPassword.text) {
+                        setDialogState(() => error = 'The new passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        busy = true;
+                        error = '';
+                      });
+                      try {
+                        await _v.changeDataPassword(
+                          point.id,
+                          currentPassword.text,
+                          newPassword.text,
+                        );
+                        if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                      } catch (e) {
+                        setDialogState(() {
+                          busy = false;
+                          error = e.toString();
+                        });
+                      }
+                    },
+              child: Text(busy ? 'Changing…' : 'Change Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    currentPassword.dispose();
+    newPassword.dispose();
+    confirmPassword.dispose();
+    if (changed == true && ctx.mounted) {
+      _key.currentState?.refresh();
+      toast(ctx, 'Data Folder password changed.');
+    }
+  }
+
   Future<void> _rotateRecoveryKey(BuildContext ctx, Point point) async {
     final password = TextEditingController();
     final confirmed = await showDialog<bool>(
@@ -1439,6 +1570,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                           _manageDataEncryption(ctx, p);
                         case 'recovery':
                           _rotateRecoveryKey(ctx, p);
+                        case 'password':
+                          _changeDataPassword(ctx, p);
                         case 'jobs':
                           if (widget.repo) {
                             _openRepo(p, tab: 1);
@@ -1462,6 +1595,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                       const PopupMenuItem(value: 'edit', child: Text('Edit')),
                       if (!widget.repo && p.isEncrypted) ...[
                         PopupMenuItem(value: 'security', child: Text(p.isUnlocked ? 'Lock Folder' : 'Unlock Folder')),
+                        const PopupMenuItem(value: 'password', child: Text('Change Password')),
                         const PopupMenuItem(value: 'recovery', child: Text('Regenerate Recovery Key')),
                       ],
                       if (widget.repo)
