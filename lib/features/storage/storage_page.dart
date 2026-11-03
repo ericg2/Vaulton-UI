@@ -1805,13 +1805,31 @@ class _NewPointSheetState extends State<_NewPointSheet> {
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
-            builder: (dialogContext) => PopScope(
-              canPop: false,
-              child: AlertDialog(
-              title: const Text('Save Your Recovery Key'),
-              content: SelectableText('This key is shown only once. Store it somewhere safe. Anyone with this key can unlock this Data Folder.\n\n$recoveryKey'),
-              actions: [FilledButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('I Have Saved It'))],
-            )),
+            builder: (dialogContext) {
+              var canDismiss = false;
+              return StatefulBuilder(
+                builder: (dialogContext, setDialogState) => PopScope(
+                  canPop: canDismiss,
+                  child: AlertDialog(
+                    title: const Text('Save Your Recovery Key'),
+                    content: SelectableText(
+                      'This key is shown only once. Store it somewhere safe. Anyone with this key can unlock this Data Folder.\n\n$recoveryKey',
+                    ),
+                    actions: [
+                      FilledButton(
+                        onPressed: () {
+                          setDialogState(() => canDismiss = true);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          });
+                        },
+                        child: const Text('I Have Saved It'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         }
         if (mounted) Navigator.pop(context, true);
