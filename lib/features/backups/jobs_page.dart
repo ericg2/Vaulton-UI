@@ -325,7 +325,10 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       }
       final selectedData = dataMap[f['data']];
       if (mode == 'backup' && selectedData == null) {
-        return toast(context, 'Scheduled backups require an unencrypted Data Folder. Encrypted folders must be backed up manually while unlocked.', error: true);
+        final message = datas.any((point) => point.isEncrypted)
+            ? 'Scheduled backups require an unencrypted Data Folder. Encrypted folders must be backed up manually while unlocked.'
+            : 'Create a data folder before scheduling a backup.';
+        return toast(context, message, error: true);
       }
       final Map<String, dynamic> opts = mode == 'backup'
           ? {'mode': 'backup', 'dataId': selectedData!.id, 'path': f['path']!.isEmpty ? '/' : f['path']}
