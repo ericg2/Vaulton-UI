@@ -1270,57 +1270,57 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             canPop: !busy,
             child: AlertDialog(
               title: const Text('Change Data Folder Password'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: currentPassword,
-                  obscureText: true,
-                  autofocus: true,
-                  decoration: const InputDecoration(labelText: 'Current Password'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: newPassword,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'New Password'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: confirmPassword,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Confirm New Password'),
-                  onSubmitted: (_) => submit(),
-                ),
-                if (error.isNotEmpty) ...[
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: currentPassword,
+                    obscureText: true,
+                    autofocus: true,
+                    decoration: const InputDecoration(labelText: 'Current Password'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: newPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'New Password'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Confirm New Password'),
+                    onSubmitted: (_) => submit(),
+                  ),
+                  if (error.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        error,
+                        style: TextStyle(color: Theme.of(dialogContext).colorScheme.error),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
-                  Align(
+                  const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      error,
-                      style: TextStyle(color: Theme.of(dialogContext).colorScheme.error),
+                      'Your files are not re-encrypted. Your existing recovery key remains valid.',
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Your files are not re-encrypted. Your existing recovery key remains valid.',
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: busy ? null : submit,
+                  child: Text(busy ? 'Changing…' : 'Change Password'),
                 ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: busy ? null : submit,
-                child: Text(busy ? 'Changing…' : 'Change Password'),
-              ),
-            ],
             ),
           );
         },
