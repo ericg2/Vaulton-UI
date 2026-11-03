@@ -1230,6 +1230,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
 
     final changed = await showDialog<bool>(
       context: ctx,
+      barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) {
           Future<void> submit() async {
@@ -1265,8 +1266,10 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             }
           }
 
-          return AlertDialog(
-            title: const Text('Change Data Folder Password'),
+          return PopScope(
+            canPop: !busy,
+            child: AlertDialog(
+              title: const Text('Change Data Folder Password'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1318,6 +1321,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                 child: Text(busy ? 'Changing…' : 'Change Password'),
               ),
             ],
+            ),
           );
         },
       ),
