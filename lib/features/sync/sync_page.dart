@@ -332,6 +332,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     setState(() {
       _profiles = SyncProfile.loadAll(prefs);
       for (final p in _profiles) {
+        final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
+        if (destination != null && destination.isEncrypted && !destination.isUnlocked) {
+          _status[p.id] = SyncRunStatus(
+            phase: 'Paused',
+            message: 'Unlock the destination Data Folder in Storage before syncing.',
+          );
+          continue;
+        }
         final live = _status[p.id];
         // Keep in-memory progress; periodic refresh must not roll back a live scan.
         if (_cancelTokens.containsKey(p.id) && live?.running == true) continue;
@@ -361,8 +369,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   }
 
   Future<void> _add() async {
-    if (_points.isEmpty) {
-      toast(context, 'No data folders are available.', error: true);
+    if (!_points.any((p) => !p.isEncrypted || p.isUnlocked)) {
+      toast(context, 'Unlock a Data Folder in Storage before creating a sync.', error: true);
       return;
     }
     final source = await pickSyncSource();
@@ -383,7 +391,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   ) async {
     var source = initialSource;
     var name = existing?.name ?? source.label;
-    var pointId = existing?.pointId ?? _points.first.id;
+    var pointId = existing?.pointId ?? _points.firstWhere((p) => !p.isEncrypted || p.isUnlocked).id;
     var remoteDir = existing?.remoteDir ?? '/${source.label}';
     final deviceTz = await deviceTimeZone();
     if (!mounted) return null;
