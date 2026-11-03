@@ -1212,7 +1212,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     );
     password.dispose();
     recovery.dispose();
-    if (result == true && mounted) setState(() {});
+    if (result == true && mounted) _key.currentState?.refresh();
   }
 
   Future<void> _manageDataEncryption(BuildContext ctx, Point point) async {
@@ -1232,7 +1232,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       if (confirmed != true) return;
       try {
         await widget.vaulton.lockData(point.id);
-        if (mounted) setState(() {});
+        if (mounted) _key.currentState?.refresh();
       } catch (e) {
         if (mounted) toast(context, e.toString(), error: true);
       }
@@ -1274,7 +1274,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               label: Text(canOpenData ? 'Open' : 'Unlock'),
             ),
             FilledButton.icon(
-              onPressed: () => startBackup(ctx, ref, data: p),
+              onPressed: canOpenData ? () => startBackup(ctx, ref, data: p) : null,
               icon: const Icon(Icons.backup_outlined),
               label: const Text('Backup'),
             ),
@@ -1686,7 +1686,8 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   late Root _root;
   final _name = TextEditingController(),
       _capacity = TextEditingController(),
-      _password = TextEditingController();
+      _password = TextEditingController(),
+      _passwordConfirm = TextEditingController();
   String _unit = 'GiB';
   bool _showPassword = false,
       _encryptData = false,
@@ -1902,7 +1903,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'This location is shared by another user. Files in this Data Folder are not independently encrypted, so the location owner or server administrator may be able to access them outside Vaulton. Only store sensitive files here if you trust them.',
+                        'This location is shared by another user. Files in this Data Folder are not independently encrypted, so the location owner or server administrator may be able to access them outside Vaulton. Unless encryption is enabled below, only store sensitive files here if you trust the location owner.',
                         style: t.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
