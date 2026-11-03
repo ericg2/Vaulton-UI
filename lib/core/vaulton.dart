@@ -169,6 +169,11 @@ class Vaulton {
       Point.fromJson(toJson(await _req('POST', '/datas/${_e(id)}/unlock/recovery', body: {'recoveryKey': recoveryKey})));
   Future<Point> rotateDataRecoveryKey(String id, String password) async =>
       Point.fromJson(toJson(await _req('POST', '/datas/${_e(id)}/recovery-key/rotate', body: {'password': password})));
+  Future<Point> changeDataPassword(String id, String currentPassword, String newPassword) async =>
+      Point.fromJson(toJson(await _req('POST', '/datas/${_e(id)}/password/change', body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      })));
   Future<Point> lockData(String id) async =>
       Point.fromJson(toJson(await _req('POST', '/datas/${_e(id)}/lock')));
   Future<Point> patchData(String id, Json body) async => Point.fromJson(toJson(await _req('PATCH', '/datas/$id', body: body)));
