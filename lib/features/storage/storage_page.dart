@@ -1221,6 +1221,91 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (result == true && mounted) _key.currentState?.refresh();
   }
 
+  Future<void> _rotateRecoveryKey(BuildContext ctx, Point point) async {
+    final password = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Regenerate Recovery Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the Data Folder password. The current recovery key will stop working, and a new key will be shown once.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: password,
+              obscureText: true,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Data Folder Password'),
+              onSubmitted: (_) => Navigator.pop(dialogContext, true),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Regenerate Key'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      password.dispose();
+      return;
+    }
+
+    try {
+      final updated = await _v.rotateDataRecoveryKey(point.id, password.text);
+      final recoveryKey = updated.recoveryKey;
+      if (recoveryKey == null || recoveryKey.isEmpty) {
+        throw Exception('The server did not return a new recovery key.');
+      }
+      if (!ctx.mounted) return;
+
+      await showDialog<void>(
+        context: ctx,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          var canDismiss = false;
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) => PopScope(
+              canPop: canDismiss,
+              child: AlertDialog(
+                title: const Text('Save Your New Recovery Key'),
+                content: SelectableText(
+                  'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.\n\n$recoveryKey',
+                ),
+                actions: [
+                  FilledButton(
+                    onPressed: () {
+                      setDialogState(() => canDismiss = true);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      });
+                    },
+                    child: const Text('I Have Saved It'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (mounted) _key.currentState?.refresh();
+    } catch (e) {
+      if (ctx.mounted) toast(ctx, e.toString(), error: true);
+    } finally {
+      password.dispose();
+    }
+  }
+
   Future<void> _manageDataEncryption(BuildContext ctx, Point point) async {
     if (!point.isEncrypted) return;
     if (point.isUnlocked) {
@@ -1352,6 +1437,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                           _edit(p);
                         case 'security':
                           _manageDataEncryption(ctx, p);
+                        case 'recovery':
+                          _rotateRecoveryKey(ctx, p);
                         case 'jobs':
                           if (widget.repo) {
                             _openRepo(p, tab: 1);
@@ -1373,8 +1460,10 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                     },
                     itemBuilder: (_) => [
                       const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      if (!widget.repo && p.isEncrypted)
+                      if (!widget.repo && p.isEncrypted) ...[
                         PopupMenuItem(value: 'security', child: Text(p.isUnlocked ? 'Lock Folder' : 'Unlock Folder')),
+                        const PopupMenuItem(value: 'recovery', child: Text('Regenerate Recovery Key')),
+                      ],
                       if (widget.repo)
                         const PopupMenuItem(
                           value: 'snaps',
