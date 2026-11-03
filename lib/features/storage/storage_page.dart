@@ -1798,11 +1798,13 @@ class _NewPointSheetState extends State<_NewPointSheet> {
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
-            builder: (dialogContext) => AlertDialog(
+            builder: (dialogContext) => PopScope(
+              canPop: false,
+              child: AlertDialog(
               title: const Text('Save Your Recovery Key'),
               content: SelectableText('This key is shown only once. Store it somewhere safe. Anyone with this key can unlock this Data Folder.\n\n$recoveryKey'),
               actions: [FilledButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('I Have Saved It'))],
-            ),
+            )),
           );
         }
         if (mounted) Navigator.pop(context, true);
@@ -1911,7 +1913,9 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'This location is shared by another user. Files in this Data Folder are not independently encrypted, so the location owner or server administrator may be able to access them outside Vaulton. Unless encryption is enabled below, only store sensitive files here if you trust the location owner.',
+                        _encryptData
+                            ? 'This folder is encrypted at rest. The server administrator can still access files while it is unlocked.'
+                            : 'Files in this Data Folder are not independently encrypted. The location owner or server administrator may be able to access them outside Vaulton.',
                         style: t.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
