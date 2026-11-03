@@ -1177,12 +1177,77 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     ),
   );
 
+  Future<void> _unlockDataFolder(BuildContext ctx, Point point) async {
+    final password = TextEditingController();
+    final recovery = TextEditingController();
+    var useRecovery = false;
+    var busy = false;
+    final result = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
+        title: const Text('Unlock Data Folder'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (!useRecovery) TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
+          if (useRecovery) TextField(controller: recovery, minLines: 2, maxLines: 3, decoration: const InputDecoration(labelText: 'Recovery Key')),
+          Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: busy ? null : () => setDialogState(() => useRecovery = !useRecovery), child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'))),
+        ]),
+        actions: [
+          TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: busy ? null : () async {
+            setDialogState(() => busy = true);
+            try {
+              if (useRecovery) {
+                await widget.vaulton.recoverData(point.id, recovery.text.trim());
+              } else {
+                await widget.vaulton.unlockData(point.id, password.text);
+              }
+              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+            } catch (e) {
+              setDialogState(() => busy = false);
+              toast(dialogContext, e.toString(), error: true);
+            }
+          }, child: Text(busy ? 'Unlocking…' : 'Unlock')),
+        ],
+      )),
+    );
+    password.dispose();
+    recovery.dispose();
+    if (result == true && mounted) setState(() {});
+  }
+
+  Future<void> _manageDataEncryption(BuildContext ctx, Point point) async {
+    if (!point.isEncrypted) return;
+    if (point.isUnlocked) {
+      final confirmed = await showDialog<bool>(
+        context: ctx,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Lock Data Folder?'),
+          content: const Text('New file operations will be blocked until the folder is unlocked again. Existing open operations may finish.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lock Folder')),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      try {
+        await widget.vaulton.lockData(point.id);
+        if (mounted) setState(() {});
+      } catch (e) {
+        if (mounted) toast(context, e.toString(), error: true);
+      }
+    } else {
+      await _unlockDataFolder(ctx, point);
+    }
+  }
+
   Widget _pointCard(BuildContext ctx, Point p) {
     final cs = Theme.of(ctx).colorScheme;
     final tt = Theme.of(ctx).textTheme;
     final locationName =
         _roots.where((r) => r.id == p.rootId).map((r) => r.name).firstOrNull ??
         (p.rootId.length > 8 ? p.rootId.substring(0, 8) : p.rootId);
+    final canOpenData = widget.repo || !p.isEncrypted || p.isUnlocked;
     final actions = widget.repo
         ? <Widget>[
             FilledButton.tonalIcon(
@@ -1201,14 +1266,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           ]
         : <Widget>[
             FilledButton.tonalIcon(
-              onPressed: () => Navigator.push(
+              onPressed: canOpenData ? () => Navigator.push(
                 ctx,
-                MaterialPageRoute(
-                  builder: (_) => FilesPage(initialPointId: p.id),
-                ),
-              ),
-              icon: const Icon(Icons.folder_open_outlined),
-              label: const Text('Open'),
+                MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)),
+              ) : () => _unlockDataFolder(ctx, p),
+              icon: Icon(canOpenData ? Icons.folder_open_outlined : Icons.lock_open_outlined),
+              label: Text(canOpenData ? 'Open' : 'Unlock'),
             ),
             FilledButton.icon(
               onPressed: () => startBackup(ctx, ref, data: p),
@@ -1221,13 +1284,10 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         onTap: () {
           if (widget.repo) {
             _openRepo(p);
+          } else if (canOpenData) {
+            Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)));
           } else {
-            Navigator.push(
-              ctx,
-              MaterialPageRoute(
-                builder: (_) => FilesPage(initialPointId: p.id),
-              ),
-            );
+            _unlockDataFolder(ctx, p);
           }
         },
         child: Padding(
@@ -1276,6 +1336,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                       switch (a) {
                         case 'edit':
                           _edit(p);
+                        case 'security':
+                          _manageDataEncryption(ctx, p);
                         case 'jobs':
                           if (widget.repo) {
                             _openRepo(p, tab: 1);
@@ -1297,6 +1359,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                     },
                     itemBuilder: (_) => [
                       const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      if (!widget.repo && p.isEncrypted)
+                        PopupMenuItem(value: 'security', child: Text(p.isUnlocked ? 'Lock Folder' : 'Unlock Folder')),
                       if (widget.repo)
                         const PopupMenuItem(
                           value: 'snaps',
@@ -1625,6 +1689,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       _password = TextEditingController();
   String _unit = 'GiB';
   bool _showPassword = false,
+      _encryptData = false,
       _saving = false,
       _capacityTouched = false,
       _passwordTouched = false;
@@ -1642,6 +1707,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
     _name.dispose();
     _capacity.dispose();
     _password.dispose();
+    _passwordConfirm.dispose();
     super.dispose();
   }
 
@@ -1685,9 +1751,13 @@ class _NewPointSheetState extends State<_NewPointSheet> {
     return '';
   }
 
-  String get _passwordError => widget.repo && _password.text.length < 8
-      ? 'Use at least 8 characters.'
-      : '';
+  String get _passwordError {
+    if (widget.repo) return _password.text.isNotEmpty && _password.text.length < 8 ? 'Use at least 8 characters.' : '';
+    if (!_encryptData) return '';
+    if (_password.text.length < 12) return 'Use at least 12 characters.';
+    if (_password.text != _passwordConfirm.text) return 'Passwords do not match.';
+    return '';
+  }
   Future<void> _save() async {
     final name = _name.text.trim();
     setState(() {
@@ -1700,19 +1770,34 @@ class _NewPointSheetState extends State<_NewPointSheet> {
     final maxBytes = _capacityBytesValue;
     setState(() => _saving = true);
     try {
-      await (widget.repo
-          ? widget.vaulton.createRepo({
+      final created = widget.repo
+          ? await widget.vaulton.createRepo({
               'rootId': _root.id,
               'name': name,
               'maxBytes': maxBytes,
               'password': _password.text,
             })
-          : widget.vaulton.createData({
+          : await widget.vaulton.createData({
               'rootId': _root.id,
               'name': name,
               'maxBytes': maxBytes,
-            }));
-      if (mounted) Navigator.pop(context, true);
+              if (_encryptData) 'encryptionPassword': _password.text,
+            });
+      if (mounted) {
+        final recoveryKey = created.recoveryKey;
+        if (recoveryKey != null && recoveryKey.isNotEmpty) {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Save Your Recovery Key'),
+              content: SelectableText('This key is shown only once. Store it somewhere safe. Anyone with this key can unlock this Data Folder.\n\n$recoveryKey'),
+              actions: [FilledButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('I Have Saved It'))],
+            ),
+          );
+        }
+        if (mounted) Navigator.pop(context, true);
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -1826,6 +1911,45 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                   ],
                 ),
               ),
+            ],
+            if (!widget.repo) ...[
+              const SizedBox(height: 16),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _encryptData,
+                onChanged: _saving ? null : (value) => setState(() => _encryptData = value),
+                title: const Text('Encrypt This Data Folder'),
+                subtitle: const Text('Protects file contents, names, and folder metadata at rest.'),
+              ),
+              if (_encryptData) ...[
+                Text('Choose a password with at least 12 characters. You will need it to unlock this folder. Save the recovery key shown after creation; it cannot be shown again.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _password,
+                  enabled: !_saving,
+                  obscureText: !_showPassword,
+                  onChanged: (_) => setState(() => _passwordTouched = true),
+                  decoration: InputDecoration(
+                    labelText: 'Encryption Password',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _showPassword = !_showPassword)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _passwordConfirm,
+                  enabled: !_saving,
+                  obscureText: !_showPassword,
+                  onChanged: (_) => setState(() => _passwordTouched = true),
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password',
+                    border: const OutlineInputBorder(),
+                    errorText: _passwordTouched && _passwordError.isNotEmpty ? _passwordError : null,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text('Encryption protects data stored on the underlying storage. The server administrator can still access files while the folder is unlocked.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              ],
             ],
             const SizedBox(height: 18),
             TextField(
