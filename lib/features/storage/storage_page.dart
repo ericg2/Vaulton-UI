@@ -1197,9 +1197,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             setDialogState(() => busy = true);
             try {
               if (useRecovery) {
-                await widget.vaulton.recoverData(point.id, recovery.text.trim());
+                await _v.recoverData(point.id, recovery.text.trim());
               } else {
-                await widget.vaulton.unlockData(point.id, password.text);
+                await _v.unlockData(point.id, password.text);
               }
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             } catch (e) {
@@ -1231,7 +1231,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       );
       if (confirmed != true) return;
       try {
-        await widget.vaulton.lockData(point.id);
+        await _v.lockData(point.id);
         if (mounted) _key.currentState?.refresh();
       } catch (e) {
         if (mounted) toast(context, e.toString(), error: true);
