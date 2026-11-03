@@ -1228,7 +1228,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         context: ctx,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Lock Data Folder?'),
-          content: const Text('New file operations will be blocked until the folder is unlocked again. Existing open operations may finish.'),
+          content: const Text('Further reads and writes will be blocked until the folder is unlocked again. An operation already in progress may finish.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
             FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lock Folder')),
