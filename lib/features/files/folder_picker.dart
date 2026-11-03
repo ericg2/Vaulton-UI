@@ -60,8 +60,8 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
       final points = await loadAllPoints(ref);
       if (!mounted) return;
       setState(() {
-        _points = points;
-        _point = points.where((x) => x.id == widget.initialPointId).firstOrNull ?? points.firstOrNull;
+        _points = points.where((p) => !p.isEncrypted || p.isUnlocked).toList();
+        _point = _points.where((x) => x.id == widget.initialPointId).firstOrNull ?? _points.firstOrNull;
         _loadingPoints = false;
         if (_point == null) _dirs = [];
       });
@@ -133,7 +133,7 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
             : _point == null && _error != null
                 ? ErrorView(_error!, onRetry: _loadPoints)
                 : _point == null
-                    ? const EmptyView('Create a data folder before choosing a location.', icon: Icons.folder_off_outlined)
+                    ? EmptyView(_points.isEmpty ? 'Unlock an encrypted Data Folder in Storage before choosing a sync destination.' : 'Create a data folder before choosing a location.', icon: Icons.folder_off_outlined)
                     : Column(children: [
                 DropdownButtonFormField<String>(
                   isExpanded: true,
