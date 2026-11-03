@@ -112,8 +112,18 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       return out;
     });
     if (datas == null || !mounted) return;
-    if (datas.isEmpty) return toast(context, 'Create a data folder first.', error: true);
-    final req = await showBackupSheet(context, datas: datas, repos: [repo], repo: repo);
+    final availableDatas = datas.where((point) => !point.isEncrypted || point.isUnlocked).toList();
+    if (availableDatas.isEmpty) {
+      final hasEncrypted = datas.any((point) => point.isEncrypted);
+      return toast(
+        context,
+        hasEncrypted
+            ? 'Unlock an encrypted Data Folder in Storage before starting a backup.'
+            : 'Create a data folder first.',
+        error: true,
+      );
+    }
+    final req = await showBackupSheet(context, datas: availableDatas, repos: [repo], repo: repo);
     if (req == null || !mounted) return;
     // Let Rustic report its own live byte total during the backup. A separate
     // source-tree walk here is slow and can disagree with backup filters,
