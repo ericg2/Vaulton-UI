@@ -1077,6 +1077,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         error: true,
       );
     }
+    var encryptionEnabled = false;
+    if (!widget.repo) {
+      try {
+        encryptionEnabled = await _v.dataFolderEncryptionEnabled();
+      } catch (_) {}
+    }
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -1084,7 +1090,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       showDragHandle: true,
       constraints: const BoxConstraints(maxWidth: 640),
       builder: (_) =>
-          _NewPointSheet(repo: widget.repo, roots: usable, vaulton: _v),
+          _NewPointSheet(repo: widget.repo, roots: usable, vaulton: _v, encryptionEnabled: encryptionEnabled),
     );
     if (created == true && mounted) {
       _key.currentState?.refresh();
@@ -1682,8 +1688,9 @@ class _NewPointSheet extends StatefulWidget {
     required this.repo,
     required this.roots,
     required this.vaulton,
+    required this.encryptionEnabled,
   });
-  final bool repo;
+  final bool repo, encryptionEnabled;
   final List<Root> roots;
   final Vaulton vaulton;
   @override
@@ -1925,7 +1932,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                 ),
               ),
             ],
-            if (!widget.repo) ...[
+            if (!widget.repo && widget.encryptionEnabled) ...[
               const SizedBox(height: 16),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
