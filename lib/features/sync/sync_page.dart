@@ -210,7 +210,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   Timer? _desktopSchedule;
   final Map<String, CancelToken> _cancelTokens = {};
   final Set<String> _activeSyncIds = {};
-  bool _loading = true;
+  bool _loading = true, _wasVisible = true;
   Object? _loadError;
 
   @override
@@ -224,6 +224,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       const Duration(seconds: 30),
       (_) => _runDueDesktop(),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible && !_wasVisible) _load();
+    _wasVisible = visible;
   }
 
   @override
