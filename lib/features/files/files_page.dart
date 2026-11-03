@@ -141,6 +141,72 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     super.dispose();
   }
 
+  Future<void> _unlockSelectedPoint(Point point) async {
+    final password = TextEditingController();
+    final recoveryKey = TextEditingController();
+    var useRecovery = false;
+    var busy = false;
+    final unlocked = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Unlock Data Folder'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (useRecovery)
+                TextField(
+                  controller: recoveryKey,
+                  minLines: 2,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'Recovery Key'),
+                )
+              else
+                TextField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: busy ? null : () => setDialogState(() => useRecovery = !useRecovery),
+                  child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: busy ? null : () async {
+                setDialogState(() => busy = true);
+                try {
+                  if (useRecovery) {
+                    await _v.recoverData(point.id, recoveryKey.text.trim());
+                  } else {
+                    await _v.unlockData(point.id, password.text);
+                  }
+                  if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                } catch (e) {
+                  setDialogState(() => busy = false);
+                  toast(dialogContext, e.toString(), error: true);
+                }
+              },
+              child: Text(busy ? 'Unlocking…' : 'Unlock'),
+            ),
+          ],
+        ),
+      ),
+    );
+    password.dispose();
+    recoveryKey.dispose();
+    if (unlocked == true) await _initPoints();
+  }
+
   Future<void> _initPoints() async {
     setState(() => _pointsError = null);
     try {
@@ -714,6 +780,35 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       );
     }
     final pt = _point!;
+    if (pt.isEncrypted && !pt.isUnlocked) {
+      return Scaffold(
+        appBar: AppBar(title: Text(pt.name)),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, size: 48),
+                  const SizedBox(height: 16),
+                  Text('This Data Folder Is Locked', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('Unlock it with its password or recovery key to browse files, upload, download, or synchronize.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => _unlockSelectedPoint(pt),
+                    icon: const Icon(Icons.lock_open_outlined),
+                    label: const Text('Unlock Folder'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final currentSync = _syncForPath(_path, pt.id);
     final selecting = _sel.isNotEmpty;
     // An upload to this data folder just finished -> refresh the list in place (no spinner).
