@@ -592,6 +592,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final now = DateTime.now().millisecondsSinceEpoch;
     for (final p in [..._profiles]) {
       if (!p.enabled || _status[p.id]?.running == true) continue;
+      final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
+      if (destination != null && destination.isEncrypted && !destination.isUnlocked) {
+        _status[p.id] = SyncRunStatus(
+          phase: 'Paused',
+          message: 'Unlock the destination Data Folder in Storage before syncing.',
+        );
+        continue;
+      }
       if (p.nextRun > 0 && now < p.nextRun) continue;
       try {
         await runScheduledSync(
@@ -618,6 +626,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     // Resolve the live list entry: the list is reloaded from preferences every
     // couple of seconds, so the card's instance may already be detached.
     final id = p.id;
+    final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
+    if (destination != null && destination.isEncrypted && !destination.isUnlocked) {
+      if (mounted) toast(context, 'Unlock the destination Data Folder in Storage before syncing.');
+      return;
+    }
     final cancel = CancelToken();
     _cancelTokens[id] = cancel;
     final note = await SyncNotification.start(p);
