@@ -278,20 +278,24 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final datas = await guarded(context, () => _loadAllPoints(repos: false));
     if (repos == null || datas == null || !mounted) return;
     if (repos.isEmpty) return toast(context, 'Create a backup vault first', error: true);
+    final isNew = s == null;
+    final dataChoices = isNew
+        ? datas.where((point) => !point.isEncrypted).toList()
+        : datas;
     String repoName(Point p) => p.name;
     final repoMap = {for (final r in repos) repoName(r): r};
-    final dataMap = {for (final d in datas) d.name: d};
+    final dataMap = {for (final d in dataChoices) d.name: d};
     final deviceTz = await deviceTimeZone();
     if (!mounted) return;
-    final isNew = s == null;
     final curRepo = repos.where((r) => r.id == (s?.repoId ?? startRepoId ?? widget.repoId)).firstOrNull ?? repos.first;
-    final curData = datas.where((d) => d.id == s?.dataId).firstOrNull;
+    final curData = dataChoices.where((d) => d.id == s?.dataId).firstOrNull;
+    final currentScheduleTargetsEncrypted = !isNew && curData?.isEncrypted == true;
     final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
       if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
       if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean Up Snapshots', 'Repair'], initial: startMode ?? 'Backup'),
       if ((s == null && startMode == null) || s?.mode == 'backup') ...[
-        if (datas.isNotEmpty) FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
+        if (dataChoices.isNotEmpty) FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
         FieldSpec('path', 'Folder to Back Up', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
       ],
       FieldSpec('cron', 'Schedule', kind: 'cron', initial: s?.cron ?? '0 2 * * *'),
@@ -305,7 +309,10 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       final r = await pickFolder(context, initialPointId: d?.id, initialPath: v['path'], title: 'Choose Folder to Backup');
       return r?.path;
     },
-      intro: 'Choose what Vaulton should run and when. Times follow the selected time zone.${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}',
+      intro: 'Choose what Vaulton should run and when. Times follow the selected time zone.'
+          '${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}'
+          '${isNew && dataChoices.isEmpty && datas.any((point) => point.isEncrypted) ? '\n\nEncrypted Data Folders cannot be unlocked automatically for scheduled backups. Use an unencrypted folder for automatic backups.' : ''}'
+          '${currentScheduleTargetsEncrypted ? '\n\nThis schedule currently targets an encrypted Data Folder. Automatic schedules cannot unlock it. Select an unencrypted folder or disable this schedule.' : ''}',
     );
     if (f == null || !mounted) return;
     try {
@@ -318,7 +325,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       }
       final selectedData = dataMap[f['data']];
       if (mode == 'backup' && selectedData == null) {
-        return toast(context, 'Create a data folder before scheduling a backup.', error: true);
+        return toast(context, 'Scheduled backups require an unencrypted Data Folder. Encrypted folders must be backed up manually while unlocked.', error: true);
       }
       final Map<String, dynamic> opts = mode == 'backup'
           ? {'mode': 'backup', 'dataId': selectedData!.id, 'path': f['path']!.isEmpty ? '/' : f['path']}
