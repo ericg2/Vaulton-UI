@@ -2189,7 +2189,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('Encryption is set up on a new empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it. The server administrator can still access files while the folder is unlocked.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                Text('Encryption is set up on a new empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using SMB or another file-transfer tool. The server administrator can still access files while the folder is unlocked.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
               ],
             ],
             const SizedBox(height: 18),
