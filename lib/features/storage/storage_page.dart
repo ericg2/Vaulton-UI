@@ -1322,6 +1322,14 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                             color: cs.onSurfaceVariant,
                           ),
                         ),
+                        if (!widget.repo && p.isEncrypted)
+                          Text(
+                            p.isUnlocked ? 'Encrypted · Unlocked' : 'Encrypted · Locked',
+                            style: tt.bodySmall?.copyWith(
+                              color: p.isUnlocked ? cs.primary : cs.error,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                       ],
                     ),
                   ),
