@@ -21,6 +21,22 @@ void main() {
       expect(point.recoveryKey, isNull);
     });
 
+    test('defaults encrypted points without live state to locked', () {
+      final point = Point.fromJson({
+        'id': 'point-id',
+        'rootId': 'root-id',
+        'name': 'Private files',
+        'maxBytes': 1024,
+        'usedBytes': 0,
+        'isReady': false,
+        'isError': false,
+        'isEncrypted': true,
+      });
+
+      expect(point.isEncrypted, isTrue);
+      expect(point.isUnlocked, isFalse);
+    });
+
     test('defaults legacy and unencrypted points to accessible', () {
       final point = Point.fromJson({
         'id': 'point-id',
