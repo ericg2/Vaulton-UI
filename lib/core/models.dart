@@ -70,7 +70,7 @@ class Point {
         createdAt: toDate(j['createdAt']),
         health: j['health'] is String ? j['health'] : null,
         isEncrypted: toBool(j['isEncrypted']),
-        isUnlocked: toBool(j['isUnlocked']),
+        isUnlocked: !toBool(j['isEncrypted']) || toBool(j['isUnlocked']),
         recoveryKey: toStr(j['recoveryKey']),
       );
 }
