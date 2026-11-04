@@ -1111,15 +1111,19 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       'Delete “${p.name}”?',
       widget.repo
           ? 'Its schedules and job history are removed. Stored backups are kept.'
-          : 'Its schedules are removed. Files in the underlying storage are kept.',
-      ok: 'Delete',
+          : p.isEncrypted
+              ? 'This permanently destroys the folder’s encryption key. The encrypted files remain in the storage location but can never be recovered. Make sure you have copied anything you need before continuing.'
+              : 'Its schedules are removed. Files in the underlying storage are kept.',
+      ok: !widget.repo && p.isEncrypted ? 'Delete Permanently' : 'Delete',
       danger: true,
     )) {
       return;
     }
     await guarded(
       context,
-      () => widget.repo ? _v.deleteRepo(p.id) : _v.deleteData(p.id),
+      () => widget.repo
+          ? _v.deleteRepo(p.id)
+          : _v.deleteData(p.id, confirmEncryptedKeyDestruction: p.isEncrypted),
     );
     if (!widget.repo) ref.read(transferProvider.notifier).clearForPoint(p.id);
     _key.currentState?.refresh();
