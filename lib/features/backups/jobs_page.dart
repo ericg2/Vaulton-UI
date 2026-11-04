@@ -312,8 +312,8 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     },
       intro: 'Choose what Vaulton should run and when. Times follow the selected time zone.'
           '${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}'
-          '${isNew && dataChoices.isEmpty && datas.any((point) => point.isEncrypted) ? '\n\nEncrypted Data Folders cannot be unlocked automatically for scheduled backups. Use an unencrypted folder for automatic backups.' : ''}'
-          '${currentScheduleTargetsEncrypted ? '\n\nThis schedule currently targets an encrypted Data Folder. Automatic schedules cannot unlock it. Select an unencrypted folder or disable this schedule.' : ''}',
+          '${datas.any((point) => point.isEncrypted) ? '\n\nEncrypted Data Folders can be scheduled too, but Vaulton never stores their passwords. The folder must be unlocked when each scheduled backup starts; otherwise that run will fail until you unlock it.' : ''}'
+          '${currentScheduleTargetsEncrypted ? '\n\nThis schedule targets an encrypted Data Folder. Remember to unlock it before the scheduled run.' : ''}',
     );
     if (f == null || !mounted) return;
     try {
@@ -327,7 +327,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       final selectedData = dataMap[f['data']];
       if (mode == 'backup' && selectedData == null) {
         final message = datas.any((point) => point.isEncrypted)
-            ? 'Scheduled backups require an unencrypted Data Folder. Encrypted folders must be backed up manually while unlocked.'
+            ? 'Select a Data Folder to back up. Encrypted folders are supported when unlocked at the scheduled time.'
             : 'Create a data folder before scheduling a backup.';
         return toast(context, message, error: true);
       }
