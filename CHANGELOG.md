@@ -13,6 +13,8 @@
 - Warn when creating an encrypted Data Folder that SMB random-offset writes and resizing are not supported yet.
 - Preserve password and recovery-key change results when IPC publication is delayed, and tell users to keep the folder unlocked while the new envelope syncs.
 - Clarify that encryption applies to new empty Data Folders and existing folders require a separate file-transfer workflow.
+- Share one encrypted-folder eligibility rule across immediate backup and sync flows, and prevent encrypted folders from being selected for recurring schedules.
+- Clear entered encryption credentials after rejected unlock/password-change attempts and failed folder creation.
 
 ## 1.3.2
 
