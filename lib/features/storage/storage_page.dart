@@ -1355,7 +1355,6 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         syncPending
             ? 'Password changed. The server is still syncing; keep the folder unlocked until it completes.'
             : 'Data Folder password changed.',
-        error: false,
       );
     }
   }
