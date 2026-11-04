@@ -64,6 +64,4 @@ file is missing or is not ignored by Git.
 
 `publish-release.sh` is the Linux Android publishing
 entry point and currently builds the Android APK only. The PowerShell script
-also builds Android. Desktop release assets must be built and attached
-separately; neither script silently claims to have produced Windows or Linux
-packages.
+also builds Android. The scripts themselves build the Android APK only. After the release is published, the repository's release-triggered GitHub Actions workflows build and attach the Windows and Linux packages. Monitor those workflow runs to confirm the desktop assets were uploaded.
