@@ -177,7 +177,10 @@ class Vaulton {
   Future<Point> lockData(String id) async =>
       Point.fromJson(toJson(await _req('POST', '/datas/${_e(id)}/lock')));
   Future<Point> patchData(String id, Json body) async => Point.fromJson(toJson(await _req('PATCH', '/datas/$id', body: body)));
-  Future<void> deleteData(String id) => _req('DELETE', '/datas/$id');
+  Future<void> deleteData(String id, {bool confirmEncryptedKeyDestruction = false}) =>
+      _req('DELETE', '/datas/${_e(id)}', q: {
+        if (confirmEncryptedKeyDestruction) 'confirmEncryptedKeyDestruction': true,
+      });
 
   Future<Paged<Point>> repos({String? rootId, String? search, String? cursor, int limit = 100}) async =>
       Paged.from(await _req('GET', '/repos', q: _pg(cursor, limit, null, {'rootId': rootId, 'search': search})), Point.fromJson);
