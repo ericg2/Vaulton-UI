@@ -21,6 +21,14 @@ try {
     if (-not (Test-Path (Join-Path $root 'android/key.properties'))) {
         throw 'No android/key.properties. Releases would be signed with a throwaway debug key and fail to update over installed apps. Run .\tool\setup-signing.ps1 first.'
     }
+    git check-ignore -q -- android/key.properties
+    if ($LASTEXITCODE -ne 0) {
+        throw 'android/key.properties is not ignored by Git. Refusing to continue because it contains signing passwords.'
+    }
+    git ls-files --error-unmatch android/key.properties *> $null
+    if ($LASTEXITCODE -eq 0) {
+        throw 'android/key.properties is already tracked by Git. Remove it from the repository history and rotate the signing credentials before publishing.'
+    }
     $branch = (git branch --show-current).Trim()
     if ($branch -ne 'main') {
         throw "Switch to the main branch before publishing (current branch: '$branch')."
