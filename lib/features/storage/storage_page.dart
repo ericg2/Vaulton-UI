@@ -1125,7 +1125,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       } else {
         await _v.deleteData(
           p.id,
-          confirmEncryptedKeyDestruction: p.isEncrypted,
+          confirmEncryptedKeyRemoval: p.isEncrypted,
         );
       }
       return true;
