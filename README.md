@@ -52,7 +52,7 @@ Do not expose the server directly to the internet without configuring secure rem
 | File management | Browse, search, upload, download, move, copy, rename, and preview files. |
 | Backups | Create scheduled backups, browse saved snapshots, and restore files or folders. |
 | Folder sync | Keep selected folders in sync with a storage location. |
-| Storage | Connect storage locations and manage access and quotas. |
+| Storage | Connect storage locations and manage access and quotas. New Data Folders can optionally use the server's experimental encryption feature when it is enabled. |
 | Transfers | Track uploads and downloads, retry failed transfers, and view progress. |
 | Account security | Use two-factor authentication and scoped API tokens. |
 | Server management | Check server health, manage users, review jobs, and view activity when your account has permission. |
