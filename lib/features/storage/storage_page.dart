@@ -2249,7 +2249,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('Encryption is set up on a new empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB writes are limited to sequential writes and append mode; random-offset edits and file resizing are not supported yet.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                Text('Encryption is set up on a new, empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB shares on local filesystem-backed Locations support sequential and random-offset writes, append, truncation, and extension. Remote user-write backends remain read-only.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
               ],
             ],
             const SizedBox(height: 18),
