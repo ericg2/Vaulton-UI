@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models.dart';
+import '../../core/data_folder_encryption.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/vaulton.dart';
@@ -280,7 +281,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     if (repos.isEmpty) return toast(context, 'Create a backup vault first', error: true);
     final isNew = s == null;
     final dataChoices = isNew
-        ? datas.where((point) => !point.isEncrypted).toList()
+        ? datas.where(canScheduleDataFolder).toList()
         : datas;
     String repoName(Point p) => p.name;
     final repoMap = {for (final r in repos) repoName(r): r};
