@@ -15,6 +15,7 @@
 - Clarify that encryption applies to new empty Data Folders and existing folders require a separate file-transfer workflow.
 - Share one encrypted-folder eligibility rule across immediate backup and sync flows, and prevent encrypted folders from being selected for recurring schedules.
 - Clear entered encryption credentials after rejected unlock/password-change attempts and failed folder creation.
+- Default encrypted Data Folder model instances to locked unless the server explicitly reports an unlocked state.
 
 ## 1.3.2
 
