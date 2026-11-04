@@ -6,9 +6,6 @@
 
 - Reject blank and too-short Unicode passwords consistently with the server when creating or changing an encrypted Data Folder password.
 - Do not refresh the Storage list or clear point-scoped transfer state when a Data Folder deletion fails.
-- Explain that encrypted Data Folder deletion removes the live key envelope but cannot erase copies retained in older server backups.
-
-### Fixed
 - Require an explicit warning before deleting an encrypted Data Folder, and explain that older server backups may still contain its key envelope.
 
 ## 1.3.2
