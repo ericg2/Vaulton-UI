@@ -10,7 +10,7 @@
 - Require an explicit warning before deleting an encrypted Data Folder, and explain that older server backups may still contain its key envelope.
 - Explain in the recovery-key unlock flow that recovery unlock does not reset the folder password.
 - Apply the same 12–1024 Unicode-character password limits in the UI, API, and Rust encryption service.
-- Warn when creating an encrypted Data Folder that SMB random-offset writes and resizing are not supported yet.
+- Explain that encrypted SMB supports random-offset writes and resizing on local filesystem-backed Data Folders, while repeated small writes to large files can incur read/modify/re-encrypt overhead.
 - Preserve password and recovery-key change results when IPC publication is delayed, and tell users to keep the folder unlocked while the new envelope syncs.
 - Clarify that encryption applies to new empty Data Folders and existing folders require a separate file-transfer workflow.
 - Share one encrypted-folder eligibility rule across immediate backup and sync flows, and allow recurring schedules to target encrypted folders without storing credentials; the folder must be unlocked when each run starts.
