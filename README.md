@@ -72,6 +72,10 @@ Vaulton only shows management features your account is allowed to use. Your serv
 - When restoring a folder, Vaulton creates that folder inside the destination you select. A restored file is placed directly in the selected destination.
 - If you are unsure what a restore will change, review the **Dry Run** before starting it.
 
+## Release Notes
+
+See the [changelog](docs/CHANGELOG.md) for recent fixes and changes.
+
 ## Need Help?
 
 - Read the [user guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md) for help with everyday tasks.
