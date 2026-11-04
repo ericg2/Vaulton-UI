@@ -10,6 +10,7 @@
 - Require an explicit warning before deleting an encrypted Data Folder, and explain that older server backups may still contain its key envelope.
 - Explain in the recovery-key unlock flow that recovery unlock does not reset the folder password.
 - Apply the same 12–1024 Unicode-character password limits in the UI, API, and Rust encryption service.
+- Warn when creating an encrypted Data Folder that SMB random-offset writes and resizing are not supported yet.
 - Clarify that encryption applies to new empty Data Folders and existing folders require a separate file-transfer workflow.
 
 ## 1.3.2
