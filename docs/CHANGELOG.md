@@ -1,5 +1,7 @@
 # Changelog
 
+This file contains curated notes through version 1.3.2 and the current unreleased changes. For version 1.3.3 and later, see the [GitHub Releases](https://github.com/ericg2/Vaulton-UI/releases), which contain the published release history.
+
 ## Unreleased
 
 ### Fixed
