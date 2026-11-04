@@ -61,10 +61,10 @@ class Point {
     this.createdAt,
     this.health,
     this.isEncrypted = false,
-    this.isUnlocked = true,
+    bool? isUnlocked,
     this.recoveryKey,
     this.encryptionSyncPending = false,
-  });
+  }) : isUnlocked = !isEncrypted || (isUnlocked ?? false);
   final String id, rootId, name;
   final int maxBytes, usedBytes;
   final bool isReady, isError;
