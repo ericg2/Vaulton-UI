@@ -68,6 +68,37 @@ void main() {
     });
   });
 
+  group('Point constructor security defaults', () {
+    test('encrypted points default to locked unless explicitly unlocked', () {
+      final point = Point(
+        id: 'point-id',
+        rootId: 'root-id',
+        name: 'Private files',
+        maxBytes: 1024,
+        usedBytes: 0,
+        isReady: false,
+        isError: false,
+        isEncrypted: true,
+      );
+
+      expect(point.isUnlocked, isFalse);
+    });
+
+    test('unencrypted points remain accessible by default', () {
+      final point = Point(
+        id: 'point-id',
+        rootId: 'root-id',
+        name: 'Files',
+        maxBytes: 1024,
+        usedBytes: 0,
+        isReady: true,
+        isError: false,
+      );
+
+      expect(point.isUnlocked, isTrue);
+    });
+  });
+
   group('Point Data Folder encryption state', () {
     test('parses encrypted and locked state', () {
       final point = Point.fromJson({
