@@ -49,8 +49,22 @@ class Node {
 }
 
 class Point {
-  Point({required this.id, required this.rootId, required this.name, required this.maxBytes, required this.usedBytes,
-      required this.isReady, required this.isError, this.error, this.createdAt, this.health, this.isEncrypted = false, this.isUnlocked = true, this.recoveryKey, this.encryptionSyncPending = false});
+  Point({
+    required this.id,
+    required this.rootId,
+    required this.name,
+    required this.maxBytes,
+    required this.usedBytes,
+    required this.isReady,
+    required this.isError,
+    this.error,
+    this.createdAt,
+    this.health,
+    this.isEncrypted = false,
+    this.isUnlocked = true,
+    this.recoveryKey,
+    this.encryptionSyncPending = false,
+  });
   final String id, rootId, name;
   final int maxBytes, usedBytes;
   final bool isReady, isError;
