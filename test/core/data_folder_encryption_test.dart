@@ -42,6 +42,32 @@ void main() {
     });
   });
 
+  group('Data Folder operation eligibility', () {
+    Point point({required bool encrypted, required bool unlocked}) => Point(
+          id: 'point-id',
+          rootId: 'root-id',
+          name: 'Files',
+          maxBytes: 4096,
+          usedBytes: 0,
+          isReady: true,
+          isError: false,
+          isEncrypted: encrypted,
+          isUnlocked: unlocked,
+        );
+
+    test('immediate operations require encrypted folders to be unlocked', () {
+      expect(canUseDataFolderNow(point(encrypted: false, unlocked: true)), isTrue);
+      expect(canUseDataFolderNow(point(encrypted: true, unlocked: false)), isFalse);
+      expect(canUseDataFolderNow(point(encrypted: true, unlocked: true)), isTrue);
+    });
+
+    test('recurring schedules never accept encrypted folders', () {
+      expect(canScheduleDataFolder(point(encrypted: false, unlocked: true)), isTrue);
+      expect(canScheduleDataFolder(point(encrypted: true, unlocked: false)), isFalse);
+      expect(canScheduleDataFolder(point(encrypted: true, unlocked: true)), isFalse);
+    });
+  });
+
   group('Point Data Folder encryption state', () {
     test('parses encrypted and locked state', () {
       final point = Point.fromJson({
