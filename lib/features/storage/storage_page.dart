@@ -1233,6 +1233,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     final confirmPassword = TextEditingController();
     var busy = false;
     var error = '';
+    var syncPending = false;
 
     final changed = await showDialog<bool>(
       context: ctx,
@@ -1262,11 +1263,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               error = '';
             });
             try {
-              await _v.changeDataPassword(
+              final updated = await _v.changeDataPassword(
                 point.id,
                 currentPassword.text,
                 newPassword.text,
               );
+              syncPending = updated.encryptionSyncPending;
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             } catch (e) {
               setDialogState(() {
@@ -1348,7 +1350,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     confirmPassword.dispose();
     if (changed == true && ctx.mounted) {
       _key.currentState?.refresh();
-      toast(ctx, 'Data Folder password changed.');
+      toast(
+        ctx,
+        syncPending
+            ? 'Password changed. The server is still syncing; keep the folder unlocked until it completes.'
+            : 'Data Folder password changed.',
+        error: false,
+      );
     }
   }
 
@@ -1411,8 +1419,23 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               canPop: canDismiss,
               child: AlertDialog(
                 title: const Text('Save Your New Recovery Key'),
-                content: SelectableText(
-                  'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.\n\n$recoveryKey',
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (updated.encryptionSyncPending) ...[
+                      Text(
+                        'The new key is saved, but the server has not finished syncing it. Keep this folder unlocked until synchronization completes.',
+                        style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(dialogContext).colorScheme.error,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    SelectableText(
+                      'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.\n\n$recoveryKey',
+                    ),
+                  ],
                 ),
                 actions: [
                   FilledButton(
