@@ -47,8 +47,127 @@ Future<bool> unlockDataFolderWithPrompt(
           Future<void> submit() async {
             if (busy) return;
             if (useRecovery) {
-              if (recoveryKey.text.trim().isEmpty) {
-                setDialogState(() => error = 'Enter your recovery key.');
+              if (!RegExp(r'^[A-Za-z0-9_-]{43}
+              final validation =
+                  validateDataFolderEncryptionPassword(password.text);
+              if (validation != null) {
+                setDialogState(() => error = validation);
+                return;
+              }
+            }
+
+            setDialogState(() {
+              busy = true;
+              error = '';
+            });
+            try {
+              if (useRecovery) {
+                await vaulton.recoverData(point.id, recoveryKey.text.trim());
+              } else {
+                await vaulton.unlockData(point.id, password.text);
+              }
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext, true);
+              }
+            } catch (e) {
+              password.clear();
+              recoveryKey.clear();
+              if (dialogContext.mounted) {
+                setDialogState(() {
+                  busy = false;
+                  error = e.toString();
+                });
+              }
+            }
+          }
+
+          return PopScope(
+            canPop: !busy,
+            child: AlertDialog(
+              title: const Text('Unlock Data Folder'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (useRecovery)
+                    TextField(
+                      controller: recoveryKey,
+                      autofocus: true,
+                      minLines: 2,
+                      maxLines: 3,
+                      maxLength: 43,
+                      decoration: const InputDecoration(
+                        labelText: 'Recovery Key',
+                        counterText: '',
+                      ),
+                      onSubmitted: (_) => submit(),
+                    )
+                  else
+                    TextField(
+                      controller: password,
+                      autofocus: true,
+                      obscureText: true,
+                      maxLength: 1024,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        counterText: '',
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: busy
+                          ? null
+                          : () => setDialogState(() {
+                                useRecovery = !useRecovery;
+                                password.clear();
+                                recoveryKey.clear();
+                                error = '';
+                              }),
+                      child: Text(
+                        useRecovery ? 'Use Password' : 'Use Recovery Key',
+                      ),
+                    ),
+                  ),
+                  if (error.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      error,
+                      style: TextStyle(
+                        color: Theme.of(dialogContext).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: busy ? null : submit,
+                  child: Text(busy ? 'Unlocking…' : 'Unlock'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    return unlocked == true;
+  } finally {
+    password.clear();
+    recoveryKey.clear();
+    password.dispose();
+    recoveryKey.dispose();
+  }
+}
+).hasMatch(recoveryKey.text.trim())) {
+                setDialogState(() => error = 'Enter the 43-character recovery key.');
                 return;
               }
             } else {
