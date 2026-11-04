@@ -62,7 +62,7 @@ file is missing or is not ignored by Git.
 
 ## Scope
 
-`publish-release.sh` is the portable Linux/macOS-style Android publishing
+`publish-release.sh` is the Linux Android publishing
 entry point and currently builds the Android APK only. The PowerShell script
 also builds Android. Desktop release assets must be built and attached
 separately; neither script silently claims to have produced Windows or Linux
