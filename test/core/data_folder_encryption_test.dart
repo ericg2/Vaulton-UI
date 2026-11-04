@@ -20,9 +20,13 @@ void main() {
       expect(validateDataFolderEncryptionPassword(List.filled(12, '😀').join()), isNull);
     });
 
-    test('enforces the same UTF-16 maximum length as the API', () {
+    test('enforces the same Unicode scalar maximum length as the API', () {
       expect(
-        validateDataFolderEncryptionPassword(List.filled(513, '😀').join()),
+        validateDataFolderEncryptionPassword(List.filled(1024, '😀').join()),
+        isNull,
+      );
+      expect(
+        validateDataFolderEncryptionPassword(List.filled(1025, '😀').join()),
         'Use 1024 characters or fewer.',
       );
     });
