@@ -1185,7 +1185,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         title: const Text('Unlock Data Folder'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           if (!useRecovery) TextField(controller: password, obscureText: true, maxLength: 1024, decoration: const InputDecoration(labelText: 'Password', counterText: '')),
-          if (useRecovery) TextField(controller: recovery, obscureText: true, maxLength: 43, decoration: const InputDecoration(labelText: 'Recovery Key', counterText: '')),
+          if (useRecovery) ...[
+            TextField(controller: recovery, obscureText: true, maxLength: 43, decoration: const InputDecoration(labelText: 'Recovery Key', counterText: '')),
+            Text(
+              'A recovery key unlocks access but does not reset the password. Keep it safe; changing the password requires the current password.',
+              style: Theme.of(dialogContext).textTheme.bodySmall,
+            ),
+          ],
           Align(alignment: Alignment.centerLeft, child: TextButton(
             onPressed: busy ? null : () => setDialogState(() {
               useRecovery = !useRecovery;
