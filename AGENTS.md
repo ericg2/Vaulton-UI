@@ -116,7 +116,7 @@ Recent commits use concise imperative subjects, often naming the change directly
 
 ## Testing and Backend Coordination
 
-Follow the sibling backend repository's [TESTING.md](../Vaulton/TESTING.md) for test design, organization, isolation, and release evidence. Organize Flutter tests by feature and layer under `test/`, separating pure unit tests, widget tests, and end-to-end workflows. Mocked API/widget tests do not replace integration tests against the real backend.
+Follow the sibling backend repository's [TESTING.md](../Vaulton/docs/TESTING.md) for test design, organization, isolation, and release evidence. Organize Flutter tests by feature and layer under `test/`, separating pure unit tests, widget tests, and end-to-end workflows. Mocked API/widget tests do not replace integration tests against the real backend.
 
 The app uses `http://localhost:5141` by default. For UI tests requiring a clean backend dataset, first confirm that the target is disposable and obtain authorization before resetting it. If explicitly approved, follow the backend procedure: `docker compose down --volumes` removes named app/IPC volumes but does not remove the configured storage bind mount. Inspect that mount and clear only files confirmed to belong to the disposable test dataset. Rebuild with `docker compose up -d --build`, wait for health, verify `/health/ready`, then run Flutter tests or the app. Never reset production or unconfirmed data; do not automate destructive cleanup.
 
