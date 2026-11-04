@@ -1220,6 +1220,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         ],
       )),
     );
+    password.clear();
+    recovery.clear();
     password.dispose();
     recovery.dispose();
     if (result == true && mounted) _key.currentState?.refresh();
@@ -1338,6 +1340,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       ),
     );
 
+    currentPassword.clear();
+    newPassword.clear();
+    confirmPassword.clear();
     currentPassword.dispose();
     newPassword.dispose();
     confirmPassword.dispose();
@@ -1940,6 +1945,8 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   void dispose() {
     _name.dispose();
     _capacity.dispose();
+    _password.clear();
+    _passwordConfirm.clear();
     _password.dispose();
     _passwordConfirm.dispose();
     super.dispose();
@@ -2018,6 +2025,8 @@ class _NewPointSheetState extends State<_NewPointSheet> {
               'maxBytes': maxBytes,
               if (_encryptData) 'encryptionPassword': _password.text,
             });
+      _password.clear();
+      _passwordConfirm.clear();
       if (mounted) {
         final recoveryKey = created.recoveryKey;
         if (recoveryKey != null && recoveryKey.isNotEmpty) {
