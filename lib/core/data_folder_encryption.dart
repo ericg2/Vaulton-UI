@@ -167,7 +167,9 @@ Future<bool> unlockDataFolderWithPrompt(
   }
 }
 ).hasMatch(recoveryKey.text.trim())) {
-                setDialogState(() => error = 'Enter the 43-character recovery key.');
+                setDialogState(
+                  () => error = 'Enter the 43-character recovery key.',
+                );
                 return;
               }
             } else {
