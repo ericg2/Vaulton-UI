@@ -1,3 +1,5 @@
+import 'models.dart';
+
 /// Validates a Data Folder encryption password using Unicode scalar values,
 /// matching the API and Rust KDF boundary.
 String? validateDataFolderEncryptionPassword(
