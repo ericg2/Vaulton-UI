@@ -183,94 +183,94 @@ void main() {
   testWidgets(
     'creates an encrypted Data Folder and protects its one-time recovery key',
     (tester) async {
-    final recoveryKey = List.filled(43, 'r').join();
-    adapter.responseBody = {
-      'id': 'created-point',
-      'rootId': 'root-id',
-      'name': 'Private files',
-      'maxBytes': 4096,
-      'usedBytes': 0,
-      'isReady': true,
-      'isError': false,
-      'isEncrypted': true,
-      'isUnlocked': true,
-      'recoveryKey': recoveryKey,
-    };
-    final root = Root(
-      id: 'root-id',
-      name: 'Local storage',
-      userName: 'admin',
-      maxBytes: 16 * 1024 * 1024,
-      allocatedBytes: 0,
-      freeBytes: 16 * 1024 * 1024,
-      isDataAllowed: true,
-      isRepoAllowed: true,
-      isOwner: true,
-    );
-    var created = false;
+      final recoveryKey = List.filled(43, 'r').join();
+      adapter.responseBody = {
+        'id': 'created-point',
+        'rootId': 'root-id',
+        'name': 'Private files',
+        'maxBytes': 4096,
+        'usedBytes': 0,
+        'isReady': true,
+        'isError': false,
+        'isEncrypted': true,
+        'isUnlocked': true,
+        'recoveryKey': recoveryKey,
+      };
+      final root = Root(
+        id: 'root-id',
+        name: 'Local storage',
+        userName: 'admin',
+        maxBytes: 16 * 1024 * 1024,
+        allocatedBytes: 0,
+        freeBytes: 16 * 1024 * 1024,
+        isDataAllowed: true,
+        isRepoAllowed: true,
+        isOwner: true,
+      );
+      var created = false;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () async {
-                final result = await showModalBottomSheet<bool>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => NewDataPointSheet(
-                    roots: [root],
-                    vaulton: vaulton,
-                    repo: false,
-                    encryptionEnabled: true,
-                  ),
-                );
-                created = result == true;
-              },
-              child: const Text('Create Folder'),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                onPressed: () async {
+                  final result = await showModalBottomSheet<bool>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => NewDataPointSheet(
+                      roots: [root],
+                      vaulton: vaulton,
+                      repo: false,
+                      encryptionEnabled: true,
+                    ),
+                  );
+                  created = result == true;
+                },
+                child: const Text('Create Folder'),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Create Folder'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Encrypt This Data Folder'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Create Folder'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Encrypt This Data Folder'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('B').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('B').last);
+      await tester.pumpAndSettle();
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'folder password 123');
-    await tester.enterText(fields.at(1), 'folder password 123');
-    await tester.enterText(fields.at(2), 'Private files');
-    await tester.enterText(fields.at(3), '4096');
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), 'folder password 123');
+      await tester.enterText(fields.at(1), 'folder password 123');
+      await tester.enterText(fields.at(2), 'Private files');
+      await tester.enterText(fields.at(3), '4096');
 
-    await tester.tap(find.text('Create'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Create'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Save Your Recovery Key'), findsOneWidget);
-    expect(find.textContaining(recoveryKey), findsOneWidget);
-    expect(adapter.requests, hasLength(1));
-    expect(adapter.requests.single.method, 'POST');
-    expect(adapter.requests.single.uri.path, '/datas');
-    final requestBody = adapter.requests.single.data;
-    final decoded = requestBody is String
-        ? jsonDecode(requestBody) as Map<String, dynamic>
-        : Map<String, dynamic>.from(requestBody as Map);
-    expect(decoded['encryptionPassword'], 'folder password 123');
+      expect(find.text('Save Your Recovery Key'), findsOneWidget);
+      expect(find.textContaining(recoveryKey), findsOneWidget);
+      expect(adapter.requests, hasLength(1));
+      expect(adapter.requests.single.method, 'POST');
+      expect(adapter.requests.single.uri.path, '/datas');
+      final requestBody = adapter.requests.single.data;
+      final decoded = requestBody is String
+          ? jsonDecode(requestBody) as Map<String, dynamic>
+          : Map<String, dynamic>.from(requestBody as Map);
+      expect(decoded['encryptionPassword'], 'folder password 123');
 
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('Save Your Recovery Key'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Save Your Recovery Key'), findsOneWidget);
 
-    await tester.tap(find.text('I Have Saved It'));
-    await tester.pumpAndSettle();
-    expect(find.text('Save Your Recovery Key'), findsNothing);
-    expect(created, isTrue);
+      await tester.tap(find.text('I Have Saved It'));
+      await tester.pumpAndSettle();
+      expect(find.text('Save Your Recovery Key'), findsNothing);
+      expect(created, isTrue);
   });
 }
