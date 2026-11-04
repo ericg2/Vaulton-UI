@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/api_client.dart';
+import '../../core/data_folder_encryption.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
@@ -143,69 +144,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }
 
   Future<void> _unlockSelectedPoint(Point point) async {
-    final password = TextEditingController();
-    final recoveryKey = TextEditingController();
-    var useRecovery = false;
-    var busy = false;
-    final unlocked = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Unlock Data Folder'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (useRecovery)
-                TextField(
-                  controller: recoveryKey,
-                  minLines: 2,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Recovery Key'),
-                )
-              else
-                TextField(
-                  controller: password,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: busy ? null : () => setDialogState(() => useRecovery = !useRecovery),
-                  child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: busy ? null : () async {
-                setDialogState(() => busy = true);
-                try {
-                  if (useRecovery) {
-                    await _v.recoverData(point.id, recoveryKey.text.trim());
-                  } else {
-                    await _v.unlockData(point.id, password.text);
-                  }
-                  if (dialogContext.mounted) Navigator.pop(dialogContext, true);
-                } catch (e) {
-                  setDialogState(() => busy = false);
-                  toast(dialogContext, e.toString(), error: true);
-                }
-              },
-              child: Text(busy ? 'Unlocking…' : 'Unlock'),
-            ),
-          ],
-        ),
-      ),
+    final unlocked = await unlockDataFolderWithPrompt(
+      context,
+      vaulton: _v,
+      point: point,
     );
-    password.dispose();
-    recoveryKey.dispose();
-    if (unlocked == true) await _initPoints();
+    if (unlocked) await _initPoints();
   }
 
   Future<void> _initPoints() async {
