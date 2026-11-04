@@ -9,6 +9,7 @@
 - Do not refresh the Storage list or clear point-scoped transfer state when a Data Folder deletion fails.
 - Require an explicit warning before deleting an encrypted Data Folder, and explain that older server backups may still contain its key envelope.
 - Explain in the recovery-key unlock flow that recovery unlock does not reset the folder password.
+- Apply the same 12–1024 Unicode-character password limits in the UI, API, and Rust encryption service.
 - Clarify that encryption applies to new empty Data Folders and existing folders require a separate file-transfer workflow.
 
 ## 1.3.2
