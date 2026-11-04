@@ -1184,8 +1184,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
         title: const Text('Unlock Data Folder'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (!useRecovery) TextField(controller: password, obscureText: true, maxLength: 1024, decoration: const InputDecoration(labelText: 'Password')),
-          if (useRecovery) TextField(controller: recovery, obscureText: true, maxLength: 43, decoration: const InputDecoration(labelText: 'Recovery Key')),
+          if (!useRecovery) TextField(controller: password, obscureText: true, maxLength: 1024, decoration: const InputDecoration(labelText: 'Password', counterText: '')),
+          if (useRecovery) TextField(controller: recovery, obscureText: true, maxLength: 43, decoration: const InputDecoration(labelText: 'Recovery Key', counterText: '')),
           Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: busy ? null : () => setDialogState(() => useRecovery = !useRecovery), child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'))),
         ]),
         actions: [
@@ -1273,21 +1273,21 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                     obscureText: true,
                     maxLength: 1024,
                     autofocus: true,
-                    decoration: const InputDecoration(labelText: 'Current Password'),
+                    decoration: const InputDecoration(labelText: 'Current Password', counterText: ''),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: newPassword,
                     obscureText: true,
                     maxLength: 1024,
-                    decoration: const InputDecoration(labelText: 'New Password'),
+                    decoration: const InputDecoration(labelText: 'New Password', counterText: ''),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: confirmPassword,
                     obscureText: true,
                     maxLength: 1024,
-                    decoration: const InputDecoration(labelText: 'Confirm New Password'),
+                    decoration: const InputDecoration(labelText: 'Confirm New Password', counterText: ''),
                     onSubmitted: (_) => submit(),
                   ),
                   if (error.isNotEmpty) ...[
@@ -2177,6 +2177,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                   decoration: InputDecoration(
                     labelText: 'Encryption Password',
                     border: const OutlineInputBorder(),
+                    counterText: '',
                     suffixIcon: IconButton(icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _showPassword = !_showPassword)),
                   ),
                 ),
@@ -2190,6 +2191,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
                     border: const OutlineInputBorder(),
+                    counterText: '',
                     errorText: _passwordTouched && _passwordError.isNotEmpty ? _passwordError : null,
                   ),
                 ),
