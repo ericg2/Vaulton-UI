@@ -64,7 +64,7 @@ Vaulton only shows management features your account is allowed to use. Your serv
 
 - The app needs a running Vaulton server. It does not store or serve your files by itself.
 - Optional Data Folder encryption is controlled by the server, disabled by default, and remains experimental. A server administrator must explicitly enable it. It applies only when creating a new, empty Data Folder; existing folders are not migrated in place. Read the [encryption guide](https://github.com/ericg2/Vaulton/blob/main/docs/ENCRYPTION.md) before using it, and store the one-time recovery key safely.
-- Encrypted Data Folders must be unlocked before use. Immediate backup/restore jobs and recurring schedules can target encrypted folders, but the folder must be unlocked when each job starts; Vaulton never stores the folder password or unlocks it automatically.
+- Encrypted Data Folders must be unlocked before use. Immediate backup/restore jobs and recurring backup schedules can use encrypted folders, but the folder must be unlocked when each job starts; Vaulton never stores the folder password or unlocks it automatically.
 - On Linux, download `Vaulton-Linux-Install.sh` from the release assets, then run `chmod +x Vaulton-Linux-Install.sh && ./Vaulton-Linux-Install.sh`. The installer downloads and verifies the latest Linux package, installs it under `~/.local/opt/vaulton`, and registers the application-menu entry. Relaunch Vaulton from the application menu on Wayland.
 - Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
