@@ -2,7 +2,7 @@
 
 ## Project Structure
 
-`lib/` contains the Flutter application, organized into `core/`, platform adapters, and feature folders such as `auth/`, `files/`, `backups/`, and `sync/`. `test/` contains Dart tests. `web/`, `android/`, and `windows/` hold platform-specific runners and configuration. `tool/` contains project tooling; `docs/` contains project documentation and the changelog. Keep documentation Markdown in `docs/`, with `README.md` and `AGENTS.md` as root-level exceptions. Keep generated output (`build/`, `.dart_tool/`) out of changes.
+`lib/` contains the Flutter application, organized into `core/`, platform adapters, and feature folders such as `auth/`, `files/`, `backups/`, and `sync/`. `test/` contains Dart tests. `web/`, `android/`, and `windows/` hold platform-specific runners and configuration. `tool/` contains project tooling; `docs/` contains general project documentation and the changelog. Keep general documentation Markdown in `docs/`; concise tool-local READMEs and skill files may remain beside the tool or skill they describe, while `README.md` and `AGENTS.md` remain at the repository root. Keep generated output (`build/`, `.dart_tool/`) out of changes.
 
 ## Build, Test, and Development
 
