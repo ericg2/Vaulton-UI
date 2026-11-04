@@ -2060,10 +2060,16 @@ class _NewPointSheetState extends State<_NewPointSheet> {
               'maxBytes': maxBytes,
               if (_encryptData) 'encryptionPassword': _password.text,
             });
+      final recoveryKey = created.recoveryKey;
+      if (!widget.repo && _encryptData &&
+          (recoveryKey == null || recoveryKey.isEmpty)) {
+        throw StateError(
+          'The encrypted Data Folder was created, but the server did not return its recovery key. Keep the folder; unlock it with the password and regenerate the recovery key before relying on recovery.',
+        );
+      }
       _password.clear();
       _passwordConfirm.clear();
       if (mounted) {
-        final recoveryKey = created.recoveryKey;
         if (recoveryKey != null && recoveryKey.isNotEmpty) {
           await showDialog<void>(
             context: context,
