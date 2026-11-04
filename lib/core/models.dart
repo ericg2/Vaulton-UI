@@ -50,12 +50,12 @@ class Node {
 
 class Point {
   Point({required this.id, required this.rootId, required this.name, required this.maxBytes, required this.usedBytes,
-      required this.isReady, required this.isError, this.error, this.createdAt, this.health, this.isEncrypted = false, this.isUnlocked = true, this.recoveryKey});
+      required this.isReady, required this.isError, this.error, this.createdAt, this.health, this.isEncrypted = false, this.isUnlocked = true, this.recoveryKey, this.encryptionSyncPending = false});
   final String id, rootId, name;
   final int maxBytes, usedBytes;
   final bool isReady, isError;
   final String? error, health, recoveryKey;
-  final bool isEncrypted, isUnlocked;
+  final bool isEncrypted, isUnlocked, encryptionSyncPending;
   final DateTime? createdAt;
   String get healthLabel => isError ? 'Error' : (isReady ? 'Ready' : (health ?? 'Unknown'));
   factory Point.fromJson(Json j) => Point(
@@ -72,6 +72,7 @@ class Point {
         isEncrypted: toBool(j['isEncrypted']),
         isUnlocked: !toBool(j['isEncrypted']) || toBool(j['isUnlocked']),
         recoveryKey: toStr(j['recoveryKey']),
+        encryptionSyncPending: toBool(j['encryptionSyncPending']),
       );
 }
 
