@@ -35,6 +35,8 @@ Future<bool> unlockDataFolderWithPrompt(
   final password = TextEditingController();
   final recoveryKey = TextEditingController();
   var useRecovery = false;
+  var busy = false;
+  var error = '';
 
   try {
     final unlocked = await showDialog<bool>(
@@ -42,9 +44,6 @@ Future<bool> unlockDataFolderWithPrompt(
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) {
-          var busy = false;
-          var error = '';
-
           Future<void> submit() async {
             if (busy) return;
             if (useRecovery) {
