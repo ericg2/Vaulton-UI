@@ -1119,12 +1119,18 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     )) {
       return;
     }
-    await guarded(
-      context,
-      () => widget.repo
-          ? _v.deleteRepo(p.id)
-          : _v.deleteData(p.id, confirmEncryptedKeyDestruction: p.isEncrypted),
-    );
+    final deleted = await guarded<bool>(context, () async {
+      if (widget.repo) {
+        await _v.deleteRepo(p.id);
+      } else {
+        await _v.deleteData(
+          p.id,
+          confirmEncryptedKeyDestruction: p.isEncrypted,
+        );
+      }
+      return true;
+    });
+    if (deleted != true || !mounted) return;
     if (!widget.repo) ref.read(transferProvider.notifier).clearForPoint(p.id);
     _key.currentState?.refresh();
     ref.invalidate(pointNamesProvider);
