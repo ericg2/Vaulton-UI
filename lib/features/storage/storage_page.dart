@@ -1229,7 +1229,11 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               setDialogState(() => error = 'Enter the current password.');
               return;
             }
-            if (newPassword.text.length < 12) {
+            if (newPassword.text.trim().isEmpty) {
+              setDialogState(() => error = 'Enter a new password.');
+              return;
+            }
+            if (newPassword.text.runes.length < 12) {
               setDialogState(() => error = 'Use at least 12 characters.');
               return;
             }
@@ -1967,7 +1971,8 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   String get _passwordError {
     if (widget.repo) return _password.text.isNotEmpty && _password.text.length < 8 ? 'Use at least 8 characters.' : '';
     if (!_encryptData) return '';
-    if (_password.text.length < 12) return 'Use at least 12 characters.';
+    if (_password.text.trim().isEmpty) return 'Enter a password.';
+    if (_password.text.runes.length < 12) return 'Use at least 12 characters.';
     if (_password.text != _passwordConfirm.text) return 'Passwords do not match.';
     return '';
   }
