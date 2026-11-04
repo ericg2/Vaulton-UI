@@ -232,16 +232,16 @@ void main() {
     await tester.tap(find.text('Encrypt This Data Folder'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B').last);
+    await tester.pumpAndSettle();
+
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), 'folder password 123');
     await tester.enterText(fields.at(1), 'folder password 123');
     await tester.enterText(fields.at(2), 'Private files');
     await tester.enterText(fields.at(3), '4096');
-
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('B').last);
-    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
