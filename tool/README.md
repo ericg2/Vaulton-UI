@@ -55,6 +55,8 @@ Keep `android/key.properties` and its keystore private, back them up securely,
 and never commit them. If the signing key is lost, existing installations
 signed with it cannot receive updates over the top.
 
+`tool/setup-signing.ps1` reuses the existing local Android debug key by default to preserve updates for installs already signed with it. That key uses Android's well-known debug-key password and is a compatibility convenience, not a recommended distribution key. For a dedicated release key, run `./tool/setup-signing.ps1 -NewKey` from PowerShell; users with an app signed by the old key must uninstall it once before installing the new APK. Keep the generated `.vaulton` directory backed up and private.
+
 The Linux script deliberately refuses to publish if the signing properties
 file is missing or is not ignored by Git.
 
