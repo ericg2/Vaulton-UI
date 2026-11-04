@@ -2179,7 +2179,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
                 subtitle: const Text('Protects file contents, names, and folder metadata at rest.'),
               ),
               if (_encryptData) ...[
-                Text('Choose a password with at least 12 characters. You will need it to unlock this folder. Save the recovery key shown after creation; it cannot be shown again.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                Text('Choose a password with 12 to 1024 characters. You will need it to unlock this folder. The recovery key is shown only once, so save it somewhere safe.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                 const SizedBox(height: 10),
                 TextField(
                   controller: _password,
