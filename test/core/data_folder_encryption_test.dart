@@ -61,10 +61,10 @@ void main() {
       expect(canUseDataFolderNow(point(encrypted: true, unlocked: true)), isTrue);
     });
 
-    test('recurring schedules never accept encrypted folders', () {
+    test('recurring schedules may target encrypted folders regardless of current lock state', () {
       expect(canScheduleDataFolder(point(encrypted: false, unlocked: true)), isTrue);
-      expect(canScheduleDataFolder(point(encrypted: true, unlocked: false)), isFalse);
-      expect(canScheduleDataFolder(point(encrypted: true, unlocked: true)), isFalse);
+      expect(canScheduleDataFolder(point(encrypted: true, unlocked: false)), isTrue);
+      expect(canScheduleDataFolder(point(encrypted: true, unlocked: true)), isTrue);
     });
   });
 
