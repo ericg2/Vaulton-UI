@@ -7,6 +7,13 @@ import 'package:vaulton/core/api_client.dart';
 import 'package:vaulton/core/session.dart';
 import 'package:vaulton/core/vaulton.dart';
 
+Object? _decodedBody(RequestOptions request) {
+  final data = request.data;
+  if (data is String) return jsonDecode(data);
+  if (data is List<int>) return jsonDecode(utf8.decode(data));
+  return data;
+}
+
 class _RecordingAdapter implements HttpClientAdapter {
   final requests = <RequestOptions>[];
 
@@ -121,9 +128,9 @@ void main() {
         'replacement-password',
       );
 
-      expect(adapter.requests[0].data, {'password': 'folder-password'});
-      expect(adapter.requests[1].data, {'recoveryKey': 'recovery-secret'});
-      expect(adapter.requests[2].data, {
+      expect(_decodedBody(adapter.requests[0]), {'password': 'folder-password'});
+      expect(_decodedBody(adapter.requests[1]), {'recoveryKey': 'recovery-secret'});
+      expect(_decodedBody(adapter.requests[2]), {
         'currentPassword': 'current-password',
         'newPassword': 'replacement-password',
       });
