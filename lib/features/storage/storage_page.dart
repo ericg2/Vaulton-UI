@@ -2087,6 +2087,8 @@ class _NewPointSheetState extends State<_NewPointSheet> {
         if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
+      _password.clear();
+      _passwordConfirm.clear();
       if (mounted) {
         setState(() => _saving = false);
         toast(context, e.toString(), error: true);
