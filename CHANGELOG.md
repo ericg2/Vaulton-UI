@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Require an explicit warning before deleting an encrypted Data Folder, and explain that older server backups may still contain its key envelope.
+
 ## 1.3.2
 
 ### Fixed
