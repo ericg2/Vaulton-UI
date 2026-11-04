@@ -1112,7 +1112,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       widget.repo
           ? 'Its schedules and job history are removed. Stored backups are kept.'
           : p.isEncrypted
-              ? 'This permanently destroys the folder’s encryption key. The encrypted files remain in the storage location but can never be recovered. Make sure you have copied anything you need before continuing.'
+              ? 'This removes the folder’s active encryption key from Vaulton. The encrypted files remain in the storage location and cannot be opened from this server. Older server backups may still contain the key, so this is not guaranteed cryptographic erasure. Copy anything you need before continuing.'
               : 'Its schedules are removed. Files in the underlying storage are kept.',
       ok: !widget.repo && p.isEncrypted ? 'Delete Permanently' : 'Delete',
       danger: true,
