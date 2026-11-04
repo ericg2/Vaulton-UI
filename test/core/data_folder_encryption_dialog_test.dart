@@ -172,7 +172,10 @@ void main() {
     tester,
   ) async {
     await openDialog(tester);
-    await tester.enterText(find.byType(TextField), 'correct horse battery staple');
+    await tester.enterText(
+      find.byType(TextField),
+      'correct horse battery staple',
+    );
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
