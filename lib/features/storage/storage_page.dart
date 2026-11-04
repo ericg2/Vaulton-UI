@@ -1320,100 +1320,152 @@ class _PointsTabState extends ConsumerState<PointsTab> {
 
   Future<void> _rotateRecoveryKey(BuildContext ctx, Point point) async {
     final password = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: ctx,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Regenerate Recovery Key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter the Data Folder password. The current recovery key will stop working, and a new key will be shown once.',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: password,
-              obscureText: true,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Data Folder Password'),
-              onSubmitted: (_) => Navigator.pop(dialogContext, true),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Regenerate Key'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) {
-      password.clear();
-      password.dispose();
-      return;
-    }
+    var busy = false;
+    var error = '';
+    var recoveryKey = '';
+    var syncPending = false;
 
     try {
-      final updated = await _v.rotateDataRecoveryKey(point.id, password.text);
-      final recoveryKey = updated.recoveryKey;
-      if (recoveryKey == null || recoveryKey.isEmpty) {
-        throw Exception('The server did not return a new recovery key.');
-      }
-      if (!ctx.mounted) return;
-
-      await showDialog<void>(
+      final saved = await showDialog<bool>(
         context: ctx,
         barrierDismissible: false,
-        builder: (dialogContext) {
-          var canDismiss = false;
-          return StatefulBuilder(
-            builder: (dialogContext, setDialogState) => PopScope(
-              canPop: canDismiss,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> rotate() async {
+              if (busy || recoveryKey.isNotEmpty) return;
+              final validation = validateDataFolderEncryptionPassword(
+                password.text,
+              );
+              if (validation != null) {
+                setDialogState(() => error = validation);
+                return;
+              }
+              setDialogState(() {
+                busy = true;
+                error = '';
+              });
+              try {
+                final updated = await _v.rotateDataRecoveryKey(
+                  point.id,
+                  password.text,
+                );
+                if (updated.recoveryKey == null ||
+                    updated.recoveryKey!.isEmpty) {
+                  throw Exception(
+                    'The server did not return a new recovery key.',
+                  );
+                }
+                if (!dialogContext.mounted) return;
+                setDialogState(() {
+                  recoveryKey = updated.recoveryKey!;
+                  syncPending = updated.encryptionSyncPending;
+                  busy = false;
+                });
+              } catch (e) {
+                password.clear();
+                if (dialogContext.mounted) {
+                  setDialogState(() {
+                    busy = false;
+                    error = e.toString();
+                  });
+                }
+              }
+            }
+
+            final showingKey = recoveryKey.isNotEmpty;
+            return PopScope(
+              canPop: !busy && !showingKey,
               child: AlertDialog(
-                title: const Text('Save Your New Recovery Key'),
+                title: Text(
+                  showingKey
+                      ? 'Save Your New Recovery Key'
+                      : 'Regenerate Recovery Key',
+                ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (updated.encryptionSyncPending) ...[
-                      Text(
-                        'The new key is saved, but the server has not finished syncing it. Keep this folder unlocked until synchronization completes.',
-                        style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(dialogContext).colorScheme.error,
+                    if (showingKey) ...[
+                      if (syncPending) ...[
+                        Text(
+                          'The new key is saved, but the server has not finished syncing it. Keep this folder unlocked until synchronization completes.',
+                          style: Theme.of(dialogContext).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(dialogContext).colorScheme.error,
+                              ),
                         ),
+                        const SizedBox(height: 12),
+                      ],
+                      const Text(
+                        'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.',
                       ),
                       const SizedBox(height: 12),
+                      SelectableText(recoveryKey),
+                    ] else ...[
+                      const Text(
+                        'Enter the Data Folder password. The current recovery key will stop working, and a new key will be shown once.',
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: password,
+                        obscureText: true,
+                        autofocus: true,
+                        maxLength: 1024,
+                        decoration: const InputDecoration(
+                          labelText: 'Data Folder Password',
+                          counterText: '',
+                        ),
+                        onSubmitted: (_) => rotate(),
+                      ),
+                      if (error.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          error,
+                          style: TextStyle(
+                            color: Theme.of(dialogContext).colorScheme.error,
+                          ),
+                        ),
+                      ],
                     ],
-                    SelectableText(
-                      'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.\n\n$recoveryKey',
-                    ),
                   ],
                 ),
                 actions: [
+                  if (!showingKey)
+                    TextButton(
+                      onPressed: busy
+                          ? null
+                          : () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancel'),
+                    ),
                   FilledButton(
-                    onPressed: () {
-                      setDialogState(() => canDismiss = true);
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (dialogContext.mounted) Navigator.pop(dialogContext);
-                      });
-                    },
-                    child: const Text('I Have Saved It'),
+                    onPressed: busy
+                        ? null
+                        : showingKey
+                        ? () => Navigator.pop(dialogContext, true)
+                        : rotate,
+                    child: Text(
+                      busy
+                          ? 'Regenerating…'
+                          : showingKey
+                          ? 'I Have Saved It'
+                          : 'Regenerate Key',
+                    ),
                   ),
                 ],
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       );
-      if (mounted) _key.currentState?.refresh();
-    } catch (e) {
-      if (ctx.mounted) toast(ctx, e.toString(), error: true);
+      if (saved == true && mounted) {
+        _key.currentState?.refresh();
+        toast(
+          ctx,
+          syncPending
+              ? 'Recovery key regenerated. Keep the folder unlocked until synchronization completes.'
+              : 'Recovery key regenerated.',
+        );
+      }
     } finally {
       password.clear();
       password.dispose();
