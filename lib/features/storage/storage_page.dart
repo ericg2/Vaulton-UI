@@ -1175,58 +1175,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
   );
 
   Future<void> _unlockDataFolder(BuildContext ctx, Point point) async {
-    final password = TextEditingController();
-    final recovery = TextEditingController();
-    var useRecovery = false;
-    var busy = false;
-    final result = await showDialog<bool>(
-      context: ctx,
-      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
-        title: const Text('Unlock Data Folder'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (!useRecovery) TextField(controller: password, obscureText: true, maxLength: 1024, decoration: const InputDecoration(labelText: 'Password', counterText: '')),
-          if (useRecovery) ...[
-            TextField(controller: recovery, obscureText: true, maxLength: 43, decoration: const InputDecoration(labelText: 'Recovery Key', counterText: '')),
-            Text(
-              'A recovery key unlocks access but does not reset the password. Keep it safe; changing the password requires the current password.',
-              style: Theme.of(dialogContext).textTheme.bodySmall,
-            ),
-          ],
-          Align(alignment: Alignment.centerLeft, child: TextButton(
-            onPressed: busy ? null : () => setDialogState(() {
-              useRecovery = !useRecovery;
-              password.clear();
-              recovery.clear();
-            }),
-            child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'),
-          )),
-        ]),
-        actions: [
-          TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: busy ? null : () async {
-            setDialogState(() => busy = true);
-            try {
-              if (useRecovery) {
-                await _v.recoverData(point.id, recovery.text.trim());
-              } else {
-                await _v.unlockData(point.id, password.text);
-              }
-              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
-            } catch (e) {
-              password.clear();
-              recovery.clear();
-              setDialogState(() => busy = false);
-              toast(dialogContext, e.toString(), error: true);
-            }
-          }, child: Text(busy ? 'Unlocking…' : 'Unlock')),
-        ],
-      )),
+    final unlocked = await unlockDataFolderWithPrompt(
+      ctx,
+      vaulton: _v,
+      point: point,
     );
-    password.clear();
-    recovery.clear();
-    password.dispose();
-    recovery.dispose();
-    if (result == true && mounted) _key.currentState?.refresh();
+    if (unlocked && mounted) _key.currentState?.refresh();
   }
 
   Future<void> _changeDataPassword(BuildContext ctx, Point point) async {
