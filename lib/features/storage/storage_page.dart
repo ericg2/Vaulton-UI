@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/data_folder_encryption.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
@@ -1229,12 +1230,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               setDialogState(() => error = 'Enter the current password.');
               return;
             }
-            if (newPassword.text.trim().isEmpty) {
-              setDialogState(() => error = 'Enter a new password.');
-              return;
-            }
-            if (newPassword.text.runes.length < 12) {
-              setDialogState(() => error = 'Use at least 12 characters.');
+            final passwordError = validateDataFolderEncryptionPassword(
+              newPassword.text,
+              emptyMessage: 'Enter a new password.',
+            );
+            if (passwordError != null) {
+              setDialogState(() => error = passwordError);
               return;
             }
             if (newPassword.text != confirmPassword.text) {
@@ -1971,8 +1972,8 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   String get _passwordError {
     if (widget.repo) return _password.text.isNotEmpty && _password.text.length < 8 ? 'Use at least 8 characters.' : '';
     if (!_encryptData) return '';
-    if (_password.text.trim().isEmpty) return 'Enter a password.';
-    if (_password.text.runes.length < 12) return 'Use at least 12 characters.';
+    final passwordError = validateDataFolderEncryptionPassword(_password.text);
+    if (passwordError != null) return passwordError;
     if (_password.text != _passwordConfirm.text) return 'Passwords do not match.';
     return '';
   }
