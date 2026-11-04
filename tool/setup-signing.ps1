@@ -40,6 +40,7 @@ if (Test-Path $propsPath) {
 New-Item -ItemType Directory -Path $keyDir -Force | Out-Null
 
 if (-not $NewKey -and (Test-Path $debugStore)) {
+    Write-Warning 'The Android debug key uses a publicly known password. Reusing it preserves updates for existing installs, but is not recommended for public distribution. Use -NewKey for a dedicated release key.'
     Write-Host 'Reusing this PC''s existing debug key as the permanent release key...' -ForegroundColor Cyan
     Copy-Item $debugStore $store -Force
     $alias = 'androiddebugkey'
