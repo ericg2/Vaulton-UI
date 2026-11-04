@@ -2063,9 +2063,29 @@ class _NewPointSheetState extends State<_NewPointSheet> {
       final recoveryKey = created.recoveryKey;
       if (!widget.repo && _encryptData &&
           (recoveryKey == null || recoveryKey.isEmpty)) {
-        throw StateError(
-          'The encrypted Data Folder was created, but the server did not return its recovery key. Keep the folder; unlock it with the password and regenerate the recovery key before relying on recovery.',
+        _password.clear();
+        _passwordConfirm.clear();
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Recovery Key Not Returned'),
+            content: const Text(
+              'The encrypted Data Folder was created, but the server did not return its recovery key. Keep the folder. Unlock it with the password you chose, then regenerate and save a recovery key before relying on recovery.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('I Understand'),
+              ),
+            ],
+          ),
         );
+        if (mounted) {
+          setState(() => _saving = false);
+          Navigator.pop(context, true);
+        }
+        return;
       }
       _password.clear();
       _passwordConfirm.clear();
