@@ -70,7 +70,7 @@ Vaulton only shows management features your account is allowed to use. Your serv
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
 - Android background tasks are scheduled by the operating system. Battery-saving settings can delay photo backups and other background work.
 - When restoring a folder, Vaulton creates that folder inside the destination you select. A restored file is placed directly in the selected destination.
-- If you are unsure what a restore will change, review the **Dry Run** before starting it.
+- If you are unsure what a restore will change, review the **Test Run** before starting it.
 
 ## Release Notes
 
