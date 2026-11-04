@@ -128,3 +128,5 @@ Data Folder encryption must be transparent to ordinary users. The product goal i
 - Avoid encryption-specific UI branches unless they are genuinely required for lock/unlock or security disclosure. Keep ordinary file and job interactions as similar as possible regardless of encryption state.
 - Add widget/unit/integration tests for every encryption-related UI state and every user-facing action that invokes an API operation. Verify both encrypted and unencrypted flows, locked/unlocked behavior, errors, cancellation, stale state, server switching, and credential clearing. Coordinate with backend API/Rust integration inventories so no exposed operation is omitted.
 - Release readiness depends on the backend parity, security, migration, and performance gates documented in the sibling `Vaulton/AGENTS.md`. UI tests alone do not establish end-to-end compatibility. Keep user-facing documentation honest about any unsupported operation or required unlock step.
+
+Coordinate UI coverage with `../Vaulton/docs/ENCRYPTION-INTEGRATION-TEST-MATRIX.md`; every API action used by the UI must be covered end-to-end, not only with mocked widget tests.
