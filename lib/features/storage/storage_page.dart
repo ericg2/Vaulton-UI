@@ -1355,6 +1355,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                     'The server did not return a new recovery key.',
                   );
                 }
+                password.clear();
                 if (!dialogContext.mounted) return;
                 setDialogState(() {
                   recoveryKey = updated.recoveryKey!;
@@ -1457,6 +1458,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           },
         ),
       );
+      recoveryKey = '';
       if (saved == true && mounted) {
         _key.currentState?.refresh();
         toast(
