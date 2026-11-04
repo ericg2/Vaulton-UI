@@ -1071,7 +1071,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       showDragHandle: true,
       constraints: const BoxConstraints(maxWidth: 640),
       builder: (_) =>
-          _NewPointSheet(repo: widget.repo, roots: usable, vaulton: _v, encryptionEnabled: encryptionEnabled),
+          NewDataPointSheet(repo: widget.repo, roots: usable, vaulton: _v, encryptionEnabled: encryptionEnabled),
     );
     if (created == true && mounted) {
       _key.currentState?.refresh();
@@ -1943,8 +1943,8 @@ class _EditPointSheetState extends State<_EditPointSheet> {
   }
 }
 
-class _NewPointSheet extends StatefulWidget {
-  const _NewPointSheet({
+class NewDataPointSheet extends StatefulWidget {
+  const NewDataPointSheet({
     required this.repo,
     required this.roots,
     required this.vaulton,
@@ -1954,10 +1954,10 @@ class _NewPointSheet extends StatefulWidget {
   final List<Root> roots;
   final Vaulton vaulton;
   @override
-  State<_NewPointSheet> createState() => _NewPointSheetState();
+  State<NewDataPointSheet> createState() => NewDataPointSheetState();
 }
 
-class _NewPointSheetState extends State<_NewPointSheet> {
+class NewDataPointSheetState extends State<NewDataPointSheet> {
   late Root _root;
   final _name = TextEditingController(),
       _capacity = TextEditingController(),
