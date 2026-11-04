@@ -1943,6 +1943,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
   }
 }
 
+/// Form for creating a Data Folder or backup vault.
 class NewDataPointSheet extends StatefulWidget {
   const NewDataPointSheet({
     super.key,
