@@ -152,12 +152,18 @@ void main() {
   ) async {
     adapter.statusCode = 400;
     await openDialog(tester);
-    await tester.enterText(find.byType(TextField), 'correct horse battery staple');
+    await tester.enterText(
+      find.byType(TextField),
+      'correct horse battery staple',
+    );
     await tester.tap(find.text('Unlock'));
     await tester.pumpAndSettle();
 
     expect(find.text('Unlock Data Folder'), findsOneWidget);
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
     expect(find.text('Unlocking…'), findsNothing);
     expect(adapter.requests, hasLength(1));
   });
@@ -174,9 +180,9 @@ void main() {
     expect(adapter.requests, isEmpty);
   });
 
-  testWidgets('creates an encrypted Data Folder and protects its one-time recovery key', (
-    tester,
-  ) async {
+  testWidgets(
+    'creates an encrypted Data Folder and protects its one-time recovery key',
+    (tester) async {
     final recoveryKey = List.filled(43, 'r').join();
     adapter.responseBody = {
       'id': 'created-point',
