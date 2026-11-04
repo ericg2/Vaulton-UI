@@ -19,4 +19,6 @@ bool canUseDataFolderNow(Point point) =>
     !point.isEncrypted || point.isUnlocked;
 
 /// Whether a Data Folder can be selected for a recurring schedule.
-bool canScheduleDataFolder(Point point) => !point.isEncrypted;
+// Schedules never store folder credentials. They may target encrypted folders,
+// but the folder must be unlocked when each scheduled job actually runs.
+bool canScheduleDataFolder(Point point) => true;
