@@ -1945,6 +1945,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
 
 class NewDataPointSheet extends StatefulWidget {
   const NewDataPointSheet({
+    super.key,
     required this.repo,
     required this.roots,
     required this.vaulton,
@@ -1954,10 +1955,10 @@ class NewDataPointSheet extends StatefulWidget {
   final List<Root> roots;
   final Vaulton vaulton;
   @override
-  State<NewDataPointSheet> createState() => NewDataPointSheetState();
+  State<NewDataPointSheet> createState() => _NewDataPointSheetState();
 }
 
-class NewDataPointSheetState extends State<NewDataPointSheet> {
+class _NewDataPointSheetState extends State<NewDataPointSheet> {
   late Root _root;
   final _name = TextEditingController(),
       _capacity = TextEditingController(),
