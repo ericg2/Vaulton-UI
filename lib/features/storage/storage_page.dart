@@ -1213,6 +1213,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               }
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             } catch (e) {
+              password.clear();
+              recovery.clear();
               setDialogState(() => busy = false);
               toast(dialogContext, e.toString(), error: true);
             }
@@ -1271,6 +1273,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
               syncPending = updated.encryptionSyncPending;
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             } catch (e) {
+              currentPassword.clear();
+              newPassword.clear();
+              confirmPassword.clear();
               setDialogState(() {
                 busy = false;
                 error = e.toString();
