@@ -1186,7 +1186,14 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           if (!useRecovery) TextField(controller: password, obscureText: true, maxLength: 1024, decoration: const InputDecoration(labelText: 'Password', counterText: '')),
           if (useRecovery) TextField(controller: recovery, obscureText: true, maxLength: 43, decoration: const InputDecoration(labelText: 'Recovery Key', counterText: '')),
-          Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: busy ? null : () => setDialogState(() => useRecovery = !useRecovery), child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'))),
+          Align(alignment: Alignment.centerLeft, child: TextButton(
+            onPressed: busy ? null : () => setDialogState(() {
+              useRecovery = !useRecovery;
+              password.clear();
+              recovery.clear();
+            }),
+            child: Text(useRecovery ? 'Use Password' : 'Use Recovery Key'),
+          )),
         ]),
         actions: [
           TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
