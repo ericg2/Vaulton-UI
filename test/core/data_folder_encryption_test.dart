@@ -92,6 +92,23 @@ void main() {
       expect(point.isUnlocked, isTrue);
     });
 
+    test('parses pending encryption configuration synchronization', () {
+      final point = Point.fromJson({
+        'id': 'point-id',
+        'rootId': 'root-id',
+        'name': 'Private files',
+        'maxBytes': 1024,
+        'usedBytes': 0,
+        'isReady': true,
+        'isError': false,
+        'isEncrypted': true,
+        'isUnlocked': true,
+        'encryptionSyncPending': true,
+      });
+
+      expect(point.encryptionSyncPending, isTrue);
+    });
+
     test('reads one-time recovery key from creation response', () {
       final point = Point.fromJson({
         'id': 'point-id',
