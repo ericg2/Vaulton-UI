@@ -2043,7 +2043,10 @@ class _NewPointSheetState extends State<_NewPointSheet> {
             },
           );
         }
-        if (mounted) Navigator.pop(context, true);
+        if (mounted) {
+          setState(() => _saving = false);
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       _password.clear();
@@ -2058,8 +2061,10 @@ class _NewPointSheetState extends State<_NewPointSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme, t = Theme.of(context).textTheme;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
+    return PopScope(
+      canPop: !_saving,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
         20,
         4,
         20,
@@ -2392,6 +2397,7 @@ class _NewPointSheetState extends State<_NewPointSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
