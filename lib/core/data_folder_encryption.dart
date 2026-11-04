@@ -10,3 +10,11 @@ String? validateDataFolderEncryptionPassword(
   if (length < 12) return 'Use at least 12 characters.';
   return null;
 }
+
+
+/// Whether a Data Folder can be used by an immediate operation right now.
+bool canUseDataFolderNow(Point point) =>
+    !point.isEncrypted || point.isUnlocked;
+
+/// Whether a Data Folder can be selected for a recurring schedule.
+bool canScheduleDataFolder(Point point) => !point.isEncrypted;
