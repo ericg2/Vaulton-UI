@@ -2147,340 +2147,340 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
       canPop: !_saving,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-        20,
-        4,
-        20,
-        MediaQuery.viewInsetsOf(context).bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: widget.repo
-                      ? cs.secondaryContainer
-                      : cs.primaryContainer,
-                  child: Icon(
-                    widget.repo
-                        ? Icons.inventory_2_outlined
-                        : Icons.folder_outlined,
-                    color: widget.repo
-                        ? cs.onSecondaryContainer
-                        : cs.onPrimaryContainer,
+          20,
+          4,
+          20,
+          MediaQuery.viewInsetsOf(context).bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 25,
+                    backgroundColor: widget.repo
+                        ? cs.secondaryContainer
+                        : cs.primaryContainer,
+                    child: Icon(
+                      widget.repo
+                          ? Icons.inventory_2_outlined
+                          : Icons.folder_outlined,
+                      color: widget.repo
+                          ? cs.onSecondaryContainer
+                          : cs.onPrimaryContainer,
+                    ),
                   ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.repo ? 'New Backup Vault' : 'New Data Folder',
+                          style: t.headlineSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.repo
+                              ? 'An encrypted place for your backups.'
+                              : 'A dedicated space for your files.',
+                          style: t.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text('Location', style: t.titleSmall),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<Root>(
+                initialValue: _root,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.dns_outlined),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
+                items: [
+                  for (final r in widget.roots)
+                    DropdownMenuItem(
+                      value: r,
+                      child: Text(r.name, overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+                onChanged: _saving ? null : (r) => setState(() => _root = r!),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _root.isOwner
+                    ? '${fmtBytes(_root.freeBytes)} available to allocate of ${fmtBytes(_root.maxBytes)}.'
+                    : '${fmtBytes(_root.freeBytes)} available to you on this shared location.',
+                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              if (!_root.isOwner) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.repo ? 'New Backup Vault' : 'New Data Folder',
-                        style: t.headlineSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.repo
-                            ? 'An encrypted place for your backups.'
-                            : 'A dedicated space for your files.',
-                        style: t.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
+                      Icon(Icons.shield_outlined, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _encryptData
+                              ? 'This folder is encrypted at rest. The server administrator can still access files while it is unlocked.'
+                              : 'Files in this Data Folder are not independently encrypted. The location owner or server administrator may be able to access them outside Vaulton.',
+                          style: t.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 20),
-            Text('Location', style: t.titleSmall),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<Root>(
-              initialValue: _root,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.dns_outlined),
-              ),
-              items: [
-                for (final r in widget.roots)
-                  DropdownMenuItem(
-                    value: r,
-                    child: Text(r.name, overflow: TextOverflow.ellipsis),
-                  ),
-              ],
-              onChanged: _saving ? null : (r) => setState(() => _root = r!),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _root.isOwner
-                  ? '${fmtBytes(_root.freeBytes)} available to allocate of ${fmtBytes(_root.maxBytes)}.'
-                  : '${fmtBytes(_root.freeBytes)} available to you on this shared location.',
-              style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            if (!_root.isOwner) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: cs.outlineVariant),
+              if (!widget.repo && widget.encryptionEnabled) ...[
+                const SizedBox(height: 16),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: _encryptData,
+                  onChanged: _saving ? null : (value) => setState(() => _encryptData = value),
+                  title: const Text('Encrypt This Data Folder'),
+                  subtitle: const Text('Protects file contents, names, and folder metadata at rest.'),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.shield_outlined, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _encryptData
-                            ? 'This folder is encrypted at rest. The server administrator can still access files while it is unlocked.'
-                            : 'Files in this Data Folder are not independently encrypted. The location owner or server administrator may be able to access them outside Vaulton.',
-                        style: t.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                if (_encryptData) ...[
+                  Text('Choose a password with 12 to 1024 characters. You will need it to unlock this folder. The recovery key is shown only once, so save it somewhere safe.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _password,
+                    enabled: !_saving,
+                    obscureText: !_showPassword,
+                    maxLength: 1024,
+                    onChanged: (_) => setState(() => _passwordTouched = true),
+                    decoration: InputDecoration(
+                      labelText: 'Encryption Password',
+                      border: const OutlineInputBorder(),
+                      counterText: '',
+                      suffixIcon: IconButton(icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _showPassword = !_showPassword)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _passwordConfirm,
+                    enabled: !_saving,
+                    obscureText: !_showPassword,
+                    maxLength: 1024,
+                    onChanged: (_) => setState(() => _passwordTouched = true),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      border: const OutlineInputBorder(),
+                      counterText: '',
+                      errorText: _passwordTouched && _passwordError.isNotEmpty ? _passwordError : null,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Encryption is set up on a new, empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB shares on local filesystem-backed Locations support sequential and random-offset writes, append, truncation, and extension. Random writes use bounded-memory read/modify/re-encrypt operations, so repeated small edits to large files can be slower than unencrypted in-place writes. Remote user-write backends remain read-only.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                ],
+              ],
+              const SizedBox(height: 18),
+              TextField(
+                controller: _name,
+                enabled: !_saving,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'e.g. Documents',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Space Limit', style: t.titleSmall),
+              const SizedBox(height: 8),
+              LayoutBuilder(
+                builder: (context, box) {
+                  final amount = Expanded(
+                    child: TextField(
+                      controller: _capacity,
+                      enabled: !_saving,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
+                      onChanged: (_) => setState(() {
+                        _clearExactCapacity();
+                        _capacityTouched = true;
+                      }),
+                      decoration: InputDecoration(
+                        labelText: 'Amount',
+                        border: const OutlineInputBorder(),
+                        errorText: (!_capacityTouched || _capacityError.isEmpty)
+                            ? null
+                            : _capacityError,
+                        helperText: null,
+                      ),
+                    ),
+                  );
+                  final unit = SizedBox(
+                    width: 96,
+                    child: DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: _unit,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Unit',
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'B', child: Text('B')),
+                        DropdownMenuItem(value: 'GiB', child: Text('GiB')),
+                        DropdownMenuItem(value: 'TiB', child: Text('TiB')),
+                      ],
+                      onChanged: _saving
+                          ? null
+                          : (v) {
+                              if (v == null) return;
+                              final raw = double.tryParse(
+                                _capacity.text.trim().replaceAll(',', '.'),
+                              );
+                              final valid =
+                                  _capacity.text.trim().isEmpty ||
+                                  (raw != null && raw.isFinite && raw >= 0);
+                              final bytes = _capacityBytesValue;
+                              setState(() {
+                                _unit = v;
+                                if (valid) {
+                                  _setExactCapacity(bytes);
+                                } else {
+                                  _clearExactCapacity();
+                                }
+                              });
+                            },
+                    ),
+                  );
+                  if (box.maxWidth < 360) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [amount, const SizedBox(height: 10), unit],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [amount, const SizedBox(width: 10), unit],
+                  );
+                },
+              ),
+              if (_root.freeBytes > 0) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      'Allocation',
+                      style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${((_capacityBytesValue / _root.freeBytes) * 100).clamp(0, 100).round()}%',
+                      style: t.titleSmall,
                     ),
                   ],
                 ),
-              ),
-            ],
-            if (!widget.repo && widget.encryptionEnabled) ...[
-              const SizedBox(height: 16),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _encryptData,
-                onChanged: _saving ? null : (value) => setState(() => _encryptData = value),
-                title: const Text('Encrypt This Data Folder'),
-                subtitle: const Text('Protects file contents, names, and folder metadata at rest.'),
-              ),
-              if (_encryptData) ...[
-                Text('Choose a password with 12 to 1024 characters. You will need it to unlock this folder. The recovery key is shown only once, so save it somewhere safe.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                const SizedBox(height: 10),
+                Slider(
+                  value: (_capacityBytesValue / _root.freeBytes)
+                      .clamp(0, 1)
+                      .toDouble(),
+                  min: 0,
+                  max: 1,
+                  divisions: 100,
+                  label:
+                      '${((_capacityBytesValue / _root.freeBytes) * 100).clamp(0, 100).round()}%',
+                  onChanged: _saving
+                      ? null
+                      : (v) {
+                          final bytes = (v * _root.freeBytes).round();
+                          setState(() {
+                            _capacityTouched = true;
+                            _setExactCapacity(bytes);
+                          });
+                        },
+                ),
+                Text(
+                  'Available to allocate: ${fmtBytes(_root.freeBytes)}.',
+                  style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+              if (widget.repo) ...[
+                const SizedBox(height: 18),
                 TextField(
                   controller: _password,
                   enabled: !_saving,
                   obscureText: !_showPassword,
-                  maxLength: 1024,
-                  onChanged: (_) => setState(() => _passwordTouched = true),
+                  onChanged: (_) => setState(() {
+                    _passwordTouched = true;
+                  }),
                   decoration: InputDecoration(
-                    labelText: 'Encryption Password',
+                    labelText: 'Vault Password',
+                    hintText: 'At least 8 characters.',
                     border: const OutlineInputBorder(),
-                    counterText: '',
-                    suffixIcon: IconButton(icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _showPassword = !_showPassword)),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _passwordConfirm,
-                  enabled: !_saving,
-                  obscureText: !_showPassword,
-                  maxLength: 1024,
-                  onChanged: (_) => setState(() => _passwordTouched = true),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    border: const OutlineInputBorder(),
-                    counterText: '',
-                    errorText: _passwordTouched && _passwordError.isNotEmpty ? _passwordError : null,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text('Encryption is set up on a new, empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB shares on local filesystem-backed Locations support sequential and random-offset writes, append, truncation, and extension. Random writes use bounded-memory read/modify/re-encrypt operations, so repeated small edits to large files can be slower than unencrypted in-place writes. Remote user-write backends remain read-only.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-              ],
-            ],
-            const SizedBox(height: 18),
-            TextField(
-              controller: _name,
-              enabled: !_saving,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'e.g. Documents',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Space Limit', style: t.titleSmall),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, box) {
-                final amount = Expanded(
-                  child: TextField(
-                    controller: _capacity,
-                    enabled: !_saving,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    onChanged: (_) => setState(() {
-                      _clearExactCapacity();
-                      _capacityTouched = true;
-                    }),
-                    decoration: InputDecoration(
-                      labelText: 'Amount',
-                      border: const OutlineInputBorder(),
-                      errorText: (!_capacityTouched || _capacityError.isEmpty)
-                          ? null
-                          : _capacityError,
-                      helperText: null,
-                    ),
-                  ),
-                );
-                final unit = SizedBox(
-                  width: 96,
-                  child: DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _unit,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Unit',
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'B', child: Text('B')),
-                      DropdownMenuItem(value: 'GiB', child: Text('GiB')),
-                      DropdownMenuItem(value: 'TiB', child: Text('TiB')),
-                    ],
-                    onChanged: _saving
+                    errorText: (!_passwordTouched || _passwordError.isEmpty)
                         ? null
-                        : (v) {
-                            if (v == null) return;
-                            final raw = double.tryParse(
-                              _capacity.text.trim().replaceAll(',', '.'),
-                            );
-                            final valid =
-                                _capacity.text.trim().isEmpty ||
-                                (raw != null && raw.isFinite && raw >= 0);
-                            final bytes = _capacityBytesValue;
-                            setState(() {
-                              _unit = v;
-                              if (valid) {
-                                _setExactCapacity(bytes);
-                              } else {
-                                _clearExactCapacity();
-                              }
-                            });
-                          },
+                        : _passwordError,
+                    suffixIcon: IconButton(
+                      tooltip: _showPassword ? 'Hide Password' : 'Show Password',
+                      icon: Icon(
+                        _showPassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      onPressed: _saving
+                          ? null
+                          : () => setState(() => _showPassword = !_showPassword),
+                    ),
                   ),
-                );
-                if (box.maxWidth < 360) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [amount, const SizedBox(height: 10), unit],
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [amount, const SizedBox(width: 10), unit],
-                );
-              },
-            ),
-            if (_root.freeBytes > 0) ...[
-              const SizedBox(height: 8),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'This password is required to open the backup vault.',
+                  style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+              const SizedBox(height: 20),
               Row(
                 children: [
-                  Text(
-                    'Allocation',
-                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _saving ? null : () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
                   ),
-                  const Spacer(),
-                  Text(
-                    '${((_capacityBytesValue / _root.freeBytes) * 100).clamp(0, 100).round()}%',
-                    style: t.titleSmall,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _saving ? null : _save,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(_saving ? 'Creating…' : 'Create'),
+                    ),
                   ),
                 ],
               ),
-              Slider(
-                value: (_capacityBytesValue / _root.freeBytes)
-                    .clamp(0, 1)
-                    .toDouble(),
-                min: 0,
-                max: 1,
-                divisions: 100,
-                label:
-                    '${((_capacityBytesValue / _root.freeBytes) * 100).clamp(0, 100).round()}%',
-                onChanged: _saving
-                    ? null
-                    : (v) {
-                        final bytes = (v * _root.freeBytes).round();
-                        setState(() {
-                          _capacityTouched = true;
-                          _setExactCapacity(bytes);
-                        });
-                      },
-              ),
-              Text(
-                'Available to allocate: ${fmtBytes(_root.freeBytes)}.',
-                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
             ],
-            if (widget.repo) ...[
-              const SizedBox(height: 18),
-              TextField(
-                controller: _password,
-                enabled: !_saving,
-                obscureText: !_showPassword,
-                onChanged: (_) => setState(() {
-                  _passwordTouched = true;
-                }),
-                decoration: InputDecoration(
-                  labelText: 'Vault Password',
-                  hintText: 'At least 8 characters.',
-                  border: const OutlineInputBorder(),
-                  errorText: (!_passwordTouched || _passwordError.isEmpty)
-                      ? null
-                      : _passwordError,
-                  suffixIcon: IconButton(
-                    tooltip: _showPassword ? 'Hide Password' : 'Show Password',
-                    icon: Icon(
-                      _showPassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                    ),
-                    onPressed: _saving
-                        ? null
-                        : () => setState(() => _showPassword = !_showPassword),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'This password is required to open the backup vault.',
-                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-            ],
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check),
-                    label: Text(_saving ? 'Creating…' : 'Create'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
-      ),
+        ),
     );
   }
 }
