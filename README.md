@@ -28,7 +28,7 @@ New to Vaulton? Start with the [server setup guide](https://github.com/ericg2/Va
 Get the latest version from [Vaulton Releases](https://github.com/ericg2/Vaulton-UI/releases). Choose the download for your device:
 
 - **Windows:** Download and run the Windows installer.
-- **Linux:** Download the Linux package and follow the included installation instructions.
+- **Linux:** Download the Linux package and the `Vaulton-Linux-Install.sh` installer from the release assets.
 - **Android:** Download the APK, open it on your device, and approve installation when prompted.
 - **Web:** Host the built web app on a web server. The app connects to your Vaulton server; it is not a standalone file server.
 
@@ -65,7 +65,7 @@ Vaulton only shows management features your account is allowed to use. Your serv
 - The app needs a running Vaulton server. It does not store or serve your files by itself.
 - Optional Data Folder encryption is controlled by the server, disabled by default, and remains experimental. A server administrator must explicitly enable it. It applies only when creating a new, empty Data Folder; existing folders are not migrated in place. Read the [encryption guide](https://github.com/ericg2/Vaulton/blob/main/docs/ENCRYPTION.md) before using it, and store the one-time recovery key safely.
 - Encrypted Data Folders must be unlocked before use. Immediate backup/restore jobs and recurring schedules can target encrypted folders, but the folder must be unlocked when each job starts; Vaulton never stores the folder password or unlocks it automatically.
-- On Linux, run `./install-desktop.sh` once from the extracted release bundle to register the app icon and application-menu entry. Relaunch Vaulton from the application menu on Wayland.
+- On Linux, download `Vaulton-Linux-Install.sh` from the release assets, then run `chmod +x Vaulton-Linux-Install.sh && ./Vaulton-Linux-Install.sh`. The installer downloads and verifies the latest Linux package, installs it under `~/.local/opt/vaulton`, and registers the application-menu entry. Relaunch Vaulton from the application menu on Wayland.
 - Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
 - Android background tasks are scheduled by the operating system. Battery-saving settings can delay photo backups and other background work.
