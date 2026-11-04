@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../background/background_api.dart';
 import '../../core/models.dart';
+import '../../core/data_folder_encryption.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/cron_picker.dart';
@@ -341,7 +342,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
       _profiles = SyncProfile.loadAll(prefs);
       for (final p in _profiles) {
         final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
-        if (destination != null && destination.isEncrypted && !destination.isUnlocked) {
+        if (destination != null && !canUseDataFolderNow(destination)) {
           _status[p.id] = SyncRunStatus(
             phase: 'Paused',
             message: 'Unlock the destination Data Folder in Storage before syncing.',
@@ -377,7 +378,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   }
 
   Future<void> _add() async {
-    if (!_points.any((p) => !p.isEncrypted || p.isUnlocked)) {
+    if (!_points.any(canUseDataFolderNow)) {
       toast(context, 'Unlock a Data Folder in Storage before creating a sync.', error: true);
       return;
     }
@@ -399,7 +400,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   ) async {
     var source = initialSource;
     var name = existing?.name ?? source.label;
-    var pointId = existing?.pointId ?? _points.firstWhere((p) => !p.isEncrypted || p.isUnlocked).id;
+    var pointId = existing?.pointId ?? _points.firstWhere(canUseDataFolderNow).id;
     var remoteDir = existing?.remoteDir ?? '/${source.label}';
     final deviceTz = await deviceTimeZone();
     if (!mounted) return null;
@@ -609,7 +610,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     for (final p in [..._profiles]) {
       if (!p.enabled || _status[p.id]?.running == true) continue;
       final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
-      if (destination != null && destination.isEncrypted && !destination.isUnlocked) {
+      if (destination != null && !canUseDataFolderNow(destination)) {
         _status[p.id] = SyncRunStatus(
           phase: 'Paused',
           message: 'Unlock the destination Data Folder in Storage before syncing.',
@@ -643,7 +644,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     // couple of seconds, so the card's instance may already be detached.
     final id = p.id;
     final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
-    if (destination != null && destination.isEncrypted && !destination.isUnlocked) {
+    if (destination != null && !canUseDataFolderNow(destination)) {
       if (mounted) toast(context, 'Unlock the destination Data Folder in Storage before syncing.');
       return;
     }
