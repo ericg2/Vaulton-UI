@@ -64,6 +64,7 @@ Vaulton only shows management features your account is allowed to use. Your serv
 
 - The app needs a running Vaulton server. It does not store or serve your files by itself.
 - Optional Data Folder encryption is controlled by the server and remains experimental. Read the [encryption guide](https://github.com/ericg2/Vaulton/blob/main/docs/DATA-FOLDER-ENCRYPTION.md) before using it, and store the one-time recovery key safely.
+- Encrypted Data Folders must be unlocked before use and currently support immediate manual backup/restore only; automatic schedules require an unencrypted Data Folder.
 - On Linux, run `./install-desktop.sh` once from the extracted release bundle to register the app icon and application-menu entry. Relaunch Vaulton from the application menu on Wayland.
 - Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
