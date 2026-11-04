@@ -105,6 +105,20 @@ void main() {
     expect(adapter.requests, isEmpty);
   });
 
+  testWidgets('rejects malformed recovery keys before sending a request', (
+    tester,
+  ) async {
+    await openDialog(tester);
+    await tester.tap(find.text('Use Recovery Key'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'not-a-recovery-key');
+    await tester.tap(find.text('Unlock'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter the 43-character recovery key.'), findsOneWidget);
+    expect(adapter.requests, isEmpty);
+  });
+
   testWidgets('supports recovery-key unlock and sends only the recovery key', (
     tester,
   ) async {
