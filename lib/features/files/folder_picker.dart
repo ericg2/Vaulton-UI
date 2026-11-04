@@ -67,10 +67,12 @@ class _FolderPickerDialogState extends ConsumerState<_FolderPickerDialog> {
       });
       _load();
     } catch (e) {
-      if (mounted) setState(() {
-        _error = e;
-        _loadingPoints = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loadingPoints = false;
+        });
+      }
     }
   }
 

@@ -204,6 +204,7 @@ final _admin = UserAccount(
     Scopes.jobsManage,
     Scopes.adminVfs,
     Scopes.adminLogs,
+    Scopes.adminSettings,
     Scopes.messagesBroadcast,
     Scopes.serverPower,
   ],
@@ -451,7 +452,7 @@ void main() {
       await pumpScreen(tester, const AdminPage(), _FakeVaulton());
 
       expect(find.text('Administration'), findsOneWidget);
-      for (final tab in ['Users', 'All Jobs', 'VFS', 'Logs', 'Configuration']) {
+      for (final tab in ['System', 'Users', 'All Jobs', 'VFS', 'Logs', 'Audit', 'Maintenance', 'Server Settings']) {
         await tapTab(tester, tab);
       }
     });
@@ -465,7 +466,7 @@ void main() {
           _FakeVaulton(failSettings: true),
         );
 
-        await tapTab(tester, 'Configuration');
+        await tapTab(tester, 'Server Settings');
         expect(find.text('Try Again'), findsOneWidget);
         await tester.tap(find.text('Try Again'));
         await tester.pump();

@@ -268,7 +268,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       'chunkSizeBytes': chunk!, 'pollIntervalMs': poll!, 'vfsSyncIntervalMs': sync!,
       'callTimeoutSeconds': timeout!,
       'monitorPaths': (f['paths'] ?? '').split(',').map((x) => x.trim()).where((x) => x.isNotEmpty).toList(),
-      'minimumFreePercent': freePercent!, 'minimumFreeBytes': freeBytes!,
+      'minimumFreePercent': freePercent, 'minimumFreeBytes': freeBytes!,
       'alertIntervalMinutes': alert!,
       'selfBackupEnabled': f['backupEnabled'] == 'true',
       'selfBackupIntervalHours': backupInterval!, 'selfBackupRetain': backupRetain!,

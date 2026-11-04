@@ -123,7 +123,7 @@ void main() {
         await tester.tap(find.text('Settings'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
-        expect(find.text('Sync Settings'), findsOneWidget);
+        expect(find.text('Edit Sync'), findsOneWidget);
         expect(find.text('Source'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Cancel'));

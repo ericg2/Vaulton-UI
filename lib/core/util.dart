@@ -268,7 +268,9 @@ Future<Map<String, String>?> formDialog(
   final formKey = GlobalKey<FormState>();
   return showDialog<Map<String, String>>(
     context: context,
-    builder: (ctx) => StatefulBuilder(
+    builder: (ctx) => _DisposeControllers(
+      controllers: ctrls.values.toList(),
+      child: StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
         insetPadding: const EdgeInsets.all(16),
         title: Text(title),
@@ -476,11 +478,31 @@ Future<Map<String, String>?> formDialog(
         ],
       ),
     ),
-  ).whenComplete(() {
-    for (final controller in ctrls.values) {
+    ),
+  );
+}
+
+class _DisposeControllers extends StatefulWidget {
+  const _DisposeControllers({required this.controllers, required this.child});
+
+  final List<TextEditingController> controllers;
+  final Widget child;
+
+  @override
+  State<_DisposeControllers> createState() => _DisposeControllersState();
+}
+
+class _DisposeControllersState extends State<_DisposeControllers> {
+  @override
+  void dispose() {
+    for (final controller in widget.controllers) {
       controller.dispose();
     }
-  });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 const _capacityFactors = <String, double>{

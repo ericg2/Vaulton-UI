@@ -515,7 +515,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(tester.takeException(), isNull);
       expect(find.text('New Message'), findsOneWidget);
-      expect(find.text('Subject *'), findsOneWidget);
+      expect(find.text('Subject'), findsOneWidget);
     });
   });
 
@@ -573,7 +573,9 @@ void main() {
       expect(fields, findsNWidgets(2));
       await tester.enterText(fields.at(0), 'old-password-1');
       await tester.enterText(fields.at(1), 'short');
-      await tapSeen(tester, find.text('Save'));
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+      await tapSeen(tester, find.widgetWithText(FilledButton, 'Change Password'));
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(find.text('Use at least 8 characters.'), findsOneWidget);

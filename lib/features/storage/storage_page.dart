@@ -598,16 +598,17 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       border: Border.all(color: cs.outlineVariant),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: ListView(
+                    child: RadioGroup<String>(
+                      groupValue: scheme,
+                      onChanged: (value) {
+                        if (value != null) setSheetState(() => scheme = value);
+                      },
+                      child: ListView(
                       shrinkWrap: true,
                       children: [
                         for (final item in schemes)
                           RadioListTile<String>(
                             value: item,
-                            groupValue: scheme,
-                            onChanged: (value) {
-                              if (value != null) setSheetState(() => scheme = value);
-                            },
                             title: Text(_sourceLabel(item)),
                             subtitle: Text(
                               _sourceDescription(item),
@@ -617,6 +618,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                           ),
                       ],
+                    ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -802,28 +804,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     custom.dispose();
     return result;
   }
-
-  Future<String?> _chooseSourceType() => showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Choose Storage Type'),
-      content: SizedBox(
-        width: 440,
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            for (final entry in typeLabels.entries)
-              ListTile(
-                leading: Icon(entry.key == 'fs' ? Icons.folder_outlined : Icons.cloud_outlined),
-                title: Text(entry.value),
-                subtitle: Text(_sourceDescription(entry.key)),
-                onTap: () => Navigator.pop(ctx, entry.key),
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
 
   Future<void> _edit(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
