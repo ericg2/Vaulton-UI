@@ -1388,6 +1388,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       ),
     );
     if (confirmed != true) {
+      password.clear();
       password.dispose();
       return;
     }
@@ -1433,6 +1434,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     } catch (e) {
       if (ctx.mounted) toast(ctx, e.toString(), error: true);
     } finally {
+      password.clear();
       password.dispose();
     }
   }
