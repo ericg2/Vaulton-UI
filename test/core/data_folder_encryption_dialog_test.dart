@@ -252,7 +252,9 @@ void main() {
     expect(adapter.requests.single.method, 'POST');
     expect(adapter.requests.single.uri.path, '/datas');
     final requestBody = adapter.requests.single.data;
-    final decoded = requestBody is String ? jsonDecode(requestBody) : requestBody;
+    final decoded = requestBody is String
+        ? jsonDecode(requestBody) as Map<String, dynamic>
+        : Map<String, dynamic>.from(requestBody as Map);
     expect(decoded['encryptionPassword'], 'folder password 123');
 
     await tester.binding.handlePopRoute();
