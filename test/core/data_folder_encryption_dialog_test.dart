@@ -130,7 +130,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Recovery Key'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'a' * 43);
+    final recoveryKey = List.filled(43, 'a').join();
+    await tester.enterText(find.byType(TextField), recoveryKey);
     await tester.tap(find.text('Unlock'));
     await tester.pumpAndSettle();
 
@@ -142,7 +143,7 @@ void main() {
     );
     final body = adapter.requests.single.data;
     final decoded = body is String ? jsonDecode(body) : body;
-    expect(decoded, {'recoveryKey': 'a' * 43});
+    expect(decoded, {'recoveryKey': recoveryKey});
     expect(find.text('Unlock Data Folder'), findsNothing);
   });
 
@@ -176,7 +177,7 @@ void main() {
   testWidgets('creates an encrypted Data Folder and protects its one-time recovery key', (
     tester,
   ) async {
-    const recoveryKey = 'r' * 43;
+    final recoveryKey = List.filled(43, 'r').join();
     adapter.responseBody = {
       'id': 'created-point',
       'rootId': 'root-id',
