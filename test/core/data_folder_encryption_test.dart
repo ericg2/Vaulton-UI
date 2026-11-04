@@ -17,7 +17,7 @@ void main() {
         validateDataFolderEncryptionPassword('😀😀😀😀😀😀'),
         'Use at least 12 characters.',
       );
-      expect(validateDataFolderEncryptionPassword('😀' * 12), isNull);
+      expect(validateDataFolderEncryptionPassword(List.filled(12, '😀').join()), isNull);
     });
 
     test('preserves a useful message for password changes', () {
