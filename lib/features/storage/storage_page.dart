@@ -2480,7 +2480,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
             ],
           ),
         ),
-        ),
+      ),
     );
   }
 }
