@@ -5,7 +5,8 @@ String? validateDataFolderEncryptionPassword(
   String emptyMessage = 'Enter a password.',
 }) {
   if (password.trim().isEmpty) return emptyMessage;
-  if (password.length > 1024) return 'Use 1024 characters or fewer.';
-  if (password.runes.length < 12) return 'Use at least 12 characters.';
+  final length = password.runes.length;
+  if (length > 1024) return 'Use 1024 characters or fewer.';
+  if (length < 12) return 'Use at least 12 characters.';
   return null;
 }
