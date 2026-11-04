@@ -1226,7 +1226,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         builder: (dialogContext, setDialogState) {
           Future<void> submit() async {
             if (busy) return;
-            if (currentPassword.text.isEmpty) {
+            if (currentPassword.text.trim().isEmpty) {
               setDialogState(() => error = 'Enter the current password.');
               return;
             }
