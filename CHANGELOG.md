@@ -5,6 +5,7 @@
 ### Fixed
 
 - Reject blank and too-short Unicode passwords consistently with the server when creating or changing an encrypted Data Folder password.
+- Clear the unused password or recovery-key field when switching Data Folder unlock methods, and enforce the API input length limits without displaying counters.
 - Do not refresh the Storage list or clear point-scoped transfer state when a Data Folder deletion fails.
 - Require an explicit warning before deleting an encrypted Data Folder, and explain that older server backups may still contain its key envelope.
 
