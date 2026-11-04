@@ -1,7 +1,36 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vaulton/core/data_folder_encryption.dart';
 import 'package:vaulton/core/models.dart';
 
 void main() {
+  group('Data Folder encryption password validation', () {
+    test('rejects blank and whitespace-only passwords', () {
+      expect(validateDataFolderEncryptionPassword(''), 'Enter a password.');
+      expect(
+        validateDataFolderEncryptionPassword('            '),
+        'Enter a password.',
+      );
+    });
+
+    test('counts Unicode scalar values like the API and Rust implementation', () {
+      expect(
+        validateDataFolderEncryptionPassword('😀😀😀😀😀😀'),
+        'Use at least 12 characters.',
+      );
+      expect(validateDataFolderEncryptionPassword('😀' * 12), isNull);
+    });
+
+    test('preserves a useful message for password changes', () {
+      expect(
+        validateDataFolderEncryptionPassword(
+          ' ',
+          emptyMessage: 'Enter a new password.',
+        ),
+        'Enter a new password.',
+      );
+    });
+  });
+
   group('Point Data Folder encryption state', () {
     test('parses encrypted and locked state', () {
       final point = Point.fromJson({
