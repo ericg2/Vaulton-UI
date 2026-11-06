@@ -1494,7 +1494,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       toast(
         ctx,
         syncPending
-            ? 'Password changed. The server is still syncing; keep the folder unlocked until it completes.'
+            ? 'Password changed. Vaulton is finishing the update; keep the folder unlocked until it is done.'
             : 'Data Folder password changed.',
       );
     }
@@ -1562,7 +1562,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                 title: Text(
                   showingKey
                       ? 'Save Your New Recovery Key'
-                      : 'Regenerate Recovery Key',
+                      : 'Create New Recovery Key',
                 ),
                 content: SingleChildScrollView(
                   child: Column(
@@ -1572,7 +1572,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                       if (showingKey) ...[
                         if (syncPending) ...[
                           Text(
-                            'The new key is saved, but the server has not finished syncing it. Keep this folder unlocked until synchronization completes.',
+                            'The new key is saved, but Vaulton is still finishing the update. Keep this folder unlocked until it is done.',
                             style: Theme.of(dialogContext).textTheme.bodySmall
                                 ?.copyWith(
                                   color: Theme.of(dialogContext)
@@ -1583,13 +1583,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                           const SizedBox(height: 12),
                         ],
                         const Text(
-                          'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.',
+                          'Your old recovery key will stop working. Save this new key somewhere safe; it will only be shown once.',
                         ),
                         const SizedBox(height: 12),
                         SelectableText(recoveryKey),
                       ] else ...[
                         const Text(
-                          'Enter the Data Folder password. The current recovery key will stop working, and a new key will be shown once.',
+                          'Enter the folder password. Your current recovery key will stop working, and a new one will be shown once.',
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -1650,8 +1650,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         toast(
           ctx,
           syncPending
-              ? 'Recovery key regenerated. Keep the folder unlocked until synchronization completes.'
-              : 'Recovery key regenerated.',
+              ? 'New recovery key created. Keep the folder unlocked until the update is complete.'
+              : 'New recovery key created.',
         );
       }
     } finally {
@@ -1668,7 +1668,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('Lock Data Folder?'),
           content: const Text(
-            'Further reads and writes will be blocked until the folder is unlocked again. An operation already in progress may finish.',
+            'You will not be able to open or change files until the folder is unlocked again. An operation already running may finish.',
           ),
           actions: [
             TextButton(
