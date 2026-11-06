@@ -294,7 +294,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     final f = await formDialog(context, isNew ? 'New Schedule' : 'Edit Schedule', [
       FieldSpec('name', 'Name', initial: s?.name ?? '', required: true),
       if (isNew) FieldSpec('repo', 'Backup Vault', kind: 'choice', options: repoMap.keys.toList(), initial: repoName(curRepo)),
-      if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Clean Up Snapshots', 'Repair'], initial: startMode ?? 'Backup'),
+      if (isNew) FieldSpec('mode', 'What to Run', kind: 'choice', options: ['Backup', 'Automatic Cleanup', 'Repair'], initial: startMode ?? 'Backup'),
       if (((s == null && startMode == null) || s?.mode == 'backup') && dataChoices.isNotEmpty) ...[
         FieldSpec('data', 'Back Up From', kind: 'choice', options: dataMap.keys.toList(), initial: curData?.name ?? dataMap.keys.first),
         FieldSpec('path', 'Folder to Back Up', kind: 'path', initial: '${s?.options['path'] ?? '/'}'),
@@ -311,13 +311,13 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       return r?.path;
     },
       intro: 'Choose what Vaulton should run and when. Times follow the selected time zone.'
-          '${isNew ? '\n\nTip: add a Clean Up Snapshots schedule so old snapshots don’t fill your vault.' : ''}'
+          '${isNew ? '\n\nTip: add an Automatic Cleanup schedule so old snapshots don’t fill your vault. Automatic Cleanup only removes old snapshots; use Repair to check the vault.' : ''}'
           '${datas.any((point) => point.isEncrypted) ? '\n\nEncrypted Data Folders can be scheduled too, but Vaulton never stores their passwords. The folder must be unlocked when each scheduled backup starts; otherwise that run will fail until you unlock it.' : ''}'
           '${currentScheduleTargetsEncrypted ? '\n\nThis schedule targets an encrypted Data Folder. Remember to unlock it before the scheduled run.' : ''}',
     );
     if (f == null || !mounted) return;
     try {
-      final mode = s == null ? (f['mode'] == 'Backup' ? 'backup' : (f['mode'] == 'Clean Up Snapshots' ? 'retention' : 'check')) : s.mode;
+      final mode = s == null ? (f['mode'] == 'Backup' ? 'backup' : (f['mode'] == 'Automatic Cleanup' ? 'retention' : 'check')) : s.mode;
       Map<String, dynamic>? policy;
       if (mode == 'retention') {
         final req = await showRetentionSheet(context, forSchedule: true, initial: s == null ? null : toJson(s.options['policy']));
@@ -354,10 +354,10 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
   Future<void> _remindCleanup(String repoId) async {
     final existing = await _loadAllSchedules(repoId);
     if (!mounted || existing.any((x) => x.mode == 'retention')) return;
-    final go = await confirm(context, 'Add a Cleanup Schedule?',
-        'Each backup adds a snapshot and nothing removes old ones. Without cleanup, this vault will eventually fill up and backups will fail.',
-        ok: 'Set Up Cleanup Now');
-    if (go && mounted) await _edit(null, 'Clean Up Snapshots', repoId);
+    final go = await confirm(context, 'Add automatic cleanup?',
+        'Each backup adds a snapshot and nothing removes old ones. Without automatic cleanup, this vault will eventually fill up and backups will fail. This sets up a recurring cleanup schedule (not a one-time cleanup).',
+        ok: 'Set up automatic cleanup');
+    if (go && mounted) await _edit(null, 'Automatic Cleanup', repoId);
   }
 
   Future<void> _preview(Schedule s) async {

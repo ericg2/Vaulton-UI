@@ -102,7 +102,7 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
           }));
     }
     await reload();
-    if (mounted) toast(context, 'Automatic cleanup is on');
+    if (mounted) toast(context, existing == null ? 'Automatic cleanup is on. It runs on the schedule you picked.' : 'Cleanup plan updated.');
   }
 
   @override
@@ -125,23 +125,27 @@ class CleanupCardState extends ConsumerState<CleanupCard> {
               Row(children: [
                 Icon(on ? Icons.auto_delete_outlined : Icons.warning_amber_rounded, color: on ? cs.primary : cs.onTertiaryContainer),
                 const SizedBox(width: 10),
-                Expanded(child: Text(on ? 'Automatic Cleanup Is On' : (s == null ? 'Old snapshots aren’t being cleaned up' : 'Automatic cleanup is paused'), style: t.titleSmall?.copyWith(color: fg))),
+                Expanded(child: Text(on ? 'Automatic Cleanup Is On' : (s == null ? 'Automatic Cleanup Is Off' : 'Automatic Cleanup Is Paused'), style: t.titleSmall?.copyWith(color: fg))),
               ]),
               const SizedBox(height: 6),
               if (on) ...[
                 Text(describeRetention(_policyOf(s)), style: t.bodyMedium?.copyWith(color: fg)),
                 const SizedBox(height: 4),
-                Text('Next run: ${fmtDate(s.nextRunAt)}', style: t.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w700)),
+                Text('Runs on a schedule. Next run: ${s.nextRunAt != null ? fmtDate(s.nextRunAt) : 'soon'}', style: t.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w700)),
+              ] else if (s != null) ...[
+                Text(describeRetention(_policyOf(s)), style: t.bodyMedium?.copyWith(color: fg)),
+                const SizedBox(height: 4),
+                Text('This schedule is paused, so old snapshots keep piling up. Resume it below to keep the vault from filling up.', style: t.bodyMedium?.copyWith(color: fg)),
               ] else
                 Text(
-                  'Every backup adds a snapshot, so this vault will keep growing until it’s full. Turn on automatic cleanup to keep only the snapshots you need.',
+                  'No cleanup schedule yet. Every backup adds a snapshot, so this vault will keep growing until it’s full. Set up automatic cleanup to keep only the snapshots you need.',
                   style: t.bodyMedium?.copyWith(color: fg),
                 ),
               const SizedBox(height: 10),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final narrow = constraints.maxWidth < 600;
-                  final setupLabel = on ? 'Change Plan' : (s == null ? 'Turn on cleanup' : 'Review plan');
+                  final setupLabel = on ? 'Change Plan' : (s == null ? 'Set up automatic cleanup' : 'Review paused plan');
                   final buttons = [
                     OutlinedButton.icon(
                       onPressed: _preview,

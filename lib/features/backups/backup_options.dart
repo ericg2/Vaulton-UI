@@ -352,7 +352,7 @@ class _RetentionSheetState extends State<_RetentionSheet> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean up old snapshots once', style: t.headlineSmall),
+            Text(widget.forSchedule ? 'Automatic Cleanup Plan' : 'Clean Up Old Snapshots Now', style: t.headlineSmall),
             const SizedBox(height: 4),
             Text('${widget.forSchedule ? 'This plan runs automatically on a schedule.' : 'This cleanup runs once.'} Snapshots outside the rules are removed. Shared data is kept. Locked snapshots and the newest snapshot in each series are always kept. Preview cleanup before confirming.',
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
