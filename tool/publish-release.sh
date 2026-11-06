@@ -58,11 +58,15 @@ require_command() {
 for command in git flutter gh; do require_command "$command"; done
 
 [[ -f android/key.properties ]] || {
-  echo "Android signing is not configured. Run the signing setup documented in tool/setup-signing.ps1, then keep android/key.properties and its keystore private." >&2
+  echo "Android signing is not configured. Run ./tool/setup-signing.sh first; see tool/README.md for key locations and backup instructions." >&2
   exit 1
 }
 git check-ignore -q android/key.properties || {
   echo "android/key.properties is not ignored by Git. Refusing to continue to protect signing credentials." >&2
+  exit 1
+}
+git ls-files --error-unmatch android/key.properties >/dev/null 2>&1 && {
+  echo "android/key.properties is tracked by Git. Remove it from source control and rotate the signing credentials before publishing." >&2
   exit 1
 }
 [[ "$(git branch --show-current)" == "main" ]] || {
