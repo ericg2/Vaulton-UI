@@ -30,7 +30,7 @@ void main() {
         'vaulton-sync-source-',
       );
       final remoteDir =
-          '/sync-verification-${DateTime.now().millisecondsSinceEpoch}';
+          '/sync-verification-${DateTime.now().millisecondsSinceEpoch}/Documents';
       final sourceFile = File(
         '${sourceDir.path}${Platform.pathSeparator}sample.txt',
       );
@@ -46,7 +46,8 @@ void main() {
       );
 
       try {
-        await vaulton.mkdir(pointId, remoteDir);
+        // The configured destination deliberately does not exist yet.
+        // Planning must treat it as empty; applying the plan creates it.
 
         await sourceFile.writeAsString('first version');
         final additions = await buildSyncPlan(api, profile, prefs);
