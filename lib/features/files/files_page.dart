@@ -738,9 +738,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 children: [
                   const Icon(Icons.lock_outline, size: 48),
                   const SizedBox(height: 16),
-                  Text('This Data Folder Is Locked', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+                  Text('This Folder Is Locked', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
                   const SizedBox(height: 8),
-                  Text('Unlock it with its password or recovery key to browse files, upload, download, or synchronize.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+                  Text('Enter its password or use your recovery key to open files and continue working.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: () => _unlockSelectedPoint(pt),
