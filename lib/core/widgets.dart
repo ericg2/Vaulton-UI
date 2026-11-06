@@ -283,7 +283,6 @@ class CursorListState<T> extends State<CursorList<T>> {
         child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: widget.padding,
-          cacheExtent: 500,
           itemCount: items.length + 1 + hdr,
           itemBuilder: (c, i) {
           if (hdr == 1 && i == 0) return widget.header!;
