@@ -51,6 +51,12 @@ git -C "$ROOT" check-ignore -q android/key.properties || {
 mkdir -p "$KEY_DIR"
 chmod 700 "$KEY_DIR"
 
+[[ ! -e "$KEYSTORE" ]] || {
+  echo "A keystore already exists at $KEYSTORE but android/key.properties is missing. Refusing to overwrite it." >&2
+  echo "Restore the matching properties file from backup before continuing." >&2
+  exit 1
+}
+
 if [[ "$NEW_KEY" -eq 0 && -f "$DEBUG_KEY" ]]; then
   echo "Reusing the existing Android debug key to preserve existing install signatures."
   echo "Warning: the Android debug key has a publicly known password."
@@ -66,11 +72,6 @@ else
   }
   command -v openssl >/dev/null 2>&1 || {
     echo "openssl is required to generate a strong keystore password." >&2
-    exit 1
-  }
-  [[ ! -e "$KEYSTORE" ]] || {
-    echo "A keystore already exists at $KEYSTORE. Refusing to overwrite it." >&2
-    echo "Restore its matching android/key.properties or move it aside intentionally." >&2
     exit 1
   }
   ALIAS="vaulton"
