@@ -39,7 +39,7 @@ ThemeData buildTheme(ColorScheme scheme) {
     ),
     cardTheme: CardThemeData(
       elevation: 0,
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.hardEdge,
       color: scheme.surfaceContainerLow,
       // Soft blue outline, shared by every card so the app reads as one piece.
       shape: RoundedRectangleBorder(
