@@ -96,15 +96,15 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       context,
       currentlyEnabled ? 'Disable Data Folder Encryption?' : 'Enable Data Folder Encryption?',
       currentlyEnabled
-          ? 'New folders can no longer be created encrypted. Existing encrypted folders stay encrypted and can still be unlocked.'
-          : 'Encrypted folders are slower: sequential encrypted writes measure about 265% slower yet around 168 MiB/s on SSD in release, while still keeping ciphertext at rest. Existing plaintext folders are not migrated — create new encrypted folders to use this. Only enable if the performance trade-off is acceptable for your storage.',
+          ? 'New Data Folders can no longer be password-protected. Folders already protected will stay protected and can still be unlocked.'
+          : 'New Data Folders can be protected with a password. Existing folders will not be changed. You can turn this off later, and folders already protected will remain protected.',
       ok: currentlyEnabled ? 'Disable' : 'Enable',
     );
     if (repo != true || !mounted) return;
     final saved = await guarded(context, () => _v.saveEncryptionSettings({'enabled': !currentlyEnabled}));
     if (saved == null || !mounted) return;
     setState(() => _encryption = saved);
-    toast(context, currentlyEnabled ? 'Data Folder encryption disabled.' : 'Data Folder encryption enabled. Create new encrypted folders to use it.');
+    toast(context, currentlyEnabled ? 'Folder protection disabled for new folders.' : 'Folder protection enabled for new folders.');
   }
 
   Future<void> _editEmail() async {
