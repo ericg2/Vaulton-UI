@@ -498,7 +498,13 @@ class _FadeIndexedState extends State<_FadeIndexed>
   @override
   Widget build(BuildContext context) => FadeTransition(
     opacity: Tween<double>(begin: 0.0, end: 1.0).animate(_fade),
-    child: IndexedStack(index: widget.index, children: widget.children),
+    child: IndexedStack(
+      index: widget.index,
+      children: [
+        for (var i = 0; i < widget.children.length; i++)
+          TickerMode(enabled: i == widget.index, child: widget.children[i]),
+      ],
+    ),
   );
 }
 
