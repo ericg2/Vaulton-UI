@@ -284,7 +284,6 @@ class CursorListState<T> extends State<CursorList<T>> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: widget.padding,
           cacheExtent: 500,
-          addAutomaticKeepAlives: false,
           itemCount: items.length + 1 + hdr,
           itemBuilder: (c, i) {
           if (hdr == 1 && i == 0) return widget.header!;
