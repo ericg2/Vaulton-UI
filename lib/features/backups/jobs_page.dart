@@ -312,8 +312,8 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
     },
       intro: 'Choose what Vaulton should run and when. Times follow the selected time zone.'
           '${isNew ? '\n\nTip: add an Automatic Cleanup schedule so old snapshots don’t fill your vault. Automatic Cleanup only removes old snapshots; use Repair to check the vault.' : ''}'
-          '${datas.any((point) => point.isEncrypted) ? '\n\nEncrypted Data Folders can be scheduled too, but Vaulton never stores their passwords. The folder must be unlocked when each scheduled backup starts; otherwise that run will fail until you unlock it.' : ''}'
-          '${currentScheduleTargetsEncrypted ? '\n\nThis schedule targets an encrypted Data Folder. Remember to unlock it before the scheduled run.' : ''}',
+          '${datas.any((point) => point.isEncrypted) ? '\n\nPassword-protected folders are supported. Unlock them before each scheduled backup; Vaulton does not save their passwords.' : ''}'
+          '${currentScheduleTargetsEncrypted ? '\n\nThis schedule uses a password-protected folder. Unlock it before each run.' : ''}',
     );
     if (f == null || !mounted) return;
     try {
