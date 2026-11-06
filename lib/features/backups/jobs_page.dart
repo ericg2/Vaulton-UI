@@ -327,7 +327,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
       final selectedData = dataMap[f['data']];
       if (mode == 'backup' && selectedData == null) {
         final message = datas.any((point) => point.isEncrypted)
-            ? 'Select a Data Folder to back up. Encrypted folders are supported when unlocked at the scheduled time.'
+            ? 'Select a Data Folder to back up. Unlock password-protected folders before each scheduled run.'
             : 'Create a data folder before scheduling a backup.';
         return toast(context, message, error: true);
       }
