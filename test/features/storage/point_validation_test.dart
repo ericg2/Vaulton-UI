@@ -9,7 +9,10 @@ void main() {
     });
 
     test('requires at least eight characters', () {
-      expect(validateBackupVaultPassword('short'), 'Use at least 8 characters.');
+      expect(
+        validateBackupVaultPassword('short'),
+        'Use at least 8 characters.',
+      );
     });
 
     test('accepts a password with at least eight characters', () {
