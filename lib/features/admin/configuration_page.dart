@@ -756,8 +756,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
             child: Column(children: [
               ListTile(
                 leading: Icon(_encryption['enabled'] == true ? Icons.lock_outlined : Icons.lock_open_outlined, color: _encryption['enabled'] == true ? cs.primary : null),
-                title: const Text('Data Folder Encryption'),
-                subtitle: Text(_encryption['enabled'] == true ? 'Enabled · New folders can be created encrypted.' : 'Disabled · Encryption option is hidden.'),
+                title: const Text('Folder Protection'),
+                subtitle: Text(_encryption['enabled'] == true ? 'On · New folders can be protected with a password.' : 'Off · New folders will not be password-protected.'),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
