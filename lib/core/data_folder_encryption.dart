@@ -17,8 +17,7 @@ String? validateDataFolderEncryptionPassword(
 }
 
 /// Whether a Data Folder can be used by an immediate operation right now.
-bool canUseDataFolderNow(Point point) =>
-    !point.isEncrypted || point.isUnlocked;
+bool canUseDataFolderNow(Point point) => !point.isEncrypted || point.isUnlocked;
 
 /// Whether a Data Folder can be selected for a recurring schedule.
 /// Schedules never store folder credentials. They may target encrypted folders,
@@ -32,262 +31,153 @@ Future<bool> unlockDataFolderWithPrompt(
   required Vaulton vaulton,
   required Point point,
 }) async {
-  final password = TextEditingController();
-  final recoveryKey = TextEditingController();
-  var useRecovery = false;
-  var busy = false;
-  var error = '';
-
-  try {
-    final unlocked = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) {
-          Future<void> submit() async {
-            if (busy) return;
-            if (useRecovery) {
-              if (!RegExp(r'^[A-Za-z0-9_-]{43}
-              final validation =
-                  validateDataFolderEncryptionPassword(password.text);
-              if (validation != null) {
-                setDialogState(() => error = validation);
-                return;
-              }
-            }
-
-            setDialogState(() {
-              busy = true;
-              error = '';
-            });
-            try {
-              if (useRecovery) {
-                await vaulton.recoverData(point.id, recoveryKey.text.trim());
-              } else {
-                await vaulton.unlockData(point.id, password.text);
-              }
-              if (dialogContext.mounted) {
-                Navigator.pop(dialogContext, true);
-              }
-            } catch (e) {
-              password.clear();
-              recoveryKey.clear();
-              if (dialogContext.mounted) {
-                setDialogState(() {
-                  busy = false;
-                  error = e.toString();
-                });
-              }
-            }
-          }
-
-          return PopScope(
-            canPop: !busy,
-            child: AlertDialog(
-              title: const Text('Unlock Data Folder'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (useRecovery)
-                    TextField(
-                      controller: recoveryKey,
-                      autofocus: true,
-                      minLines: 2,
-                      maxLines: 3,
-                      maxLength: 43,
-                      decoration: const InputDecoration(
-                        labelText: 'Recovery Key',
-                        counterText: '',
-                      ),
-                      onSubmitted: (_) => submit(),
-                    )
-                  else
-                    TextField(
-                      controller: password,
-                      autofocus: true,
-                      obscureText: true,
-                      maxLength: 1024,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        counterText: '',
-                      ),
-                      onSubmitted: (_) => submit(),
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: busy
-                          ? null
-                          : () => setDialogState(() {
-                                useRecovery = !useRecovery;
-                                password.clear();
-                                recoveryKey.clear();
-                                error = '';
-                              }),
-                      child: Text(
-                        useRecovery ? 'Use Password' : 'Use Recovery Key',
-                      ),
-                    ),
-                  ),
-                  if (error.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      error,
-                      style: TextStyle(
-                        color: Theme.of(dialogContext).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: busy ? null : submit,
-                  child: Text(busy ? 'Unlocking…' : 'Unlock'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-    return unlocked == true;
-  } finally {
-    password.clear();
-    recoveryKey.clear();
-    password.dispose();
-    recoveryKey.dispose();
-  }
+  final unlocked = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => _UnlockDataFolderDialog(vaulton: vaulton, point: point),
+  );
+  return unlocked == true;
 }
-).hasMatch(recoveryKey.text.trim())) {
-                setDialogState(
-                  () => error = 'Enter the 43-character recovery key.',
-                );
-                return;
-              }
-            } else {
-              final validation =
-                  validateDataFolderEncryptionPassword(password.text);
-              if (validation != null) {
-                setDialogState(() => error = validation);
-                return;
-              }
-            }
 
-            setDialogState(() {
-              busy = true;
-              error = '';
-            });
-            try {
-              if (useRecovery) {
-                await vaulton.recoverData(point.id, recoveryKey.text.trim());
-              } else {
-                await vaulton.unlockData(point.id, password.text);
-              }
-              if (dialogContext.mounted) {
-                Navigator.pop(dialogContext, true);
-              }
-            } catch (e) {
-              password.clear();
-              recoveryKey.clear();
-              if (dialogContext.mounted) {
-                setDialogState(() {
-                  busy = false;
-                  error = e.toString();
-                });
-              }
-            }
-          }
+class _UnlockDataFolderDialog extends StatefulWidget {
+  const _UnlockDataFolderDialog({required this.vaulton, required this.point});
 
-          return PopScope(
-            canPop: !busy,
-            child: AlertDialog(
-              title: const Text('Unlock Data Folder'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (useRecovery)
-                    TextField(
-                      controller: recoveryKey,
-                      autofocus: true,
-                      minLines: 2,
-                      maxLines: 3,
-                      maxLength: 128,
-                      decoration: const InputDecoration(
-                        labelText: 'Recovery Key',
-                        counterText: '',
-                      ),
-                      onSubmitted: (_) => submit(),
-                    )
-                  else
-                    TextField(
-                      controller: password,
-                      autofocus: true,
-                      obscureText: true,
-                      maxLength: 1024,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        counterText: '',
-                      ),
-                      onSubmitted: (_) => submit(),
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: busy
-                          ? null
-                          : () => setDialogState(() {
-                                useRecovery = !useRecovery;
-                                password.clear();
-                                recoveryKey.clear();
-                                error = '';
-                              }),
-                      child: Text(
-                        useRecovery ? 'Use Password' : 'Use Recovery Key',
-                      ),
-                    ),
-                  ),
-                  if (error.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      error,
-                      style: TextStyle(
-                        color: Theme.of(dialogContext).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ],
+  final Vaulton vaulton;
+  final Point point;
+
+  @override
+  State<_UnlockDataFolderDialog> createState() =>
+      _UnlockDataFolderDialogState();
+}
+
+class _UnlockDataFolderDialogState extends State<_UnlockDataFolderDialog> {
+  final _password = TextEditingController();
+  final _recoveryKey = TextEditingController();
+  bool _useRecovery = false;
+  bool _busy = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _password.clear();
+    _recoveryKey.clear();
+    _password.dispose();
+    _recoveryKey.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    if (_useRecovery) {
+      if (!RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(_recoveryKey.text.trim())) {
+        setState(() => _error = 'Enter the 43-character recovery key.');
+        return;
+      }
+    } else {
+      final validation = validateDataFolderEncryptionPassword(_password.text);
+      if (validation != null) {
+        setState(() => _error = validation);
+        return;
+      }
+    }
+
+    setState(() {
+      _busy = true;
+      _error = '';
+    });
+    try {
+      if (_useRecovery) {
+        await widget.vaulton.recoverData(
+          widget.point.id,
+          _recoveryKey.text.trim(),
+        );
+      } else {
+        await widget.vaulton.unlockData(widget.point.id, _password.text);
+      }
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      _password.clear();
+      _recoveryKey.clear();
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_busy,
+      child: AlertDialog(
+        title: const Text('Unlock Data Folder'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_useRecovery)
+              TextField(
+                controller: _recoveryKey,
+                autofocus: true,
+                minLines: 2,
+                maxLines: 3,
+                maxLength: 43,
+                decoration: const InputDecoration(
+                  labelText: 'Recovery Key',
+                  counterText: '',
+                ),
+                onSubmitted: (_) => _submit(),
+              )
+            else
+              TextField(
+                controller: _password,
+                autofocus: true,
+                obscureText: true,
+                maxLength: 1024,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  counterText: '',
+                ),
+                onSubmitted: (_) => _submit(),
               ),
-              actions: [
-                TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: busy ? null : submit,
-                  child: Text(busy ? 'Unlocking…' : 'Unlock'),
-                ),
-              ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => setState(() {
+                        _useRecovery = !_useRecovery;
+                        _password.clear();
+                        _recoveryKey.clear();
+                        _error = '';
+                      }),
+                child: Text(_useRecovery ? 'Use Password' : 'Use Recovery Key'),
+              ),
             ),
-          );
-        },
+            if (_error.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                _error,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _busy ? null : () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _busy ? null : _submit,
+            child: Text(_busy ? 'Unlocking…' : 'Unlock'),
+          ),
+        ],
       ),
     );
-    return unlocked == true;
-  } finally {
-    password.clear();
-    recoveryKey.clear();
-    password.dispose();
-    recoveryKey.dispose();
   }
 }

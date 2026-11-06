@@ -18,6 +18,8 @@ This file contains curated notes through version 1.3.2 and the current unrelease
 - Share one encrypted-folder eligibility rule across immediate backup and sync flows, and allow recurring schedules to target encrypted folders without storing credentials; the folder must be unlocked when each run starts.
 - Clear entered encryption credentials after rejected unlock/password-change attempts and failed folder creation.
 - Default encrypted Data Folder model instances to locked unless the server explicitly reports an unlocked state.
+- Fix the Data Folder unlock dialog crash caused by disposing its text controllers before the dialog finished leaving the screen; credentials are now cleared when the dialog widget is disposed.
+- Fix the encrypted Data Folder creation sheet never settling after creation by stopping the saving spinner while the one-time recovery key is shown; the sheet still cannot be dismissed before the key is acknowledged.
 
 ## 1.3.2
 

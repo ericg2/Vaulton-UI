@@ -1969,6 +1969,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
   bool _showPassword = false,
       _encryptData = false,
       _saving = false,
+      _recoveryPending = false,
       _capacityTouched = false,
       _passwordTouched = false;
   int? _exactCapacityBytes;
@@ -2069,6 +2070,10 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
           (recoveryKey == null || recoveryKey.isEmpty)) {
         _password.clear();
         _passwordConfirm.clear();
+        setState(() {
+          _saving = false;
+          _recoveryPending = true;
+        });
         await showDialog<void>(
           context: context,
           barrierDismissible: false,
@@ -2086,7 +2091,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
           ),
         );
         if (mounted) {
-          setState(() => _saving = false);
+          setState(() => _recoveryPending = false);
           Navigator.pop(context, true);
         }
         return;
@@ -2095,6 +2100,10 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
       _passwordConfirm.clear();
       if (mounted) {
         if (recoveryKey != null && recoveryKey.isNotEmpty) {
+          setState(() {
+            _saving = false;
+            _recoveryPending = true;
+          });
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
@@ -2126,7 +2135,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
           );
         }
         if (mounted) {
-          setState(() => _saving = false);
+          setState(() => _recoveryPending = false);
           Navigator.pop(context, true);
         }
       }
@@ -2144,7 +2153,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme, t = Theme.of(context).textTheme;
     return PopScope(
-      canPop: !_saving,
+      canPop: !_saving && !_recoveryPending,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           20,

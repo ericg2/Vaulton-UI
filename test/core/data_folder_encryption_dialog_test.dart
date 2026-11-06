@@ -137,10 +137,7 @@ void main() {
 
     expect(adapter.requests, hasLength(1));
     expect(adapter.requests.single.method, 'POST');
-    expect(
-      adapter.requests.single.uri.path,
-      '/datas/point-id/unlock/recovery',
-    );
+    expect(adapter.requests.single.uri.path, '/datas/point-id/unlock/recovery');
     final body = adapter.requests.single.data;
     final decoded = body is String ? jsonDecode(body) : body;
     expect(decoded, {'recoveryKey': recoveryKey});
@@ -212,6 +209,10 @@ void main() {
       );
       var created = false;
 
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
@@ -275,5 +276,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Save Your Recovery Key'), findsNothing);
       expect(created, isTrue);
-  });
+    },
+  );
 }
