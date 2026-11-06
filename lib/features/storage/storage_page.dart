@@ -211,15 +211,47 @@ class StorageTabStrip extends StatelessWidget {
 
 // ================================================================== ROOTS
 const typeLabels = <String, String>{
-  'fs': 'Local Disk', 's3': 'Amazon S3', 'azblob': 'Azure Blob Storage',
-  'azdls': 'Azure Data Lake Storage', 'azfile': 'Azure Files',
-  'b2': 'Backblaze B2', 'gcs': 'Google Cloud Storage', 'gdrive': 'Google Drive',
-  'onedrive': 'Microsoft OneDrive', 'dropbox': 'Dropbox', 'ftp': 'FTP Server',
-  'webdav': 'WebDAV Server', 'pcloud': 'pCloud', 'alluxio': 'Alluxio',
-  'cos': 'Cloud Object Storage', 'd1': 'Cloudflare D1', 'dbfs': 'Databricks File System',
+  'fs': 'Local Disk',
+  's3': 'Amazon S3',
+  'azblob': 'Azure Blob Storage',
+  'azdls': 'Azure Data Lake Storage',
+  'azfile': 'Azure Files',
+  'b2': 'Backblaze B2',
+  'gcs': 'Google Cloud Storage',
+  'gdrive': 'Google Drive',
+  'onedrive': 'Microsoft OneDrive',
+  'dropbox': 'Dropbox',
+  'ftp': 'FTP Server',
+  'webdav': 'WebDAV Server',
+  'pcloud': 'pCloud',
+  'alluxio': 'Alluxio',
+  'cos': 'Cloud Object Storage',
+  'd1': 'Cloudflare D1',
+  'dbfs': 'Databricks File System',
 };
 String _sourceLabel(String scheme) => typeLabels[scheme] ?? pretty(scheme);
-String _sourceDescription(String scheme) => {"fs":"Use a directory on the Vaulton server. Select a folder under /mnt.","s3":"Connect to an S3-compatible object storage service.","azblob":"Store files in an Azure Blob Storage container.","azdls":"Connect to an Azure Data Lake Storage filesystem.","azfile":"Connect to an Azure file share.","b2":"Connect to a Backblaze B2 bucket.","gcs":"Connect to a Google Cloud Storage bucket.","gdrive":"Connect to a Google Drive account.","onedrive":"Connect to a Microsoft OneDrive account.","dropbox":"Connect to a Dropbox account.","ftp":"Connect to an FTP server.","webdav":"Connect to a WebDAV server.","pcloud":"Connect to pCloud storage.","alluxio":"Connect to an Alluxio filesystem.","cos":"Connect to a compatible cloud object storage service.","d1":"Connect to a Cloudflare D1 database.","dbfs":"Connect to a Databricks File System."}[scheme] ?? 'Connect an external storage service.';
+String _sourceDescription(String scheme) =>
+    {
+      "fs":
+          "Use a directory on the Vaulton server. Select a folder under /mnt.",
+      "s3": "Connect to an S3-compatible object storage service.",
+      "azblob": "Store files in an Azure Blob Storage container.",
+      "azdls": "Connect to an Azure Data Lake Storage filesystem.",
+      "azfile": "Connect to an Azure file share.",
+      "b2": "Connect to a Backblaze B2 bucket.",
+      "gcs": "Connect to a Google Cloud Storage bucket.",
+      "gdrive": "Connect to a Google Drive account.",
+      "onedrive": "Connect to a Microsoft OneDrive account.",
+      "dropbox": "Connect to a Dropbox account.",
+      "ftp": "Connect to an FTP server.",
+      "webdav": "Connect to a WebDAV server.",
+      "pcloud": "Connect to pCloud storage.",
+      "alluxio": "Connect to an Alluxio filesystem.",
+      "cos": "Connect to a compatible cloud object storage service.",
+      "d1": "Connect to a Cloudflare D1 database.",
+      "dbfs": "Connect to a Databricks File System.",
+    }[scheme] ??
+    'Connect an external storage service.';
 
 class RootsTab extends ConsumerStatefulWidget {
   const RootsTab({super.key});
@@ -290,11 +322,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
             title: const Text('Choose Server Directory'),
             content: SizedBox(
               width: double.maxFinite,
-              height: (MediaQuery.sizeOf(ctx).height -
-                      MediaQuery.viewInsetsOf(ctx).bottom -
-                      200)
-                  .clamp(120.0, 420.0)
-                  .toDouble(),
+              height:
+                  (MediaQuery.sizeOf(ctx).height -
+                          MediaQuery.viewInsetsOf(ctx).bottom -
+                          200)
+                      .clamp(120.0, 420.0)
+                      .toDouble(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -362,13 +395,19 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                   Text(
                                     error!,
                                     textAlign: TextAlign.center,
-                                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(ctx).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(ctx)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
                                   ),
                                   const SizedBox(height: 8),
                                   OutlinedButton.icon(
-                                    onPressed: () => load(path.isEmpty ? null : path, update),
+                                    onPressed: () => load(
+                                      path.isEmpty ? null : path,
+                                      update,
+                                    ),
                                     icon: const Icon(Icons.refresh),
                                     label: const Text('Try Again'),
                                   ),
@@ -409,7 +448,11 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       spacing: 8,
                       children: [
                         TextButton.icon(
-                          onPressed: path == '/mnt' || parent == null || parent.isEmpty || !allowedPath(parent)
+                          onPressed:
+                              path == '/mnt' ||
+                                  parent == null ||
+                                  parent.isEmpty ||
+                                  !allowedPath(parent)
                               ? null
                               : () => load(parent, update),
                           icon: const Icon(Icons.arrow_upward),
@@ -500,13 +543,16 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           ),
       ],
       ok: existing != null ? 'Save Connection' : 'Continue',
-      intro: '${_sourceDescription(scheme)} ${existing != null ? 'Leave secret fields blank to keep saved credentials.' : 'Enter the connection details below.'}',
+      intro:
+          '${_sourceDescription(scheme)} ${existing != null ? 'Leave secret fields blank to keep saved credentials.' : 'Enter the connection details below.'}',
       pick: scheme == 'fs' ? (values) => _pickLocalPath(values['root']) : null,
     );
     if (r == null) return null;
     if (scheme == 'fs') {
       final root = r['root']?.trim() ?? '';
-      final valid = (root == '/mnt' || root.startsWith('/mnt/')) && !root.split('/').contains('..');
+      final valid =
+          (root == '/mnt' || root.startsWith('/mnt/')) &&
+          !root.split('/').contains('..');
       if (!valid) {
         toast(context, 'Choose a directory under /mnt.', error: true);
         return null;
@@ -537,13 +583,17 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       constraints: const BoxConstraints(maxWidth: 640),
       builder: (sheetContext) => StatefulBuilder(
         builder: (ctx, setSheetState) {
-          final schemes = typeLabels.keys.where((s) => s != 'fs').toList()..sort();
+          final schemes = typeLabels.keys.where((s) => s != 'fs').toList()
+            ..sort();
           schemes.insert(0, 'fs');
           final cs = Theme.of(ctx).colorScheme;
           final tt = Theme.of(ctx).textTheme;
           return Padding(
             padding: EdgeInsets.fromLTRB(
-              20, 4, 20, MediaQuery.viewInsetsOf(ctx).bottom + 20,
+              20,
+              4,
+              20,
+              MediaQuery.viewInsetsOf(ctx).bottom + 20,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -554,7 +604,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       CircleAvatar(
                         radius: 25,
                         backgroundColor: cs.primaryContainer,
-                        child: Icon(Icons.dns_outlined, color: cs.onPrimaryContainer),
+                        child: Icon(
+                          Icons.dns_outlined,
+                          color: cs.onPrimaryContainer,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -565,7 +618,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                             const SizedBox(height: 2),
                             Text(
                               'Connect storage for your data folders and backup vaults.',
-                              style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                              style: tt.bodyMedium?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -605,21 +660,25 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                         if (value != null) setSheetState(() => scheme = value);
                       },
                       child: ListView(
-                      shrinkWrap: true,
-                      children: [
-                        for (final item in schemes)
-                          RadioListTile<String>(
-                            value: item,
-                            title: Text(_sourceLabel(item)),
-                            subtitle: Text(
-                              _sourceDescription(item),
-                              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                        shrinkWrap: true,
+                        children: [
+                          for (final item in schemes)
+                            RadioListTile<String>(
+                              value: item,
+                              title: Text(_sourceLabel(item)),
+                              subtitle: Text(
+                                _sourceDescription(item),
+                                style: tt.bodySmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                             ),
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                          ),
-                      ],
-                    ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -634,17 +693,23 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     contentPadding: EdgeInsets.zero,
                     secondary: const Icon(Icons.folder_outlined),
                     title: const Text('Data Folders'),
-                    subtitle: const Text('Store files that you upload and manage in Vaulton.'),
+                    subtitle: const Text(
+                      'Store files that you upload and manage in Vaulton.',
+                    ),
                     value: allowData,
-                    onChanged: (value) => setSheetState(() => allowData = value),
+                    onChanged: (value) =>
+                        setSheetState(() => allowData = value),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     secondary: const Icon(Icons.inventory_2_outlined),
                     title: const Text('Backup Vaults'),
-                    subtitle: const Text('Store encrypted backup repositories.'),
+                    subtitle: const Text(
+                      'Store encrypted backup repositories.',
+                    ),
                     value: allowRepo,
-                    onChanged: (value) => setSheetState(() => allowRepo = value),
+                    onChanged: (value) =>
+                        setSheetState(() => allowRepo = value),
                   ),
                   const SizedBox(height: 18),
                   Row(
@@ -742,15 +807,28 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     }
   }
 
-  Future<int?> _capacityDialog({required int currentBytes, Json? detected, required bool isLocal}) async {
+  Future<int?> _capacityDialog({
+    required int currentBytes,
+    Json? detected,
+    required bool isLocal,
+  }) async {
     final available = toInt(detected?['availableBytes']);
     final total = toInt(detected?['capacityBytes']);
     if (!isLocal || available <= 0) {
       final result = await formDialog(
-        context, 'Location Capacity',
-        [FieldSpec('capacity', 'Capacity (GiB)', kind: 'capacity',
-          initial: bytesToCapacity(currentBytes, 'GiB'), required: true,
-          initialBytes: currentBytes, initialUnit: 'GiB')],
+        context,
+        'Location Capacity',
+        [
+          FieldSpec(
+            'capacity',
+            'Capacity (GiB)',
+            kind: 'capacity',
+            initial: bytesToCapacity(currentBytes, 'GiB'),
+            required: true,
+            initialBytes: currentBytes,
+            initialUnit: 'GiB',
+          ),
+        ],
         ok: 'Save Capacity',
         intro: 'Remote storage capacity is a manual allocation limit. Vaulton cannot reliably detect the provider’s total capacity.',
       );
@@ -765,39 +843,93 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Location Capacity'),
-          content: SizedBox(width: 440, child: SingleChildScrollView(child: Column(
-            mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Detected free space: ${fmtBytes(available)} of ${fmtBytes(total)}.'),
-              const SizedBox(height: 12),
-              Row(children: [const Expanded(child: Text('Allocated capacity')), Text(fmtBytes(override ? (int.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024 : value.round()))]),
-              Slider(value: value, min: 1, max: available.toDouble().clamp(2, double.maxFinite).toDouble(),
-                onChanged: override ? null : (v) => setDialogState(() => value = v)),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero, title: const Text('Allow a custom limit'),
-                subtitle: const Text('The limit may exceed currently available disk space.'),
-                value: override, onChanged: (v) => setDialogState(() => override = v),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Detected free space: ${fmtBytes(available)} of ${fmtBytes(total)}.',
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(child: Text('Allocated capacity')),
+                      Text(
+                        fmtBytes(
+                          override
+                              ? (int.tryParse(custom.text) ?? 0) *
+                                    1024 *
+                                    1024 *
+                                    1024
+                              : value.round(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: value,
+                    min: 1,
+                    max: available
+                        .toDouble()
+                        .clamp(2, double.maxFinite)
+                        .toDouble(),
+                    onChanged: override
+                        ? null
+                        : (v) => setDialogState(() => value = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Allow a custom limit'),
+                    subtitle: const Text(
+                      'The limit may exceed currently available disk space.',
+                    ),
+                    value: override,
+                    onChanged: (v) => setDialogState(() => override = v),
+                  ),
+                  if (override)
+                    TextField(
+                      controller: custom,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Custom capacity',
+                        suffixText: 'GiB',
+                      ),
+                    ),
+                  if (override)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Warning: Vaulton may allocate more space than the disk currently has free.',
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              if (override) TextField(
-                controller: custom, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Custom capacity', suffixText: 'GiB'),
-              ),
-              if (override) Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text('Warning: Vaulton may allocate more space than the disk currently has free.',
-                  style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
-              ),
-            ],
-          ))),
+            ),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-            FilledButton(onPressed: () {
-              final bytes = override
-                ? ((double.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024).round()
-                : value.round();
-              if (bytes <= 0) return;
-              Navigator.pop(dialogContext, bytes);
-            }, child: const Text('Save')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final bytes = override
+                    ? ((double.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024)
+                          .round()
+                    : value.round();
+                if (bytes <= 0) return;
+                Navigator.pop(dialogContext, bytes);
+              },
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
@@ -808,26 +940,56 @@ class _RootsTabState extends ConsumerState<RootsTab> {
 
   Future<void> _edit(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
-    if (!kSourceSchemas.containsKey(scheme)) return toast(context, 'Unknown connection type.', error: true);
+    if (!kSourceSchemas.containsKey(scheme))
+      return toast(context, 'Unknown connection type.', error: true);
     final src = await _sourceForm(scheme, root.source);
     if (src == null || !mounted) return;
     Json? detected;
     if (scheme == 'fs') {
-      detected = await guarded(context, () => _v.browseLocal(src['root'] as String?));
+      detected = await guarded(
+        context,
+        () => _v.browseLocal(src['root'] as String?),
+      );
       if (detected == null || !mounted) return;
     }
-    final r = await formDialog(context, 'Edit ${root.name}', [
-      FieldSpec('name', 'Name', initial: root.name, required: true),
-      FieldSpec('data', 'Allow Data Folders', kind: 'bool', initial: '${root.isDataAllowed}'),
-      FieldSpec('repo', 'Allow Backup Vaults', kind: 'bool', initial: '${root.isRepoAllowed}'),
-    ], ok: 'Save Location', intro: 'Update the connection and location settings.');
+    final r = await formDialog(
+      context,
+      'Edit ${root.name}',
+      [
+        FieldSpec('name', 'Name', initial: root.name, required: true),
+        FieldSpec(
+          'data',
+          'Allow Data Folders',
+          kind: 'bool',
+          initial: '${root.isDataAllowed}',
+        ),
+        FieldSpec(
+          'repo',
+          'Allow Backup Vaults',
+          kind: 'bool',
+          initial: '${root.isRepoAllowed}',
+        ),
+      ],
+      ok: 'Save Location',
+      intro: 'Update the connection and location settings.',
+    );
     if (r == null || !mounted) return;
-    final maxBytes = await _capacityDialog(currentBytes: root.maxBytes, detected: detected, isLocal: scheme == 'fs');
+    final maxBytes = await _capacityDialog(
+      currentBytes: root.maxBytes,
+      detected: detected,
+      isLocal: scheme == 'fs',
+    );
     if (maxBytes == null || maxBytes <= 0 || !mounted) return;
-    await guarded(context, () => _v.patchRoot(root.id, {
-      'name': r['name'], 'source': src, 'maxBytes': maxBytes,
-      'isDataAllowed': r['data'] == 'true', 'isRepoAllowed': r['repo'] == 'true',
-    }));
+    await guarded(
+      context,
+      () => _v.patchRoot(root.id, {
+        'name': r['name'],
+        'source': src,
+        'maxBytes': maxBytes,
+        'isDataAllowed': r['data'] == 'true',
+        'isRepoAllowed': r['repo'] == 'true',
+      }),
+    );
     _key.currentState?.refresh();
   }
 
@@ -1070,8 +1232,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       useSafeArea: true,
       showDragHandle: true,
       constraints: const BoxConstraints(maxWidth: 640),
-      builder: (_) =>
-          NewDataPointSheet(repo: widget.repo, roots: usable, vaulton: _v, encryptionEnabled: encryptionEnabled),
+      builder: (_) => NewDataPointSheet(
+        repo: widget.repo,
+        roots: usable,
+        vaulton: _v,
+        encryptionEnabled: encryptionEnabled,
+      ),
     );
     if (created == true && mounted) {
       _key.currentState?.refresh();
@@ -1113,8 +1279,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       widget.repo
           ? 'Its schedules and job history are removed. Stored backups are kept.'
           : p.isEncrypted
-              ? 'This removes the folder’s active encryption key from Vaulton. The encrypted files remain in the storage location and cannot be opened from this server. Older server backups may still contain the key, so this is not guaranteed cryptographic erasure. Copy anything you need before continuing.'
-              : 'Its schedules are removed. Files in the underlying storage are kept.',
+          ? 'This removes the folder’s active encryption key from Vaulton. The encrypted files remain in the storage location and cannot be opened from this server. Older server backups may still contain the key, so this is not guaranteed cryptographic erasure. Copy anything you need before continuing.'
+          : 'Its schedules are removed. Files in the underlying storage are kept.',
       ok: !widget.repo && p.isEncrypted ? 'Delete Permanently' : 'Delete',
       danger: true,
     )) {
@@ -1124,10 +1290,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       if (widget.repo) {
         await _v.deleteRepo(p.id);
       } else {
-        await _v.deleteData(
-          p.id,
-          confirmEncryptedKeyRemoval: p.isEncrypted,
-        );
+        await _v.deleteData(p.id, confirmEncryptedKeyRemoval: p.isEncrypted);
       }
       return true;
     });
@@ -1225,6 +1388,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                 newPassword.text,
               );
               syncPending = updated.encryptionSyncPending;
+              currentPassword.clear();
+              newPassword.clear();
+              confirmPassword.clear();
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             } catch (e) {
               currentPassword.clear();
@@ -1241,53 +1407,68 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             canPop: !busy,
             child: AlertDialog(
               title: const Text('Change Data Folder Password'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: currentPassword,
-                    obscureText: true,
-                    maxLength: 1024,
-                    autofocus: true,
-                    decoration: const InputDecoration(labelText: 'Current Password', counterText: ''),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: newPassword,
-                    obscureText: true,
-                    maxLength: 1024,
-                    decoration: const InputDecoration(labelText: 'New Password', counterText: ''),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: confirmPassword,
-                    obscureText: true,
-                    maxLength: 1024,
-                    decoration: const InputDecoration(labelText: 'Confirm New Password', counterText: ''),
-                    onSubmitted: (_) => submit(),
-                  ),
-                  if (error.isNotEmpty) ...[
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: currentPassword,
+                      obscureText: true,
+                      maxLength: 1024,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Current Password',
+                        counterText: '',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: newPassword,
+                      obscureText: true,
+                      maxLength: 1024,
+                      decoration: const InputDecoration(
+                        labelText: 'New Password',
+                        counterText: '',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmPassword,
+                      obscureText: true,
+                      maxLength: 1024,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm New Password',
+                        counterText: '',
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                    if (error.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          error,
+                          style: TextStyle(
+                            color: Theme.of(dialogContext).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
-                    Align(
+                    const Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        error,
-                        style: TextStyle(color: Theme.of(dialogContext).colorScheme.error),
+                        'Your files are not re-encrypted. Your existing recovery key remains valid.',
                       ),
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Your files are not re-encrypted. Your existing recovery key remains valid.',
-                    ),
-                  ),
-                ],
+                ),
               ),
               actions: [
                 TextButton(
-                  onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
+                  onPressed: busy
+                      ? null
+                      : () => Navigator.pop(dialogContext, false),
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
@@ -1382,53 +1563,57 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                       ? 'Save Your New Recovery Key'
                       : 'Regenerate Recovery Key',
                 ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (showingKey) ...[
-                      if (syncPending) ...[
-                        Text(
-                          'The new key is saved, but the server has not finished syncing it. Keep this folder unlocked until synchronization completes.',
-                          style: Theme.of(dialogContext).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(dialogContext).colorScheme.error,
-                              ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (showingKey) ...[
+                        if (syncPending) ...[
+                          Text(
+                            'The new key is saved, but the server has not finished syncing it. Keep this folder unlocked until synchronization completes.',
+                            style: Theme.of(dialogContext).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(dialogContext)
+                                      .colorScheme
+                                      .error,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        const Text(
+                          'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.',
                         ),
                         const SizedBox(height: 12),
-                      ],
-                      const Text(
-                        'Your previous recovery key is no longer valid. Store this new key somewhere safe. It will only be shown once.',
-                      ),
-                      const SizedBox(height: 12),
-                      SelectableText(recoveryKey),
-                    ] else ...[
-                      const Text(
-                        'Enter the Data Folder password. The current recovery key will stop working, and a new key will be shown once.',
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: password,
-                        obscureText: true,
-                        autofocus: true,
-                        maxLength: 1024,
-                        decoration: const InputDecoration(
-                          labelText: 'Data Folder Password',
-                          counterText: '',
+                        SelectableText(recoveryKey),
+                      ] else ...[
+                        const Text(
+                          'Enter the Data Folder password. The current recovery key will stop working, and a new key will be shown once.',
                         ),
-                        onSubmitted: (_) => rotate(),
-                      ),
-                      if (error.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          error,
-                          style: TextStyle(
-                            color: Theme.of(dialogContext).colorScheme.error,
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: password,
+                          obscureText: true,
+                          autofocus: true,
+                          maxLength: 1024,
+                          decoration: const InputDecoration(
+                            labelText: 'Data Folder Password',
+                            counterText: '',
                           ),
+                          onSubmitted: (_) => rotate(),
                         ),
+                        if (error.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            error,
+                            style: TextStyle(
+                              color: Theme.of(dialogContext).colorScheme.error,
+                            ),
+                          ),
+                        ],
                       ],
                     ],
-                  ],
+                  ),
                 ),
                 actions: [
                   if (!showingKey)
@@ -1481,10 +1666,18 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         context: ctx,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Lock Data Folder?'),
-          content: const Text('Further reads and writes will be blocked until the folder is unlocked again. An operation already in progress may finish.'),
+          content: const Text(
+            'Further reads and writes will be blocked until the folder is unlocked again. An operation already in progress may finish.',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lock Folder')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Lock Folder'),
+            ),
           ],
         ),
       );
@@ -1525,15 +1718,25 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           ]
         : <Widget>[
             FilledButton.tonalIcon(
-              onPressed: canOpenData ? () => Navigator.push(
-                ctx,
-                MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)),
-              ) : () => _unlockDataFolder(ctx, p),
-              icon: Icon(canOpenData ? Icons.folder_open_outlined : Icons.lock_open_outlined),
+              onPressed: canOpenData
+                  ? () => Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => FilesPage(initialPointId: p.id),
+                      ),
+                    )
+                  : () => _unlockDataFolder(ctx, p),
+              icon: Icon(
+                canOpenData
+                    ? Icons.folder_open_outlined
+                    : Icons.lock_open_outlined,
+              ),
               label: Text(canOpenData ? 'Open' : 'Unlock'),
             ),
             FilledButton.icon(
-              onPressed: canOpenData ? () => startBackup(ctx, ref, data: p) : null,
+              onPressed: canOpenData
+                  ? () => startBackup(ctx, ref, data: p)
+                  : null,
               icon: const Icon(Icons.backup_outlined),
               label: const Text('Backup'),
             ),
@@ -1544,7 +1747,12 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           if (widget.repo) {
             _openRepo(p);
           } else if (canOpenData) {
-            Navigator.push(ctx, MaterialPageRoute(builder: (_) => FilesPage(initialPointId: p.id)));
+            Navigator.push(
+              ctx,
+              MaterialPageRoute(
+                builder: (_) => FilesPage(initialPointId: p.id),
+              ),
+            );
           } else {
             _unlockDataFolder(ctx, p);
           }
@@ -1583,7 +1791,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                         ),
                         if (!widget.repo && p.isEncrypted)
                           Text(
-                            p.isUnlocked ? 'Encrypted · Unlocked' : 'Encrypted · Locked',
+                            p.isUnlocked
+                                ? 'Encrypted · Unlocked'
+                                : 'Encrypted · Locked',
                             style: tt.bodySmall?.copyWith(
                               color: p.isUnlocked ? cs.primary : cs.error,
                               fontWeight: FontWeight.w600,
@@ -1631,9 +1841,20 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                     itemBuilder: (_) => [
                       const PopupMenuItem(value: 'edit', child: Text('Edit')),
                       if (!widget.repo && p.isEncrypted) ...[
-                        PopupMenuItem(value: 'security', child: Text(p.isUnlocked ? 'Lock Folder' : 'Unlock Folder')),
-                        const PopupMenuItem(value: 'password', child: Text('Change Password')),
-                        const PopupMenuItem(value: 'recovery', child: Text('Regenerate Recovery Key')),
+                        PopupMenuItem(
+                          value: 'security',
+                          child: Text(
+                            p.isUnlocked ? 'Lock Folder' : 'Unlock Folder',
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'password',
+                          child: Text('Change Password'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'recovery',
+                          child: Text('Regenerate Recovery Key'),
+                        ),
                       ],
                       if (widget.repo)
                         const PopupMenuItem(
@@ -2033,20 +2254,27 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
   }
 
   String get _passwordError {
-    if (widget.repo) return _password.text.isNotEmpty && _password.text.length < 8 ? 'Use at least 8 characters.' : '';
+    if (widget.repo)
+      return _password.text.isNotEmpty && _password.text.length < 8
+          ? 'Use at least 8 characters.'
+          : '';
     if (!_encryptData) return '';
     final passwordError = validateDataFolderEncryptionPassword(_password.text);
     if (passwordError != null) return passwordError;
-    if (_password.text != _passwordConfirm.text) return 'Passwords do not match.';
+    if (_password.text != _passwordConfirm.text)
+      return 'Passwords do not match.';
     return '';
   }
+
   Future<void> _save() async {
     final name = _name.text.trim();
     setState(() {
       _capacityTouched = true;
       _passwordTouched = true;
     });
-    if (name.isEmpty || _capacityError.isNotEmpty || _passwordError.isNotEmpty) {
+    if (name.isEmpty ||
+        _capacityError.isNotEmpty ||
+        _passwordError.isNotEmpty) {
       return;
     }
     final maxBytes = _capacityBytesValue;
@@ -2066,7 +2294,8 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
               if (_encryptData) 'encryptionPassword': _password.text,
             });
       final recoveryKey = created.recoveryKey;
-      if (!widget.repo && _encryptData &&
+      if (!widget.repo &&
+          _encryptData &&
           (recoveryKey == null || recoveryKey.isEmpty)) {
         _password.clear();
         _passwordConfirm.clear();
@@ -2114,15 +2343,19 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                   canPop: canDismiss,
                   child: AlertDialog(
                     title: const Text('Save Your Recovery Key'),
-                    content: SelectableText(
-                      'This key is shown only once. Store it somewhere safe. Anyone with this key can unlock this Data Folder.\n\n$recoveryKey',
+                    content: SingleChildScrollView(
+                      child: SelectableText(
+                        'This key is shown only once. Store it somewhere safe. Anyone with this key can unlock this Data Folder.\n\n$recoveryKey',
+                      ),
                     ),
                     actions: [
                       FilledButton(
                         onPressed: () {
                           setDialogState(() => canDismiss = true);
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (dialogContext.mounted) Navigator.pop(dialogContext);
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
                           });
                         },
                         child: const Text('I Have Saved It'),
@@ -2264,12 +2497,19 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: _encryptData,
-                  onChanged: _saving ? null : (value) => setState(() => _encryptData = value),
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _encryptData = value),
                   title: const Text('Encrypt This Data Folder'),
-                  subtitle: const Text('Protects file contents, names, and folder metadata at rest.'),
+                  subtitle: const Text(
+                    'Protects file contents, names, and folder metadata at rest.',
+                  ),
                 ),
                 if (_encryptData) ...[
-                  Text('Choose a password with 12 to 1024 characters. You will need it to unlock this folder. The recovery key is shown only once, so save it somewhere safe.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  Text(
+                    'Choose a password with 12 to 1024 characters. You will need it to unlock this folder. The recovery key is shown only once, so save it somewhere safe.',
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _password,
@@ -2281,7 +2521,15 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                       labelText: 'Encryption Password',
                       border: const OutlineInputBorder(),
                       counterText: '',
-                      suffixIcon: IconButton(icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _showPassword = !_showPassword)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () =>
+                            setState(() => _showPassword = !_showPassword),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -2295,11 +2543,16 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                       labelText: 'Confirm Password',
                       border: const OutlineInputBorder(),
                       counterText: '',
-                      errorText: _passwordTouched && _passwordError.isNotEmpty ? _passwordError : null,
+                      errorText: _passwordTouched && _passwordError.isNotEmpty
+                          ? _passwordError
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text('Encryption is set up on a new, empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB shares on local filesystem-backed Locations support sequential and random-offset writes, append, truncation, and extension. Random writes use bounded-memory read/modify/re-encrypt operations, so repeated small edits to large files can be slower than unencrypted in-place writes. Remote user-write backends remain read-only.', style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  Text(
+                    'Encryption is set up on a new, empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB shares on local filesystem-backed Locations support sequential and random-offset writes, append, truncation, and extension. Random writes use bounded-memory read/modify/re-encrypt operations, so repeated small edits to large files can be slower than unencrypted in-place writes. Remote user-write backends remain read-only.',
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
                 ],
               ],
               const SizedBox(height: 18),
@@ -2443,7 +2696,9 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                         ? null
                         : _passwordError,
                     suffixIcon: IconButton(
-                      tooltip: _showPassword ? 'Hide Password' : 'Show Password',
+                      tooltip: _showPassword
+                          ? 'Hide Password'
+                          : 'Show Password',
                       icon: Icon(
                         _showPassword
                             ? Icons.visibility_off_outlined
@@ -2451,7 +2706,8 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                       ),
                       onPressed: _saving
                           ? null
-                          : () => setState(() => _showPassword = !_showPassword),
+                          : () =>
+                                setState(() => _showPassword = !_showPassword),
                     ),
                   ),
                 ),

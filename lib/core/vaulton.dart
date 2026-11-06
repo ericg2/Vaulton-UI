@@ -368,6 +368,8 @@ class Vaulton {
 
   Future<Json> notificationSettings() async => toJson(await _req('GET', '/admin/settings/notifications'));
   Future<Json> saveNotificationSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/notifications', body: body));
+  Future<Json> encryptionSettings() async => toJson(await _req('GET', '/admin/settings/encryption'));
+  Future<Json> saveEncryptionSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/encryption', body: body));
   Future<Json> startupSettings() async => toJson(await _req('GET', '/admin/settings/startup'));
   Future<Json> saveStartupSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/startup', body: body));
   Future<Json> emailSettings() async => toJson(await _req('GET', '/admin/settings/email'));

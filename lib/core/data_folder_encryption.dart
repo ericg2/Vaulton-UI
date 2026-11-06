@@ -94,6 +94,9 @@ class _UnlockDataFolderDialogState extends State<_UnlockDataFolderDialog> {
       } else {
         await widget.vaulton.unlockData(widget.point.id, _password.text);
       }
+      // Clear credentials before closing so they do not linger in memory.
+      _password.clear();
+      _recoveryKey.clear();
       if (mounted) {
         Navigator.pop(context, true);
       }
@@ -115,57 +118,61 @@ class _UnlockDataFolderDialogState extends State<_UnlockDataFolderDialog> {
       canPop: !_busy,
       child: AlertDialog(
         title: const Text('Unlock Data Folder'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_useRecovery)
-              TextField(
-                controller: _recoveryKey,
-                autofocus: true,
-                minLines: 2,
-                maxLines: 3,
-                maxLength: 43,
-                decoration: const InputDecoration(
-                  labelText: 'Recovery Key',
-                  counterText: '',
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_useRecovery)
+                TextField(
+                  controller: _recoveryKey,
+                  autofocus: true,
+                  minLines: 2,
+                  maxLines: 3,
+                  maxLength: 43,
+                  decoration: const InputDecoration(
+                    labelText: 'Recovery Key',
+                    counterText: '',
+                  ),
+                  onSubmitted: (_) => _submit(),
+                )
+              else
+                TextField(
+                  controller: _password,
+                  autofocus: true,
+                  obscureText: true,
+                  maxLength: 1024,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    counterText: '',
+                  ),
+                  onSubmitted: (_) => _submit(),
                 ),
-                onSubmitted: (_) => _submit(),
-              )
-            else
-              TextField(
-                controller: _password,
-                autofocus: true,
-                obscureText: true,
-                maxLength: 1024,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  counterText: '',
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
+                          _useRecovery = !_useRecovery;
+                          _password.clear();
+                          _recoveryKey.clear();
+                          _error = '';
+                        }),
+                  child: Text(
+                    _useRecovery ? 'Use Password' : 'Use Recovery Key',
+                  ),
                 ),
-                onSubmitted: (_) => _submit(),
               ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _busy
-                    ? null
-                    : () => setState(() {
-                        _useRecovery = !_useRecovery;
-                        _password.clear();
-                        _recoveryKey.clear();
-                        _error = '';
-                      }),
-                child: Text(_useRecovery ? 'Use Password' : 'Use Recovery Key'),
-              ),
-            ),
-            if (_error.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                _error,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+              if (_error.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _error,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           TextButton(

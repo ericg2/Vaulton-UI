@@ -35,6 +35,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   Json _limits = {};
   Json _startup = {};
   Json _notifications = {};
+  Json _encryption = {};
 
   Vaulton get _v => ref.read(vaultonProvider);
 
@@ -47,6 +48,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       final limits = await _v.operationalLimits();
       final startup = await _v.startupSettings();
       final notifications = await _v.notificationSettings();
+      final encryption = await _v.encryptionSettings();
       if (!mounted) return;
       setState(() {
         _enabled = toBool(data['enabled']);
@@ -66,6 +68,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         _limits = limits;
         _startup = startup;
         _notifications = notifications;
+        _encryption = encryption;
         _loaded = true;
         _loadError = null;
       });
@@ -85,6 +88,23 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   void _retry() {
     setState(() => _loadError = null);
     _load();
+  }
+
+  Future<void> _editEncryption() async {
+    final currentlyEnabled = _encryption['enabled'] == true;
+    final repo = await confirm(
+      context,
+      currentlyEnabled ? 'Disable Data Folder Encryption?' : 'Enable Data Folder Encryption?',
+      currentlyEnabled
+          ? 'New folders can no longer be created encrypted. Existing encrypted folders stay encrypted and can still be unlocked.'
+          : 'Encrypted folders are slower: sequential encrypted writes measure about 265% slower yet around 168 MiB/s on SSD in release, while still keeping ciphertext at rest. Existing plaintext folders are not migrated — create new encrypted folders to use this. Only enable if the performance trade-off is acceptable for your storage.',
+      ok: currentlyEnabled ? 'Disable' : 'Enable',
+    );
+    if (repo != true || !mounted) return;
+    final saved = await guarded(context, () => _v.saveEncryptionSettings({'enabled': !currentlyEnabled}));
+    if (saved == null || !mounted) return;
+    setState(() => _encryption = saved);
+    toast(context, currentlyEnabled ? 'Data Folder encryption disabled.' : 'Data Folder encryption enabled. Create new encrypted folders to use it.');
   }
 
   Future<void> _editEmail() async {
@@ -728,6 +748,21 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
                   onPressed: _editNotifications,
+                  icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
+              ),
+            ]),
+          ),
+          Card(
+            child: Column(children: [
+              ListTile(
+                leading: Icon(_encryption['enabled'] == true ? Icons.lock_outlined : Icons.lock_open_outlined, color: _encryption['enabled'] == true ? cs.primary : null),
+                title: const Text('Data Folder Encryption'),
+                subtitle: Text(_encryption['enabled'] == true ? 'Enabled · New folders can be created encrypted.' : 'Disabled · Encryption option is hidden.'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
+                  onPressed: _editEncryption,
                   icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
               ),
             ]),
