@@ -227,32 +227,40 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   final remote = <SyncSourceEntry>[];
   final v = Vaulton(api);
 
-  Future<void> validateDestinationRoot() async {
+  Future<bool> validateDestinationRoot() async {
     _throwIfCancelled(cancel);
     var current = '/';
     final parts = profile.remoteDir.split('/').where((part) => part.isNotEmpty);
     for (final part in parts) {
       String? cursor = '';
-      var found = false;
+      var foundDirectory = false;
+      var foundEntry = false;
       do {
         _throwIfCancelled(cancel);
         final page = await v.list(profile.pointId, current, cursor: cursor, limit: 200, order: 'Asc');
         for (final node in page.items) {
-          if (node.name == part && node.isDir) {
-            found = true;
+          if (node.name == part) {
+            foundEntry = true;
+            foundDirectory = node.isDir;
             break;
           }
         }
-        cursor = found || !page.hasMore ? null : page.nextCursor;
+        cursor = foundEntry || !page.hasMore ? null : page.nextCursor;
       } while (cursor != null);
-      if (!found) {
-        throw Exception('Destination folder "$current$part" does not exist in the selected data folder.');
+      if (!foundDirectory) {
+        if (foundEntry) {
+          throw Exception('Destination path "${joinPath(current, part)}" exists but is not a folder.');
+        }
+        // The selected destination (or one of its parent folders) is new.
+        // The apply phase creates it recursively before uploading any files.
+        return false;
       }
       current = joinPath(current, part);
     }
     if (profile.remoteDir == '/') {
       await v.list(profile.pointId, '/', limit: 1, order: 'Asc');
     }
+    return true;
   }
 
   // Lists one remote folder; returns its sub-folders so the walk can go level by
@@ -295,8 +303,10 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
     }
   }
 
-  await validateDestinationRoot();
-  await walkRemote(profile.remoteDir, '');
+  final destinationExists = await validateDestinationRoot();
+  if (destinationExists) {
+    await walkRemote(profile.remoteDir, '');
+  }
   _throwIfCancelled(cancel);
   status.scannedDestination = remote.length;
   status.phase = 'Comparing';
