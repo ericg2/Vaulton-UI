@@ -1793,8 +1793,8 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                         if (!widget.repo && p.isEncrypted)
                           Text(
                             p.isUnlocked
-                                ? 'Encrypted · Unlocked'
-                                : 'Encrypted · Locked',
+                                ? 'Protected · Ready'
+                                : 'Protected · Locked',
                             style: tt.bodySmall?.copyWith(
                               color: p.isUnlocked ? cs.primary : cs.error,
                               fontWeight: FontWeight.w600,
@@ -2305,9 +2305,9 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('Recovery Key Not Returned'),
+            title: const Text('Recovery Key Unavailable'),
             content: const Text(
-              'The encrypted Data Folder was created, but the server did not return its recovery key. Keep the folder. Unlock it with the password you chose, then regenerate and save a recovery key before relying on recovery.',
+              'The folder was created, but Vaulton could not provide a recovery key. Keep the folder and unlock it with your password. Then create and save a new recovery key before relying on recovery.'
             ),
             actions: [
               FilledButton(
