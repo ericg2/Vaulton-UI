@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data_folder_encryption.dart';
+import 'point_validation.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
@@ -705,7 +706,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     secondary: const Icon(Icons.inventory_2_outlined),
                     title: const Text('Backup Vaults'),
                     subtitle: const Text(
-                      'Store encrypted backup repositories.',
+                      'Store backup vaults.',
                     ),
                     value: allowRepo,
                     onChanged: (value) =>
@@ -1279,7 +1280,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       widget.repo
           ? 'Its schedules and job history are removed. Stored backups are kept.'
           : p.isEncrypted
-          ? 'This removes the folder’s active encryption key from Vaulton. The encrypted files remain in the storage location and cannot be opened from this server. Older server backups may still contain the key, so this is not guaranteed cryptographic erasure. Copy anything you need before continuing.'
+          ? 'This removes the folder’s access key from Vaulton. The files remain in storage but can no longer be opened through this server. Copy anything you need before continuing.'
           : 'Its schedules are removed. Files in the underlying storage are kept.',
       ok: !widget.repo && p.isEncrypted ? 'Delete Permanently' : 'Delete',
       danger: true,
@@ -2254,10 +2255,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
   }
 
   String get _passwordError {
-    if (widget.repo)
-      return _password.text.isNotEmpty && _password.text.length < 8
-          ? 'Use at least 8 characters.'
-          : '';
+    if (widget.repo) return validateBackupVaultPassword(_password.text) ?? '';
     if (!_encryptData) return '';
     final passwordError = validateDataFolderEncryptionPassword(_password.text);
     if (passwordError != null) return passwordError;
@@ -2507,7 +2505,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                 ),
                 if (_encryptData) ...[
                   Text(
-                    'Choose a password with 12 to 1024 characters. You will need it to unlock this folder. The recovery key is shown only once, so save it somewhere safe.',
+                    'Choose a password you can keep safe. You will need it whenever you unlock this folder. Save the recovery key when it appears.',
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 10),
@@ -2518,7 +2516,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                     maxLength: 1024,
                     onChanged: (_) => setState(() => _passwordTouched = true),
                     decoration: InputDecoration(
-                      labelText: 'Encryption Password',
+                      labelText: 'Folder Password',
                       border: const OutlineInputBorder(),
                       counterText: '',
                       suffixIcon: IconButton(
@@ -2550,7 +2548,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Encryption is set up on a new, empty Data Folder; existing folders are not converted. To protect existing files, create a new encrypted folder and copy them into it using a file-transfer workflow supported by the Location. The server administrator can still access files while the folder is unlocked. Encrypted SMB shares on local filesystem-backed Locations support sequential and random-offset writes, append, truncation, and extension. Random writes use bounded-memory read/modify/re-encrypt operations, so repeated small edits to large files can be slower than unencrypted in-place writes. Remote user-write backends remain read-only.',
+                    'Protection can only be enabled when creating a new, empty Data Folder. Existing folders are not changed. You can move existing files into a new protected folder. The server administrator can access files while the folder is unlocked. Some remote storage locations may have limited write support.',
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
