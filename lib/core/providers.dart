@@ -87,6 +87,12 @@ class AuthState {
 
 class AuthController extends Notifier<AuthState> {
   int _restoreGeneration = 0;
+  String? _accountPassword;
+
+  /// Kept only in memory for automatic Data Folder unlock and creation.
+  String? get accountPassword => _accountPassword;
+
+  void updateAccountPassword(String password) => _accountPassword = password;
   @override
   AuthState build() {
     // No saved session -> go straight to the login form (no splash flash).
@@ -158,6 +164,7 @@ class AuthController extends Notifier<AuthState> {
       await WakeService.refreshConfig(_v, _s, cancelToken: cancelToken);
       throwIfCancelled(cancelToken);
       ref.read(accountsProvider.notifier).remember(url, user);
+      _accountPassword = (newPassword?.isNotEmpty ?? false) ? newPassword : pass;
       state = AuthState(AuthStatus.signedIn, user: u);
     } catch (_) {
       if (cancelToken?.isCancelled == true) await _s.clearTokensIf(t.refresh);
@@ -175,6 +182,7 @@ class AuthController extends Notifier<AuthState> {
     // Clear credentials before any optional network cleanup can delay navigation.
     _restoreGeneration++;
     final refresh = _s.refreshToken;
+    _accountPassword = null;
     await _s.clear();
     state = const AuthState(AuthStatus.signedOut);
     if (refresh != null) {
@@ -186,6 +194,7 @@ class AuthController extends Notifier<AuthState> {
 
   void sessionExpired() {
     _restoreGeneration++;
+    _accountPassword = null;
     state = const AuthState(AuthStatus.signedOut, message: 'Your session expired. Please sign in again.');
   }
 }
