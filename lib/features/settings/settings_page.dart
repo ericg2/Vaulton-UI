@@ -223,7 +223,7 @@ class SettingsPage extends ConsumerWidget {
                       ),
                     ],
                     ok: 'Change Password',
-                    intro: 'Choose a password with at least 8 characters. Changing it signs out your other sessions and also updates the password used for SMB shares.',
+                    intro: 'Choose at least 8 characters; if you have encrypted Data Folders, use at least 12. Changing it signs out your other sessions and also updates the password used for SMB shares.',
                   );
                   if (f == null) return;
                   if (f['new']!.length < 8) {
