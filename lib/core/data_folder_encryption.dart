@@ -30,7 +30,17 @@ Future<bool> unlockDataFolderWithPrompt(
   BuildContext context, {
   required Vaulton vaulton,
   required Point point,
+  String? accountPassword,
 }) async {
+  if (!point.isEncrypted || point.isUnlocked) return true;
+  if (accountPassword != null && accountPassword.isNotEmpty) {
+    try {
+      await vaulton.unlockData(point.id, accountPassword);
+      return true;
+    } catch (_) {
+      // Existing folders may still use a legacy, separate password.
+    }
+  }
   final unlocked = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
@@ -143,7 +153,7 @@ class _UnlockDataFolderDialogState extends State<_UnlockDataFolderDialog> {
                   obscureText: true,
                   maxLength: 1024,
                   decoration: const InputDecoration(
-                    labelText: 'Password',
+                    labelText: 'Account Password',
                     counterText: '',
                   ),
                   onSubmitted: (_) => _submit(),
