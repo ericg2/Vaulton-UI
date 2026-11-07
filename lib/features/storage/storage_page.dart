@@ -1238,6 +1238,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
         roots: usable,
         vaulton: _v,
         encryptionEnabled: encryptionEnabled,
+        accountPassword: ref.read(authProvider.notifier).accountPassword,
       ),
     );
     if (created == true && mounted) {
@@ -1343,6 +1344,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       ctx,
       vaulton: _v,
       point: point,
+      accountPassword: ref.read(authProvider.notifier).accountPassword,
     );
     if (unlocked && mounted) _key.currentState?.refresh();
   }
@@ -2173,8 +2175,10 @@ class NewDataPointSheet extends StatefulWidget {
     required this.roots,
     required this.vaulton,
     required this.encryptionEnabled,
+    required this.accountPassword,
   });
   final bool repo, encryptionEnabled;
+  final String? accountPassword;
   final List<Root> roots;
   final Vaulton vaulton;
   @override
@@ -2257,11 +2261,9 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
   String get _passwordError {
     if (widget.repo) return validateBackupVaultPassword(_password.text) ?? '';
     if (!_encryptData) return '';
-    final passwordError = validateDataFolderEncryptionPassword(_password.text);
-    if (passwordError != null) return passwordError;
-    if (_password.text != _passwordConfirm.text)
-      return 'Passwords do not match.';
-    return '';
+    if (widget.accountPassword == null || widget.accountPassword!.isEmpty)
+      return 'Sign in again to create an encrypted Data Folder.';
+    return validateDataFolderEncryptionPassword(widget.accountPassword!) ?? '';
   }
 
   Future<void> _save() async {
@@ -2289,7 +2291,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
               'rootId': _root.id,
               'name': name,
               'maxBytes': maxBytes,
-              if (_encryptData) 'encryptionPassword': _password.text,
+              if (_encryptData) 'encryptionPassword': widget.accountPassword,
             });
       final recoveryKey = created.recoveryKey;
       if (!widget.repo &&
@@ -2505,50 +2507,20 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                 ),
                 if (_encryptData) ...[
                   Text(
-                    'Choose a password you can keep safe. You will need it whenever you unlock this folder. Save the recovery key when it appears.',
+                    'This folder uses your Vaulton account password automatically. You will not need a separate folder password. Save the recovery key when it appears.',
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _password,
-                    enabled: !_saving,
-                    obscureText: !_showPassword,
-                    maxLength: 1024,
-                    onChanged: (_) => setState(() => _passwordTouched = true),
-                    decoration: InputDecoration(
-                      labelText: 'Folder Password',
-                      border: const OutlineInputBorder(),
-                      counterText: '',
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _showPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () =>
-                            setState(() => _showPassword = !_showPassword),
-                      ),
+                  if (widget.accountPassword == null ||
+                      validateDataFolderEncryptionPassword(widget.accountPassword!) != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sign in again with an account password of at least 12 characters to create an encrypted folder.',
+                      style: t.bodySmall?.copyWith(color: cs.error),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _passwordConfirm,
-                    enabled: !_saving,
-                    obscureText: !_showPassword,
-                    maxLength: 1024,
-                    onChanged: (_) => setState(() => _passwordTouched = true),
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      border: const OutlineInputBorder(),
-                      counterText: '',
-                      errorText: _passwordTouched && _passwordError.isNotEmpty
-                          ? _passwordError
-                          : null,
-                    ),
-                  ),
+                  ],
                   const SizedBox(height: 8),
                   Text(
-                    'Protection can only be enabled when creating a new, empty Data Folder. Existing folders are not changed. You can move existing files into a new protected folder. The server administrator can access files while the folder is unlocked. Some remote storage locations may have limited write support.',
+                    'Protection can only be enabled when creating a new, empty Data Folder. The server administrator can access files while the folder is unlocked. Some remote storage locations may have limited write support.',
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
