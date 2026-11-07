@@ -2510,11 +2510,16 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                     'This folder uses your Vaulton account password automatically. You will not need a separate folder password. Save the recovery key when it appears.',
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
-                  if (widget.accountPassword == null ||
-                      validateDataFolderEncryptionPassword(widget.accountPassword!) != null) ...[
+                  if (widget.accountPassword == null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Sign in again with an account password of at least 12 characters to create an encrypted folder.',
+                      'Sign in again to use your account password for encryption.',
+                      style: t.bodySmall?.copyWith(color: cs.error),
+                    ),
+                  ] else if (validateDataFolderEncryptionPassword(widget.accountPassword!) != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Change your Vaulton account password to at least 12 characters before creating an encrypted folder.',
                       style: t.bodySmall?.copyWith(color: cs.error),
                     ),
                   ],
