@@ -14,6 +14,8 @@ dependencies:
   crypto: ^3.0.6
   dio: ^5.11.1
   dynamic_color: ^1.9.0
+  # Upstream Linux portal-transfer lifetime fix; keep the 0.8 API because
+  # file_picker currently requires cross_file 0.3.x.
   desktop_drop:
     git:
       url: https://github.com/MixinNetwork/flutter-plugins.git
