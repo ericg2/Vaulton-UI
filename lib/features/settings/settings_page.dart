@@ -240,6 +240,11 @@ class SettingsPage extends ConsumerWidget {
                   if (t != null) {
                     await session.setTokens(t);
                     ref.read(authProvider.notifier).updateAccountPassword(f['new']!);
+                    final rememberedUser = session.userName;
+                    if (rememberedUser != null &&
+                        await session.savedPassword(session.baseUrl, rememberedUser) != null) {
+                      await session.savePassword(session.baseUrl, rememberedUser, f['new']!);
+                    }
                     if (context.mounted) toast(context, 'Password changed.');
                   }
                 },
