@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'update_service.dart';
 import '../../core/api_client.dart';
-import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/vaulton.dart';
@@ -234,45 +233,10 @@ class SettingsPage extends ConsumerWidget {
                       error: true,
                     );
                   }
-                  final t = await guarded(context, () async {
-                    final encrypted = <Point>[];
-                    String? cursor;
-                    do {
-                      final page = await v.datas(cursor: cursor, limit: 100);
-                      encrypted.addAll(page.items.where((point) => point.isEncrypted));
-                      cursor = page.hasMore ? page.nextCursor : null;
-                    } while (cursor != null);
-
-                    if (encrypted.isNotEmpty && f['new']!.runes.length < 12) {
-                      throw StateError(
-                        'Your new account password must contain at least 12 characters because it also protects your encrypted Data Folders.',
-                      );
-                    }
-
-                    final changed = <String>[];
-                    try {
-                      for (final point in encrypted) {
-                        await v.changeDataPassword(point.id, f['cur']!, f['new']!);
-                        changed.add(point.id);
-                      }
-                      return await v.changePassword(f['cur']!, f['new']!);
-                    } catch (_) {
-                      Object? rollbackError;
-                      for (final id in changed.reversed) {
-                        try {
-                          await v.changeDataPassword(id, f['new']!, f['cur']!);
-                        } catch (error) {
-                          rollbackError = error;
-                        }
-                      }
-                      if (rollbackError != null) {
-                        throw StateError(
-                          'The password change could not be completed and at least one Data Folder could not be rolled back. Keep both passwords and contact the server administrator.',
-                        );
-                      }
-                      rethrow;
-                    }
-                  });
+                  final t = await guarded(
+                    context,
+                    () => v.changePassword(f['cur']!, f['new']!),
+                  );
                   if (t != null) {
                     await session.setTokens(t);
                     ref.read(authProvider.notifier).updateAccountPassword(f['new']!);
