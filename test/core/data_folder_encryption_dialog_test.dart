@@ -125,7 +125,9 @@ void main() {
     expect(find.text('Unlock Data Folder'), findsNothing);
     expect(adapter.requests, hasLength(1));
     expect(adapter.requests.single.uri.path, '/datas/point-id/unlock');
-    expect(adapter.requests.single.data, contains('correct horse battery staple'));
+    final body = adapter.requests.single.data;
+    final decoded = body is String ? jsonDecode(body) : body;
+    expect(decoded, {'password': 'correct horse battery staple'});
   });
 
   testWidgets('rejects an invalid password before sending a request', (
