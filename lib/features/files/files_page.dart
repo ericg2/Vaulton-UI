@@ -949,7 +949,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
 
             Future<void> addDirectory(XDirectory directory, String remotePath) async {
               await for (final entry in directory.list()) {
-                final childName = await entry.name();
+                final uri = Uri.parse(entry.uri);
+                final childName = entry is XFile
+                    ? (await entry.name() ?? uri.pathSegments.last)
+                    : uri.pathSegments.last;
                 final childPath = joinPath(remotePath, childName);
                 if (entry is XDirectory) {
                   await addDirectory(entry, childPath);
