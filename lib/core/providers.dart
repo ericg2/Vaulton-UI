@@ -150,6 +150,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> signIn(String url, String user, String pass, {String? newPassword, String? twoFactorCode, CancelToken? cancelToken}) async {
+    _accountPassword = null;
     await _s.setBaseUrl(url);
     throwIfCancelled(cancelToken);
     final t = await _v.signIn(user, pass, newPassword: newPassword, twoFactorCode: twoFactorCode, cancelToken: cancelToken);
