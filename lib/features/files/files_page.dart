@@ -953,12 +953,13 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 if (entry is XDirectory) {
                   await addDirectory(entry, childPath);
                 } else if (entry is XFile) {
+                  final bytes = await entry.readAsBytes();
                   requests.add(
                     UploadRequest(
                       pointId: pt.id,
                       remotePath: childPath,
-                      size: await entry.length(),
-                      loadBytes: () => entry.readAsBytes(),
+                      size: bytes.length,
+                      loadBytes: () async => bytes,
                     ),
                   );
                 }
@@ -969,12 +970,13 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               final file = item.file;
               final remotePath = joinPath(_path, item.name);
               if (kIsWeb || item.localPath == null) {
+                final bytes = await file.readAsBytes();
                 requests.add(
                   UploadRequest(
                     pointId: pt.id,
                     remotePath: remotePath,
-                    size: await file.length(),
-                    loadBytes: () => file.readAsBytes(),
+                    size: bytes.length,
+                    loadBytes: () async => bytes,
                   ),
                 );
               } else {
