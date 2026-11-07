@@ -24,8 +24,8 @@ bool canUseDataFolderNow(Point point) => !point.isEncrypted || point.isUnlocked;
 /// but the folder must be unlocked when each scheduled job actually runs.
 bool canScheduleDataFolder(Point point) => true;
 
-/// Prompts for a folder password or recovery key and clears both credentials
-/// from the controllers whenever the dialog closes or a request fails.
+/// Tries the signed-in account password first, then prompts for a password or
+/// recovery key. Dialog credentials are cleared when the dialog closes or fails.
 Future<bool> unlockDataFolderWithPrompt(
   BuildContext context, {
   required Vaulton vaulton,
@@ -153,7 +153,7 @@ class _UnlockDataFolderDialogState extends State<_UnlockDataFolderDialog> {
                   obscureText: true,
                   maxLength: 1024,
                   decoration: const InputDecoration(
-                    labelText: 'Account Password',
+                    labelText: 'Password',
                     counterText: '',
                   ),
                   onSubmitted: (_) => _submit(),
