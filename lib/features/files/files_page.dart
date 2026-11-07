@@ -989,7 +989,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                     pointId: pt.id,
                     remotePath: remotePath,
                     localPath: item.localPath,
-                    size: await file.length(),
+                    size: (await file.length()) ?? 0,
                   ),
                 );
               }
