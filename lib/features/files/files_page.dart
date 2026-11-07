@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -148,6 +149,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       context,
       vaulton: _v,
       point: point,
+      accountPassword: ref.read(authProvider.notifier).accountPassword,
     );
     if (unlocked) await _initPoints();
   }
@@ -938,34 +940,64 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 label: const Text('Add'),
               ),
         body: DropTarget(
-          onDragEntered: (_) => setState(() => _drag = true),
-          onDragExited: (_) => setState(() => _drag = false),
-          onDragDone: (d) async {
+          acceptedKinds: const {DropItemKind.file, DropItemKind.directory},
+          onEnter: (_) => setState(() => _drag = true),
+          onLeave: () => setState(() => _drag = false),
+          onDrop: (d) async {
             setState(() => _drag = false);
             final requests = <UploadRequest>[];
-            for (final f in d.files) {
-              if (kIsWeb) {
+
+            Future<void> addDirectory(XDirectory directory, String remotePath) async {
+              await for (final entry in directory.list()) {
+                final childPath = joinPath(remotePath, entry.name);
+                if (entry is XDirectory) {
+                  await addDirectory(entry, childPath);
+                } else if (entry is XFile) {
+                  requests.add(
+                    UploadRequest(
+                      pointId: pt.id,
+                      remotePath: childPath,
+                      size: await entry.length(),
+                      loadBytes: () => entry.readAsBytes(),
+                    ),
+                  );
+                }
+              }
+            }
+
+            for (final item in d.items.whereType<DropFileItem>()) {
+              final file = item.file;
+              final remotePath = joinPath(_path, item.name);
+              if (kIsWeb || item.localPath == null) {
                 requests.add(
                   UploadRequest(
                     pointId: pt.id,
-                    remotePath: joinPath(_path, f.name),
-                    size: await f.length(),
-                    loadBytes: () => f.readAsBytes(),
+                    remotePath: remotePath,
+                    size: await file.length(),
+                    loadBytes: () => file.readAsBytes(),
                   ),
                 );
-              } else if (await localFiles.isDirectory(f.path)) {
-                await _uploadDir(f.path);
               } else {
                 requests.add(
                   UploadRequest(
                     pointId: pt.id,
-                    remotePath: joinPath(_path, f.name),
-                    localPath: f.path,
-                    size: await f.length(),
+                    remotePath: remotePath,
+                    localPath: item.localPath,
+                    size: await file.length(),
                   ),
                 );
               }
             }
+
+            for (final item in d.items.whereType<DropDirectoryItem>()) {
+              final localPath = item.localPath;
+              if (!kIsWeb && localPath != null) {
+                await _uploadDir(localPath);
+              } else {
+                await addDirectory(item.directory, joinPath(_path, item.name));
+              }
+            }
+
             final results = _mgr.addUploads(requests);
             final queued = results.whereType<TransferTask>().length;
             if (mounted && queued >= 25) {
