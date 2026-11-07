@@ -95,6 +95,39 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('automatically unlocks with the signed-in account password', (
+    tester,
+  ) async {
+    var unlocked = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                unlocked = await unlockDataFolderWithPrompt(
+                  context,
+                  vaulton: vaulton,
+                  point: _point(),
+                  accountPassword: 'correct horse battery staple',
+                );
+              },
+              child: const Text('Auto Unlock'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Auto Unlock'));
+    await tester.pumpAndSettle();
+
+    expect(unlocked, isTrue);
+    expect(find.text('Unlock Data Folder'), findsNothing);
+    expect(adapter.requests, hasLength(1));
+    expect(adapter.requests.single.uri.path, '/datas/point-id/unlock');
+    expect(adapter.requests.single.data, contains('correct horse battery staple'));
+  });
+
   testWidgets('rejects an invalid password before sending a request', (
     tester,
   ) async {
@@ -227,6 +260,7 @@ void main() {
                       vaulton: vaulton,
                       repo: false,
                       encryptionEnabled: true,
+                      accountPassword: 'correct horse battery staple',
                     ),
                   );
                   created = result == true;
@@ -249,10 +283,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), 'folder password 123');
-      await tester.enterText(fields.at(1), 'folder password 123');
-      await tester.enterText(fields.at(2), 'Private files');
-      await tester.enterText(fields.at(3), '4096');
+      await tester.enterText(fields.at(0), 'Private files');
+      await tester.enterText(fields.at(1), '4096');
 
       await tester.tap(find.text('Create'));
       await tester.pumpAndSettle();
@@ -266,7 +298,7 @@ void main() {
       final decoded = requestBody is String
           ? jsonDecode(requestBody) as Map<String, dynamic>
           : Map<String, dynamic>.from(requestBody as Map);
-      expect(decoded['encryptionPassword'], 'folder password 123');
+      expect(decoded['encryptionPassword'], 'correct horse battery staple');
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
