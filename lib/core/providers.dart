@@ -120,6 +120,10 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final u = await _v.me().timeout(const Duration(seconds: 8));
+      final restoredUser = _s.userName;
+      _accountPassword = restoredUser == null
+          ? null
+          : await _s.savedPassword(_s.baseUrl, restoredUser);
       try {
         await WakeService.refreshConfig(_v, _s);
       } catch (_) {
