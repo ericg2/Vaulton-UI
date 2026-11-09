@@ -106,7 +106,7 @@ Future<void> restoreSnapshotFlow({
   );
   if (selected == null || selected.isEmpty || !context.mounted) return;
 
-  final dest = await pickFolder(context, title: 'Restore Into…');
+  final dest = await pickFolder(context, title: 'Choose Where to Restore');
   if (dest == null || !context.mounted) return;
 
   final label = selected.length == 1 ? selected.first.name : '${selected.length} items';
@@ -152,18 +152,18 @@ Future<void> restoreSnapshotFlow({
                   .toDouble(),
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Restore Location', style: Theme.of(ctx).textTheme.titleSmall),
+                  Text('Restore From and To', style: Theme.of(ctx).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   _restoreLocationCard(ctx, label: 'From Backup', value: fromText, icon: Icons.camera_alt_outlined),
                   const SizedBox(height: 8),
-                  _restoreLocationCard(ctx, label: 'Destination', value: toText, icon: Icons.folder_outlined),
+                  _restoreLocationCard(ctx, label: 'Restore To', value: toText, icon: Icons.folder_outlined),
                   const SizedBox(height: 16),
-                  Text('Restore Behavior', style: Theme.of(ctx).textTheme.titleSmall),
+                  Text('Restore Options', style: Theme.of(ctx).textTheme.titleSmall),
                   const SizedBox(height: 4),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Remove Files Not in This Backup'),
-                    subtitle: const Text('When enabled, files in the destination that are not in the selected backup may be deleted.'),
+                    title: const Text('Make the Folder Match This Backup'),
+                    subtitle: const Text('Also delete files from the destination that are not in this backup.'),
                     value: deleteExtras,
                     onChanged: (value) {
                       set(() => deleteExtras = value);
@@ -188,7 +188,7 @@ Future<void> restoreSnapshotFlow({
                               counting
                                   ? 'Checking the destination…'
                                   : destinationFileCount == null
-                                      ? 'Extra files in the destination may be deleted.'
+                                      ? 'Files not in this backup may be deleted from the destination.'
                                       : 'Up to $destinationFileCount existing file${destinationFileCount == 1 ? '' : 's'} may be deleted.',
                               style: TextStyle(color: cs.onErrorContainer, fontWeight: FontWeight.w600),
                             ),
@@ -199,14 +199,14 @@ Future<void> restoreSnapshotFlow({
                   const Divider(height: 20),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Preview Only'),
-                    subtitle: const Text('Show what would be restored without changing any files.'),
+                    title: const Text('Preview Changes Only'),
+                    subtitle: const Text('Show what would change without restoring or replacing files.'),
                     value: dryRun,
                     onChanged: (value) => set(() => dryRun = value),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Folders are restored inside the destination. Files with matching names may be replaced. Use Preview Only to review changes first.',
+                    'Restored files are placed in the selected folder. Files with the same names may be replaced. Choose Preview Only to review the changes first.',
                     style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ]),
@@ -315,7 +315,7 @@ class _SnapshotPathPickerDialogState extends ConsumerState<_SnapshotPathPickerDi
                 context,
                 [(path: _path, isDir: true, name: _path == '/' ? 'snapshot' : baseName(_path))],
               ),
-              child: Text(MediaQuery.sizeOf(context).width < 420 ? 'Select' : 'Select folder'),
+              child: Text(MediaQuery.sizeOf(context).width < 420 ? 'Select' : 'Choose Folder'),
             ),
           ]),
           const Divider(height: 1),
@@ -674,7 +674,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
     if (_error != null) return Scaffold(appBar: AppBar(title: title), body: ErrorView(_error!, onRetry: _init));
     if (_snaps == null) return Scaffold(appBar: AppBar(title: title), body: const Center(child: CircularProgressIndicator()));
     if (_snap == null) {
-      return Scaffold(appBar: AppBar(title: title), body: const EmptyView('This backup vault has no snapshots yet.\nRun a backup first.', icon: Icons.camera_alt_outlined));
+      return Scaffold(appBar: AppBar(title: title), body: const EmptyView('No backups yet. Run a backup to see saved copies of your files here.', icon: Icons.camera_alt_outlined));
     }
     final snap = _snap!;
     final selecting = _sel.isNotEmpty;
@@ -739,7 +739,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                 },
                 itemBuilder: (c) => [
                   PopupMenuItem(value: 'sort', child: Text(_desc ? 'Sort Ascending' : 'Sort Descending')),
-                  const PopupMenuItem(value: 'restore', child: Text('Restore This Folder…')),
+                  const PopupMenuItem(value: 'restore', child: Text('Restore This Folder')),
                   const PopupMenuItem(value: 'refresh', child: Text('Refresh')),
                 ],
               ),
