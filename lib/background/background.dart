@@ -183,8 +183,7 @@ class TransferNotification {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ));
       final android = n.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      await android?.requestNotificationsPermission();
-      await android?.createNotificationChannel(const AndroidNotificationChannel(
+          await android?.createNotificationChannel(const AndroidNotificationChannel(
         _kTransferChannel, 'File transfers',
         description: 'Progress of file uploads and downloads.', importance: Importance.low,
       ));
@@ -273,7 +272,7 @@ Future<void> startBackgroundUpdateDownload({required String packageUrl, required
     existingWorkPolicy: ExistingWorkPolicy.replace,
     constraints: Constraints(networkType: NetworkType.connected),
     outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
-    foregroundServiceConfig: const ForegroundServiceConfig(
+    foregroundServiceConfig: ForegroundServiceConfig(
       notificationTitle: 'Vaulton update',
       notificationText: 'Downloading and verifying the update',
       notificationChannelId: 'vaulton_updates',
