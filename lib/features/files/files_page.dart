@@ -132,9 +132,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     _autoTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (!mounted || !TickerMode.valuesOf(context).enabled) return;
       if (_point == null) {
-        _initPoints();
+        unawaited(_initPoints());
       } else if (_point!.isEncrypted && !_point!.isUnlocked) {
-        _refreshUsage();
+        unawaited(_refreshUsage());
       } else {
         _silent();
       }
