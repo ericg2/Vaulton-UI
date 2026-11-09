@@ -8,6 +8,7 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 
 - You can switch folders in the Files page even when the current folder is locked.
 - Encrypted folders unlock automatically when you sign in.
+- Simplified the storage and folder sync screens.
 - Simplified the encryption option to **Use Encryption**.
 - Improved folder unlocking and recovery.
 - Improved password checks and messages.
