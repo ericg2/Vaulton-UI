@@ -6,6 +6,10 @@ This file contains curated notes through version 1.3.2 and the current unrelease
 
 ### Fixed
 
+- Keep the Data Folder selector available in the Files browser while a folder is locked, and clarify how to unlock it.
+- Automatically unlock encrypted Data Folders at startup and when selected whenever the account password is available; share in-flight unlock requests and retry after transient failures.
+- Simplify the encryption option to **Use Encryption** without the expanded explanatory text.
+
 - Reject blank, too-short, and oversized Unicode passwords consistently with the server when creating or changing an encrypted Data Folder password.
 - Clear the unused password or recovery-key field when switching Data Folder unlock methods, and enforce the API input length limits without displaying counters.
 - Do not refresh the Storage list or clear point-scoped transfer state when a Data Folder deletion fails.
