@@ -156,6 +156,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Future<void> _initPoints() async {
     setState(() => _pointsError = null);
     try {
+      // Wait for startup unlock attempts before loading the visible folder list.
+      // The shared in-flight map prevents duplicate requests with HomeShell.
+      await autoUnlockAllDataFolders(
+        _v,
+        ref.read(authProvider.notifier).accountPassword,
+      );
       final pts = await loadAllPoints(ref);
       final last =
           widget.initialPointId ?? ref.read(settingsProvider).lastPointId;
@@ -200,6 +206,23 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     } catch (_) {}
   }
 
+  Future<void> _selectPoint(String id) async {
+    final selected = _points!.firstWhere((x) => x.id == id);
+    ref.read(settingsProvider.notifier).setLastPoint(id);
+    setState(() => _point = selected);
+    _go([]);
+
+    final password = ref.read(authProvider.notifier).accountPassword;
+    if (!selected.isEncrypted || selected.isUnlocked || password == null) {
+      return;
+    }
+    final unlocked = await tryAutoUnlockDataFolder(_v, selected, password);
+    if (mounted && _point?.id == id && unlocked.isUnlocked) {
+      setState(() => _point = unlocked);
+      _refresh();
+    }
+  }
+
   Widget _pointMenu(Point point) => DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: point.id,
@@ -210,11 +233,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               DropdownMenuItem(value: x.id, child: Text(x.name)),
           ],
           onChanged: (id) {
-            ref.read(settingsProvider.notifier).setLastPoint(id!);
-            setState(
-              () => _point = _points!.firstWhere((x) => x.id == id),
-            );
-            _go([]);
+            if (id != null) _selectPoint(id);
           },
         ),
       );
@@ -747,7 +766,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final pt = _point!;
     if (pt.isEncrypted && !pt.isUnlocked) {
       return Scaffold(
-        appBar: AppBar(title: Text(pt.name)),
+        // Keep the folder selector visible even while this folder is locked.
+        appBar: AppBar(title: _pointMenu(pt)),
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
@@ -758,9 +778,17 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 children: [
                   const Icon(Icons.lock_outline, size: 48),
                   const SizedBox(height: 16),
-                  Text('This Folder Is Locked', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+                  Text(
+                    'Folder Locked',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 8),
-                  Text('Enter its password or use your recovery key to open files and continue working.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    'Unlock this folder with your Vaulton password or recovery key to browse its files.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: () => _unlockSelectedPoint(pt),
@@ -870,24 +898,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                       _refresh();
                     },
                   )
-                : DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: pt.id,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(12),
-                      items: [
-                        for (final x in _points!)
-                          DropdownMenuItem(value: x.id, child: Text(x.name)),
-                      ],
-                      onChanged: (id) {
-                        ref.read(settingsProvider.notifier).setLastPoint(id!);
-                        setState(
-                          () => _point = _points!.firstWhere((x) => x.id == id),
-                        );
-                        _go([]);
-                      },
-                    ),
-                  ),
+                : _pointMenu(pt),
             actions: [
               IconButton(
                 tooltip: 'Select All',
