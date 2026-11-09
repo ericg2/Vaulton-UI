@@ -159,6 +159,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }
 
   Future<void> _initPoints() async {
+    if (!mounted) return;
     setState(() => _pointsError = null);
     try {
       // Wait for startup unlock attempts before loading the visible folder list.
