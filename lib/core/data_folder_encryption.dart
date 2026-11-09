@@ -25,6 +25,16 @@ bool canUseDataFolderNow(Point point) => !point.isEncrypted || point.isUnlocked;
 bool canScheduleDataFolder(Point point) => true;
 
 final _autoUnlockAttempts = <String, Future<Point>>{};
+final _manuallyLockedDataFolders = <String>{};
+
+/// Keeps automatic account-password unlock from undoing a user's lock action.
+void markDataFolderManuallyLocked(String pointId) {
+  _manuallyLockedDataFolders.add(pointId);
+}
+
+void _markDataFolderManuallyUnlocked(String pointId) {
+  _manuallyLockedDataFolders.remove(pointId);
+}
 
 /// Tries the signed-in account password without prompting. Folders that use a
 /// legacy password simply stay locked until the user unlocks them explicitly.
@@ -34,6 +44,7 @@ Future<Point> tryAutoUnlockDataFolder(
   String? accountPassword,
 ) async {
   if (!point.isEncrypted || point.isUnlocked) return point;
+  if (_manuallyLockedDataFolders.contains(point.id)) return point;
   if (accountPassword == null || accountPassword.isEmpty) return point;
   final attempt = '${point.id}\u0000${accountPassword.hashCode}';
   final existing = _autoUnlockAttempts[attempt];
@@ -86,6 +97,7 @@ Future<bool> unlockDataFolderWithPrompt(
   if (accountPassword != null && accountPassword.isNotEmpty) {
     try {
       await vaulton.unlockData(point.id, accountPassword);
+      _markDataFolderManuallyUnlocked(point.id);
       return true;
     } catch (_) {
       // Existing folders may still use a legacy, separate password.
@@ -96,6 +108,7 @@ Future<bool> unlockDataFolderWithPrompt(
     barrierDismissible: false,
     builder: (_) => _UnlockDataFolderDialog(vaulton: vaulton, point: point),
   );
+  if (unlocked == true) _markDataFolderManuallyUnlocked(point.id);
   return unlocked == true;
 }
 
