@@ -136,7 +136,10 @@ echo "Resolving Flutter dependencies..."
 flutter pub get
 
 echo "Building signed Android release..."
-flutter build apk --release
+# AGP 9 bundles Kotlin 2.2.10; Flutter's current KGP version check
+# incorrectly rejects this built-in Kotlin version (Flutter issue #192167).
+# Skip only that dependency-version validation; Gradle still performs the build.
+flutter build apk --release --android-skip-build-dependency-validation
 APK="build/app/outputs/flutter-apk/app-release.apk"
 [[ -s "$APK" ]] || { echo "APK build output not found: $APK" >&2; exit 1; }
 
