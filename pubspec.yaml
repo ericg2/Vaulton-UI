@@ -13,35 +13,69 @@ dependencies:
   collection: ^1.19.1
   crypto: ^3.0.6
   dio: ^5.11.1
-  dynamic_color: ^1.9.0
-  # Upstream Linux portal-transfer lifetime fix; keep the 0.8 API because
-  # file_picker currently requires cross_file 0.3.x.
-  desktop_drop:
+  dynamic_color: ^2.1.0
+  desktop_drop: ^0.9.2
+  file_picker:
     git:
-      url: https://github.com/MixinNetwork/flutter-plugins.git
-      ref: 5f33a92bf8d6da7ee3a26f9a7d675f984ace66f9
-      path: packages/desktop_drop
-  file_picker: ^13.1.0
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker
   flutter_timezone: ^5.1.1
-  flutter_riverpod: ^3.4.3
-  flutter_local_notifications: ^22.3.2
+  flutter_riverpod: ^3.5.0
+  flutter_local_notifications: ^23.0.0
   flutter_secure_storage: ^11.2.0
   intl: ^0.20.3
+  material_ui: ^1.10.0
   mime: ^2.1.0
-  open_filex: ^4.7.0
+  open_filex: ^5.0.0
   path: ^1.9.1
   path_provider: ^2.1.6
   photo_manager: ^3.12.0
   saf: ^2.1.2
   shared_preferences: ^2.5.5
   web: ^1.1.1
-  window_manager: ^0.5.2
+  window_manager: ^0.6.0
   workmanager: ^0.10.10
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+# The file_picker 14 cross_file 0.4 migration is merged on the release branch
+# but not published yet. Pin all federated packages to the same commit so that
+# desktop_drop 0.9 / cross_file 0.4 can resolve.
+dependency_overrides:
+  file_picker_platform_interface:
+    git:
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker_platform_interface
+  android_file_picker:
+    git:
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker_android
+  file_picker_darwin:
+    git:
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker_darwin
+  file_picker_linux:
+    git:
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker_linux
+  windows_file_picker:
+    git:
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker_windows
+  file_picker_web:
+    git:
+      url: https://github.com/vicajilau/flutter_file_picker.git
+      ref: 39ce58c0f4c32455ff09a89e45dfaee1585d84b3
+      path: packages/file_picker_web
 
 flutter:
   uses-material-design: true

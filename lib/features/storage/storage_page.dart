@@ -941,8 +941,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
 
   Future<void> _edit(Root root) async {
     final scheme = '${root.source?['scheme'] ?? ''}';
-    if (!kSourceSchemas.containsKey(scheme))
+    if (!kSourceSchemas.containsKey(scheme)) {
       return toast(context, 'Unknown connection type.', error: true);
+    }
     final src = await _sourceForm(scheme, root.source);
     if (src == null || !mounted) return;
     Json? detected;
@@ -2261,8 +2262,9 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
   String get _passwordError {
     if (widget.repo) return validateBackupVaultPassword(_password.text) ?? '';
     if (!_encryptData) return '';
-    if (widget.accountPassword == null || widget.accountPassword!.isEmpty)
+    if (widget.accountPassword == null || widget.accountPassword!.isEmpty) {
       return 'Sign in again to create an encrypted Data Folder.';
+    }
     return validateDataFolderEncryptionPassword(widget.accountPassword!) ?? '';
   }
 

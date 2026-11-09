@@ -939,41 +939,427 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 label: const Text('Add'),
               ),
         body: DropTarget(
-          onDragEntered: (_) => setState(() => _drag = true),
-          onDragExited: (_) => setState(() => _drag = false),
-          onDragDone: (d) async {
+          acceptedKinds: const {DropItemKind.file, DropItemKind.directory},
+          onEnter: (_) => setState(() => _drag = true),
+          onLeave: () => setState(() => _drag = false),
+          onDrop: (d) async {
             setState(() => _drag = false);
             final requests = <UploadRequest>[];
-            for (final f in d.files) {
-              if (kIsWeb) {
+
+            Future<void> addDirectory(XDirectory directory, String remotePath) async {
+              await for (final entry in directory.list()) {
+                final uri = Uri.parse(entry.uri);
+                final childName = entry is XFile
+                    ? (await entry.name() ?? uri.pathSegments.last)
+                    : uri.pathSegments.last;
+                final childPath = joinPath(remotePath, childName);
+                if (entry is XDirectory) {
+                  await addDirectory(entry, childPath);
+                } else if (entry is XFile) {
+                  final bytes = await entry.readAsBytes();
+                  requests.add(
+                    UploadRequest(
+                      pointId: pt.id,
+                      remotePath: childPath,
+                      size: bytes.length,
+                      loadBytes: () async => bytes,
+                    ),
+                  );
+                }
+              }
+            }
+
+            for (final item in d.items.whereType<DropFileItem>()) {
+              final file = item.file;
+              final remotePath = joinPath(_path, item.name);
+              if (kIsWeb || item.localPath == null) {
+                final bytes = await file.readAsBytes();
                 requests.add(
                   UploadRequest(
                     pointId: pt.id,
-                    remotePath: joinPath(_path, f.name),
-                    size: await f.length(),
-                    loadBytes: () => f.readAsBytes(),
+                    remotePath: remotePath,
+                    size: bytes.length,
+                    loadBytes: () async => bytes,
                   ),
                 );
-              } else if (await localFiles.isDirectory(f.path)) {
-                await _uploadDir(f.path);
               } else {
                 requests.add(
                   UploadRequest(
                     pointId: pt.id,
-                    remotePath: joinPath(_path, f.name),
-                    localPath: f.path,
-                    size: await f.length(),
+                    remotePath: remotePath,
+                    localPath: item.localPath,
+                    size: (await file.length()) ?? 0,
                   ),
                 );
               }
             }
+
+            for (final item in d.items.whereType<DropDirectoryItem>()) {
+              final localPath = item.localPath;
+              if (!kIsWeb && localPath != null) {
+                await _uploadDir(localPath);
+              } else {
+                await addDirectory(item.directory, joinPath(_path, item.name));
+              }
+            }
+
             final results = _mgr.addUploads(requests);
             final queued = results.whereType<TransferTask>().length;
             if (mounted && queued >= 25) {
               toast(context, 'Queued $queued uploads');
             }
           },
-          child: child,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _Breadcrumbs(
+                    point: pt,
+                    segs: _segs,
+                    onTap: (i) => _go(_segs.sublist(0, i)),
+                  ),
+                  if (!kIsWeb && !isDesktop)
+                    const HintBanner(
+                      id: 'files_select',
+                      text: 'Long-press to select several files. Tap ⋮ for more actions.',
+                    ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        if (currentSync != null)
+                          Builder(
+                            builder: (context) {
+                              final sync = currentSync;
+                              final status = SyncRunStatus.load(
+                                ref.read(prefsProvider),
+                                sync.id,
+                              );
+                              final error = status.error;
+                              final cs = Theme.of(context).colorScheme;
+                              return InkWell(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SyncPage(settingsSyncId: sync.id),
+                                  ),
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    8,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: error != null
+                                        ? cs.errorContainer
+                                        : cs.primaryContainer.withValues(
+                                            alpha: 0.65,
+                                          ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        error != null
+                                            ? Icons.warning_amber_rounded
+                                            : Icons.sync,
+                                        size: 18,
+                                        color: error != null
+                                            ? cs.onErrorContainer
+                                            : cs.onPrimaryContainer,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          error != null
+                                              ? 'Sync Error: $error'
+                                              : 'Sync Folder · ${sync.name}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: error != null
+                                                    ? cs.onErrorContainer
+                                                    : cs.onPrimaryContainer,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        Expanded(
+                          child: CursorList<Node>(
+                            key: _listKey,
+                            empty: _search.isEmpty
+                                ? 'This folder is empty.'
+                                : 'No matches.',
+                            emptyHint: _search.isEmpty
+                                ? (isDesktop || kIsWeb
+                                      ? 'Tap Add or drag and drop files here.'
+                                      : 'Tap Add to upload files or create a folder.')
+                                : 'Try a different search.',
+                            emptyIcon: Icons.folder_open,
+                            header: _PendingUploads(
+                              pointId: pt.id,
+                              dir: _path,
+                              since: _panelSince,
+                              onDismiss: () =>
+                                  setState(() => _panelSince = DateTime.now()),
+                            ),
+                            fetch: (c) => _v.list(
+                              pt.id,
+                              _path,
+                              search: _search,
+                              cursor: c,
+                              order: _desc ? 'Desc' : 'Asc',
+                            ),
+                            onChanged: (l) => _loaded = l,
+                            itemBuilder: (c, n, i) {
+                              final sel = _sel.contains(n.name);
+                              final sync = n.isDir
+                                  ? _syncForPath(joinPath(_path, n.name), pt.id)
+                                  : null;
+                              final syncError = sync == null
+                                  ? null
+                                  : SyncRunStatus.load(
+                                      ref.read(prefsProvider),
+                                      sync.id,
+                                    ).error;
+                              final syncColor = syncError != null
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary;
+                              return GestureDetector(
+                                onSecondaryTapUp: (details) async {
+                                  final action = await showMenu<String>(
+                                    context: context,
+                                    position: RelativeRect.fromLTRB(
+                                      details.globalPosition.dx,
+                                      details.globalPosition.dy,
+                                      MediaQuery.sizeOf(context).width -
+                                          details.globalPosition.dx,
+                                      MediaQuery.sizeOf(context).height -
+                                          details.globalPosition.dy,
+                                    ),
+                                    items: const [
+                                      PopupMenuItem(
+                                        value: 'open',
+                                        child: Text('Open'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'download',
+                                        child: Text('Download'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'rename',
+                                        child: Text('Rename'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'move',
+                                        child: Text('Move To…'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'copy',
+                                        child: Text('Copy To…'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'select',
+                                        child: Text('Select'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'info',
+                                        child: Text('Details'),
+                                      ),
+                                      PopupMenuDivider(),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  );
+                                  if (!context.mounted || action == null) {
+                                    return;
+                                  }
+                                  switch (action) {
+                                    case 'open':
+                                      _open(n);
+                                    case 'download':
+                                      _download([n]);
+                                    case 'rename':
+                                      _rename(n);
+                                    case 'move':
+                                      _moveCopy([n], false);
+                                    case 'copy':
+                                      _moveCopy([n], true);
+                                    case 'select':
+                                      _toggle(n);
+                                    case 'info':
+                                      _info(n);
+                                    case 'delete':
+                                      _delete([n]);
+                                  }
+                                },
+                                child: ListTile(
+                                  key: ValueKey(
+                                    '${pt.id}:$_path:${n.isDir ? "d" : "f"}:${n.name}',
+                                  ),
+                                  selected: sel,
+                                  leading: selecting
+                                      ? SizedBox(
+                                          width: 56,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: Checkbox(
+                                                  value: sel,
+                                                  onChanged: (_) => _toggle(n),
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Icon(
+                                                sync != null
+                                                    ? Icons.sync
+                                                    : iconFor(n),
+                                                size: 24,
+                                                color: sync != null
+                                                    ? syncColor
+                                                    : (n.isDir
+                                                          ? Colors.orange
+                                                          : null),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : sync != null
+                                      ? Icon(Icons.sync, color: syncColor)
+                                      : Icon(
+                                          iconFor(n),
+                                          color: n.isDir ? Colors.orange : null,
+                                        ),
+                                  title: Text(
+                                    n.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    sync != null
+                                        ? (syncError != null
+                                              ? 'Sync Error'
+                                              : 'Sync Folder')
+                                        : (n.isDir
+                                              ? 'Folder · ${fmtShort(n.modified)}'
+                                              : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}'),
+                                  ),
+                                  trailing: selecting
+                                      ? null
+                                      : PopupMenuButton<String>(
+                                          onSelected: (a) {
+                                            switch (a) {
+                                              case 'open':
+                                                _open(n);
+                                              case 'download':
+                                                _download([n]);
+                                              case 'rename':
+                                                _rename(n);
+                                              case 'move':
+                                                _moveCopy([n], false);
+                                              case 'copy':
+                                                _moveCopy([n], true);
+                                              case 'select':
+                                                _toggle(n);
+                                              case 'info':
+                                                _info(n);
+                                              case 'delete':
+                                                _delete([n]);
+                                            }
+                                          },
+                                          itemBuilder: (_) => const [
+                                            PopupMenuItem(
+                                              value: 'open',
+                                              child: Text('Open'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'download',
+                                              child: Text('Download'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'rename',
+                                              child: Text('Rename'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'move',
+                                              child: Text('Move To…'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'copy',
+                                              child: Text('Copy To…'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'select',
+                                              child: Text('Select'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'info',
+                                              child: Text('Details'),
+                                            ),
+                                            PopupMenuDivider(),
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                  onTap: () => (kIsWeb || isDesktop)
+                                      ? _open(n)
+                                      : (selecting ? _toggle(n) : _open(n)),
+                                  onLongPress: () => _toggle(n),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_drag)
+                Positioned.fill(
+                  child: Container(
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.12),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.upload_file, size: 56),
+                          SizedBox(height: 8),
+                          Text('Drop to Upload Here'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

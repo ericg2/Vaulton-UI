@@ -1,54 +1,46 @@
+import 'dart:async';
 import 'dart:ui' show Size;
 import 'dart:io';
+
 import 'package:window_manager/window_manager.dart';
 
-bool get isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+bool get isDesktop =>
+    Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
-_Guard? _closeGuard;
+Window? get _currentWindow => WindowManager.instance.getCurrent();
 
-class _Guard with WindowListener {
-  _Guard(this.hasWork, this.ask);
-  final bool Function() hasWork;
-  final Future<bool> Function() ask;
-  @override
-  void onWindowClose() async {
-    if (!hasWork()) {
-      await windowManager.setPreventClose(false);
-      await windowManager.close();
-      return;
-    }
-    // true => minimise and keep transferring, false => really quit.
-    if (await ask()) {
-      await windowManager.minimize();
-    } else {
-      await windowManager.setPreventClose(false);
-      await windowManager.close();
-    }
-  }
-}
+ListenerId? _closeListener;
 
 Future<void> clearCloseGuard() async {
   if (!isDesktop) return;
-  if (_closeGuard != null) {
-    windowManager.removeListener(_closeGuard!);
-    _closeGuard = null;
-  }
-  await windowManager.setPreventClose(false);
+  final listener = _closeListener;
+  _closeListener = null;
+  if (listener != null) _currentWindow?.removeListener(listener);
 }
 
 Future<void> initDesktopWindow() async {
   if (!isDesktop) return;
-  await windowManager.ensureInitialized();
-  await windowManager.setMinimumSize(const Size(420, 560));
-  await windowManager.setTitle('Vaulton');
-  await windowManager.setPreventClose(false);
+  final window = _currentWindow;
+  if (window == null) return;
+  window.minimumSize = const Size(420, 560).toNative();
+  window.title = 'Vaulton';
 }
 
-void setCloseGuard(bool Function() hasActiveWork, Future<bool> Function() askMinimize) {
+void setCloseGuard(
+  bool Function() hasActiveWork,
+  Future<bool> Function() askMinimize,
+) {
   if (!isDesktop) return;
-  if (_closeGuard != null) windowManager.removeListener(_closeGuard!);
-  _closeGuard = _Guard(hasActiveWork, askMinimize);
-  windowManager.addListener(_closeGuard!);
-  windowManager.setPreventClose(true);
-
+  final window = _currentWindow;
+  if (window == null) return;
+  final previous = _closeListener;
+  if (previous != null) window.removeListener(previous);
+  _closeListener = window.addListener((event) async {
+    if (event is! WindowCloseRequestedEvent || !hasActiveWork()) return;
+    // true => minimise and keep transferring, false => really quit.
+    if (await askMinimize()) {
+      event.request.cancel();
+      window.minimize();
+    }
+  });
 }

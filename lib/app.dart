@@ -2,6 +2,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart' as mui;
 import 'core/providers.dart';
 import 'core/theme.dart';
 import 'features/auth/login_page.dart';
@@ -19,8 +20,8 @@ class VaultonApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(settingsProvider.select((s) => s.themeMode));
     return DynamicColorBuilder(builder: (light, dark) {
-      final l = light?.harmonized() ?? ColorScheme.fromSeed(seedColor: seedColor);
-      final d = dark?.harmonized() ?? ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark);
+      final l = light == null ? ColorScheme.fromSeed(seedColor: seedColor) : _fromDynamicScheme(light);
+      final d = dark == null ? ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark) : _fromDynamicScheme(dark);
       return MaterialApp(
         title: 'Vaulton',
         navigatorKey: navigatorKey,
@@ -82,4 +83,59 @@ class _AuthGateState extends ConsumerState<AuthGate> {
       child: child,
     );
   }
+}
+
+/// Converts the `material_ui` scheme returned by `dynamic_color` 2.x into the
+/// Flutter Material [ColorScheme] used by the rest of the app.
+ColorScheme _fromDynamicScheme(mui.ColorScheme scheme) {
+  final s = scheme.harmonized();
+  return ColorScheme(
+    brightness: s.brightness,
+    primary: s.primary,
+    onPrimary: s.onPrimary,
+    primaryContainer: s.primaryContainer,
+    onPrimaryContainer: s.onPrimaryContainer,
+    primaryFixed: s.primaryFixed,
+    primaryFixedDim: s.primaryFixedDim,
+    onPrimaryFixed: s.onPrimaryFixed,
+    onPrimaryFixedVariant: s.onPrimaryFixedVariant,
+    secondary: s.secondary,
+    onSecondary: s.onSecondary,
+    secondaryContainer: s.secondaryContainer,
+    onSecondaryContainer: s.onSecondaryContainer,
+    secondaryFixed: s.secondaryFixed,
+    secondaryFixedDim: s.secondaryFixedDim,
+    onSecondaryFixed: s.onSecondaryFixed,
+    onSecondaryFixedVariant: s.onSecondaryFixedVariant,
+    tertiary: s.tertiary,
+    onTertiary: s.onTertiary,
+    tertiaryContainer: s.tertiaryContainer,
+    onTertiaryContainer: s.onTertiaryContainer,
+    tertiaryFixed: s.tertiaryFixed,
+    tertiaryFixedDim: s.tertiaryFixedDim,
+    onTertiaryFixed: s.onTertiaryFixed,
+    onTertiaryFixedVariant: s.onTertiaryFixedVariant,
+    error: s.error,
+    onError: s.onError,
+    errorContainer: s.errorContainer,
+    onErrorContainer: s.onErrorContainer,
+    surface: s.surface,
+    onSurface: s.onSurface,
+    surfaceDim: s.surfaceDim,
+    surfaceBright: s.surfaceBright,
+    surfaceContainerLowest: s.surfaceContainerLowest,
+    surfaceContainerLow: s.surfaceContainerLow,
+    surfaceContainer: s.surfaceContainer,
+    surfaceContainerHigh: s.surfaceContainerHigh,
+    surfaceContainerHighest: s.surfaceContainerHighest,
+    onSurfaceVariant: s.onSurfaceVariant,
+    outline: s.outline,
+    outlineVariant: s.outlineVariant,
+    shadow: s.shadow,
+    scrim: s.scrim,
+    inverseSurface: s.inverseSurface,
+    onInverseSurface: s.onInverseSurface,
+    inversePrimary: s.inversePrimary,
+    surfaceTint: s.surfaceTint,
+  );
 }
