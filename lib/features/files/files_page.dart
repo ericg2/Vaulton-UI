@@ -776,7 +776,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   // ------------------------------------------------------------------ build
   @override
   Widget build(BuildContext context) {
-    ref.listen(epochProvider, (_, _) {
+    ref.listen(pointListEpochProvider, (_, _) {
       if (_point == null) {
         unawaited(_initPoints());
       } else {
