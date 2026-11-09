@@ -669,6 +669,7 @@ Future<void> scheduleDrain() async {
   await notifications.initialize(settings: const InitializationSettings(
     android: AndroidInitializationSettings('@mipmap/ic_launcher'),
   ));
+  final android = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   await android?.createNotificationChannel(const AndroidNotificationChannel(
     _kTransferChannel, 'File transfers',
     description: 'Progress of file uploads and downloads.', importance: Importance.low,
