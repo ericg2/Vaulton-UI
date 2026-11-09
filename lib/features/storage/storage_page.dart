@@ -1234,6 +1234,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (created == true && mounted) {
       _key.currentState?.refresh();
       ref.invalidate(pointNamesProvider);
+      if (!widget.repo) {
+        ref.read(pointListEpochProvider.notifier).bump();
+      }
       ref.read(epochProvider.notifier).bump();
     }
   }
@@ -1293,6 +1296,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     }
     _key.currentState?.refresh();
     ref.invalidate(pointNamesProvider);
+    if (!widget.repo) {
+      ref.read(pointListEpochProvider.notifier).bump();
+    }
     ref.read(epochProvider.notifier).bump();
   }
 
