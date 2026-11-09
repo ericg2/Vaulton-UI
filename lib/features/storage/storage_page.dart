@@ -1692,6 +1692,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       if (confirmed != true) return;
       try {
         await _v.lockData(point.id);
+        markDataFolderManuallyLocked(point.id);
         if (mounted) _key.currentState?.refresh();
       } catch (e) {
         if (mounted) toast(context, e.toString(), error: true);
