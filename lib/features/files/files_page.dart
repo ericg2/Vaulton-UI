@@ -163,13 +163,33 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         ref.read(authProvider.notifier).accountPassword,
       );
       final pts = await loadAllPoints(ref);
-      final last =
-          widget.initialPointId ?? ref.read(settingsProvider).lastPointId;
+      final settings = ref.read(settingsProvider);
+      final preferred = widget.initialPointId ?? settings.lastPointId;
+      final selected = pts.where((x) => x.id == preferred).firstOrNull ?? pts.firstOrNull;
       if (!mounted) return;
+      final changed = _point?.id != selected?.id;
       setState(() {
         _points = pts;
-        _point = pts.where((x) => x.id == last).firstOrNull ?? pts.firstOrNull;
+        _point = selected;
+        if (changed) {
+          _segs = [];
+          _sel.clear();
+          _loaded = [];
+          _search = '';
+          _searching = false;
+          _searchCtl.clear();
+        }
       });
+      if (selected == null) {
+        ref.read(settingsProvider.notifier).clearLastPoint();
+      } else if (settings.lastPointId != selected.id) {
+        ref.read(settingsProvider.notifier).setLastPoint(selected.id);
+      }
+      if (changed && selected != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _refresh();
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _pointsError = e);
     }
@@ -203,6 +223,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     try {
       final fresh = await _v.data(pt.id);
       if (mounted && _point?.id == pt.id) setState(() => _point = fresh);
+    } on ApiException catch (error) {
+      if (error.isNotFound && mounted && _point?.id == pt.id) {
+        await _initPoints();
+      }
     } catch (_) {}
   }
 
