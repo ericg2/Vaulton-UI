@@ -439,7 +439,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
                 const SizedBox(height: 10),
                 _PathRow(
-                  label: 'From Folder',
+                  label: 'Source',
                   value: source.location,
                   onBrowse: () async {
                     final picked = await pickSyncSource();
@@ -448,7 +448,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
                 const SizedBox(height: 14),
                 _PathRow(
-                  label: 'To Folder',
+                  label: 'Destination',
                   value: _pointName(pointId) + remoteDir,
                   onBrowse: () async {
                     final picked = await pickFolder(
@@ -518,7 +518,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   onChanged: (v) => set(() => wakeServer = v),
                 ),
                 _SettingSwitch(
-                  title: 'Make Destination Match Source',
+                  title: 'Mirror Destination',
                   subtitle: 'Also remove files from the destination when they are deleted from the source.',
                   value: deleteExtras,
                   onChanged: (v) => set(() => deleteExtras = v),
