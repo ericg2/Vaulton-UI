@@ -27,12 +27,12 @@ class AppSettings {
   final ThemeMode themeMode;
   final int concurrency;
   final String? downloadDir, lastPointId;
-  AppSettings copyWith({ThemeMode? themeMode, int? concurrency, String? downloadDir, String? lastPointId, bool clearDir = false}) =>
+  AppSettings copyWith({ThemeMode? themeMode, int? concurrency, String? downloadDir, String? lastPointId, bool clearDir = false, bool clearLastPoint = false}) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
         concurrency: concurrency ?? this.concurrency,
         downloadDir: clearDir ? null : (downloadDir ?? this.downloadDir),
-        lastPointId: lastPointId ?? this.lastPointId,
+        lastPointId: clearLastPoint ? null : (lastPointId ?? this.lastPointId),
       );
 }
 
@@ -70,6 +70,12 @@ class SettingsController extends Notifier<AppSettings> {
   void setLastPoint(String id) {
     _p.setString('lastPointId', id);
     state = state.copyWith(lastPointId: id);
+  }
+
+  void clearLastPoint({String? ifMatches}) {
+    if (ifMatches != null && state.lastPointId != ifMatches) return;
+    _p.remove('lastPointId');
+    state = state.copyWith(clearLastPoint: true);
   }
 }
 
