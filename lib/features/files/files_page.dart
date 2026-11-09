@@ -130,10 +130,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     // Quietly re-sync the listing and usage in the background. This never clears
     // the list or shows a spinner, so there is no flicker while you browse.
     _autoTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!mounted || !TickerMode.valuesOf(context).enabled || _point == null) {
-        return;
-      }
-      if (_point!.isEncrypted && !_point!.isUnlocked) {
+      if (!mounted || !TickerMode.valuesOf(context).enabled) return;
+      if (_point == null) {
+        _initPoints();
+      } else if (_point!.isEncrypted && !_point!.isUnlocked) {
         _refreshUsage();
       } else {
         _silent();
