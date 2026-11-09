@@ -131,58 +131,28 @@ class UpdateService {
             title: const Text('Update Available'),
             content: SizedBox(
               width: 440,
-              height: (MediaQuery.sizeOf(dialogContext).height * 0.62)
-                  .clamp(240.0, 520.0)
-                  .toDouble(),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: colors.secondaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.system_update_alt, size: 30, color: colors.onSecondaryContainer),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Vaulton $latestVersion', style: theme.textTheme.titleMedium?.copyWith(color: colors.onSecondaryContainer)),
-                              Text('Currently installed: $currentVersion', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSecondaryContainer)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text('The update will be downloaded and verified before installation.'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'You can choose Later and install it when you are ready.',
-                    style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                  ),
-                  if (releaseNotes.isNotEmpty) ...[
-                    const SizedBox(height: 18),
-                    Text('What’s New', style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colors.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
+                    Text('Vaulton $latestVersion', style: theme.textTheme.titleLarge),
+                    Text(
+                      'Installed version: $currentVersion',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
                       ),
-                      child: _buildReleaseNotes(releaseNotes, theme),
                     ),
-                  ],
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Vaulton will download and verify the update before opening the installer.',
+                    ),
+                    if (releaseNotes.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text('What’s New', style: theme.textTheme.titleSmall),
+                      const SizedBox(height: 8),
+                      _buildReleaseNotes(releaseNotes, theme),
+                    ],
                   ],
                 ),
               ),
@@ -192,7 +162,7 @@ class UpdateService {
               FilledButton.icon(
                 onPressed: () => Navigator.pop(dialogContext, true),
                 icon: const Icon(Icons.download_outlined),
-                label: const Text('Download Update'),
+                label: const Text('Install Update'),
               ),
             ],
           );
@@ -210,7 +180,7 @@ class UpdateService {
         builder: (dialogContext) => ValueListenableBuilder<_UpdateProgress>(
           valueListenable: progress,
           builder: (context, value, _) => AlertDialog(
-            title: const Text('Updating Vaulton'),
+            title: const Text('Installing Update'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
