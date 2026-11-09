@@ -642,10 +642,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text('Storage Type', style: tt.titleSmall),
+                  Text('Where to Store Files', style: tt.titleSmall),
                   const SizedBox(height: 4),
                   Text(
-                    'Choose where Vaulton should store your files.',
+                    'Choose the kind of storage you want to use.',
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
@@ -832,7 +832,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Location Capacity'),
+          title: const Text('Storage Space'),
           content: SizedBox(
             width: 440,
             child: SingleChildScrollView(
@@ -846,7 +846,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Expanded(child: Text('Allocated capacity')),
+                      const Expanded(child: Text('Space Set Aside')),
                       Text(
                         fmtBytes(
                           override
@@ -872,9 +872,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Allow a custom limit'),
+                    title: const Text('Set a Custom Space Limit'),
                     subtitle: const Text(
-                      'The limit may exceed currently available disk space.',
+                      'This limit can be higher than the free space currently available.',
                     ),
                     value: override,
                     onChanged: (v) => setDialogState(() => override = v),
@@ -886,7 +886,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Custom capacity',
+                        labelText: 'Space Limit',
                         suffixText: 'GiB',
                       ),
                     ),
@@ -894,7 +894,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Warning: Vaulton may allocate more space than the disk currently has free.',
+                        'This may set aside more space than the drive currently has free.',
                         style: TextStyle(
                           color: Theme.of(ctx).colorScheme.error,
                         ),
@@ -1134,7 +1134,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Text(
-                          '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
+                          '${fmtBytes(allocated)} set aside · ${fmtBytes(r.freeBytes)} available of ${fmtBytes(r.maxBytes)}',
                           style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                             color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                           ),
@@ -1207,7 +1207,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     if (usable.isEmpty) {
       return toast(
         context,
-        'No location allows ${widget.repo ? 'backup vaults' : 'data folders'}. Add or share one first.',
+        'There is no storage location available for ${widget.repo ? 'backup vaults' : 'data folders'}. Add a location or ask its owner to share one.',
         error: true,
       );
     }
@@ -2054,7 +2054,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 18),
-            Text('Space Limit', style: t.titleSmall),
+            Text('Storage Space', style: t.titleSmall),
             const SizedBox(height: 8),
             LayoutBuilder(
               builder: (context, box) {
@@ -2143,7 +2143,7 @@ class _EditPointSheetState extends State<_EditPointSheet> {
                   : (value) => setState(() => _setBytes((value * max).round())),
             ),
             Text(
-              'Available to this folder: ${fmtBytes(max)}.',
+              'Maximum available: ${fmtBytes(max)}.',
               style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 20),
@@ -2529,7 +2529,7 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Space Limit', style: t.titleSmall),
+              Text('Storage Space', style: t.titleSmall),
               const SizedBox(height: 8),
               LayoutBuilder(
                 builder: (context, box) {
@@ -2832,7 +2832,7 @@ class _RootSheetState extends State<_RootSheet> {
             UsageBar(used: allocated, max: r.maxBytes),
             const SizedBox(height: 6),
             Text(
-              '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} free of ${fmtBytes(r.maxBytes)}',
+              '${fmtBytes(allocated)} set aside · ${fmtBytes(r.freeBytes)} available of ${fmtBytes(r.maxBytes)}',
               style: t.bodySmall,
             ),
           ] else ...[
