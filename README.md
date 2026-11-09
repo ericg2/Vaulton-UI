@@ -52,7 +52,7 @@ Do not expose the server directly to the internet without configuring secure rem
 | File management | Browse, search, upload, download, move, copy, rename, and preview files. |
 | Backups | Create scheduled backups, browse saved snapshots, and restore files or folders. |
 | Folder sync | Keep selected folders in sync with a storage location. |
-| Storage | Connect storage locations and manage access and quotas. New Data Folders can optionally use the server's experimental encryption feature when it is enabled. |
+| Storage | Choose where your files and backups are kept, and manage shared storage. |
 | Transfers | Track uploads and downloads, retry failed transfers, and view progress. |
 | Account security | Use two-factor authentication and scoped API tokens. |
 | Server management | Check server health, manage users, review jobs, and view activity when your account has permission. |
@@ -63,8 +63,8 @@ Vaulton only shows management features your account is allowed to use. Your serv
 ## Helpful Notes
 
 - The app needs a running Vaulton server. It does not store or serve your files by itself.
-- Optional folder protection is controlled by the server and is off by default. An administrator must enable it before you can use it. It applies to new, empty Data Folders; existing folders are not changed. Save the recovery key shown when you create a protected folder.
-- New encrypted Data Folders use your Vaulton account password; there is no separate folder password. Vaulton attempts to unlock encrypted folders when the app starts. If you enable Remember Password, the app can restore your account password for startup unlocking; otherwise, sign in again after restarting the app. The password is never stored with the folder's encryption metadata.
+- You can protect new Data Folders with encryption when it is enabled on your server. Use your Vaulton account password to unlock them, and save the recovery key shown during setup.
+- Vaulton unlocks protected folders when you sign in. Turn on **Remember Password** to unlock them automatically after restarting the app.
 - On Linux, download `Vaulton-Linux-Install.sh` from the release assets, then run `chmod +x Vaulton-Linux-Install.sh && ./Vaulton-Linux-Install.sh`. The installer downloads and verifies the latest Linux package, installs it under `~/.local/opt/vaulton`, and registers the application-menu entry. Relaunch Vaulton from the application menu on Wayland.
 - Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
