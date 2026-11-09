@@ -503,17 +503,45 @@ class _HealthRow extends StatelessWidget {
     final disk = _diskSummary(check);
     final details = [if (description.isNotEmpty) description, ?disk].join('\n');
 
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall),
-      subtitle: details.isEmpty ? null : Text(details, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-      trailing: Container(
-        constraints: const BoxConstraints(minWidth: 76, maxWidth: 104),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-        alignment: Alignment.center,
-        child: Text(status, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall),
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(details, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            constraints: const BoxConstraints(minWidth: 76, maxWidth: 104),
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              status,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }
