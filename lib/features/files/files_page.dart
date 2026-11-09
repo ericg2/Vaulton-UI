@@ -130,8 +130,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     // Quietly re-sync the listing and usage in the background. This never clears
     // the list or shows a spinner, so there is no flicker while you browse.
     _autoTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted && TickerMode.valuesOf(context).enabled && _point != null &&
-          (!_point!.isEncrypted || _point!.isUnlocked)) {
+      if (!mounted || !TickerMode.valuesOf(context).enabled || _point == null) {
+        return;
+      }
+      if (_point!.isEncrypted && !_point!.isUnlocked) {
+        _refreshUsage();
+      } else {
         _silent();
       }
     });
@@ -772,7 +776,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   @override
   Widget build(BuildContext context) {
     ref.listen(epochProvider, (_, _) {
-      if (_point != null) unawaited(_refreshUsage());
+      if (_point == null) {
+        unawaited(_initPoints());
+      } else {
+        unawaited(_refreshUsage());
+      }
     });
     if (_pointsError != null) {
       return Scaffold(
