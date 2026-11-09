@@ -124,7 +124,7 @@ class SettingsPage extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            'Transfers at Once',
+                            'Simultaneous Transfers',
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
                         ),
