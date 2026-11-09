@@ -172,12 +172,12 @@ class _BackupSheetState extends State<_BackupSheet> {
                   onTap: _chooseFolder,
                 ),
               ),
-              _heading('Choose What to Back Up', 'Back up everything or choose specific file types.'),
+              _heading('Back Up', 'Choose which files to save.'),
               SegmentedButton<bool>(
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(value: false, label: Text('Everything')),
-                  ButtonSegment(value: true, label: Text('Choose File Types')),
+                  ButtonSegment(value: true, label: Text('File Types')),
                 ],
                 selected: {_onlySome},
                 onSelectionChanged: (s) => setState(() => _onlySome = s.first),
@@ -197,16 +197,16 @@ class _BackupSheetState extends State<_BackupSheet> {
                       )
                     : const SizedBox(width: double.infinity),
               ),
-              _heading('Choose What to Skip', 'Leave out files you don’t need in this backup.'),
+              _heading('Skip', 'Leave out files you don’t need.'),
               _kinds(_skipPresets, _skipKinds),
               const SizedBox(height: 12),
-              ChipInput(label: 'Files and Folders to Skip', hint: 'For example, *.iso or Downloads.', values: _customSkip, onChanged: (v) => setState(() => _customSkip = v)),
-              _heading('Skip Large Files', 'Files larger than the selected size won’t be backed up.'),
+              ChipInput(label: 'Files and Folders', hint: 'For example, *.iso or Downloads.', values: _customSkip, onChanged: (v) => setState(() => _customSkip = v)),
+              _heading('Large Files', 'Skip files over this size.'),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final c in _sizeChoices)
                   ChoiceChip(label: Text(c.$1), selected: _maxSize == c.$2, onSelected: (_) => setState(() => _maxSize = c.$2)),
               ]),
-              _heading('Labels', 'Optional. Add a label to help you find this backup later.'),
+              _heading('Labels', 'Add a label to find this backup later (optional).'),
               ChipInput(label: 'Add a Label', hint: 'For example, Before upgrade.', values: _labels, onChanged: (v) => setState(() => _labels = v)),
               const SizedBox(height: 8),
               SwitchListTile(
