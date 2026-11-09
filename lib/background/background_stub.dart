@@ -8,6 +8,13 @@ class SyncNotification {
   Future<void> finish(SharedPreferences prefs, {bool cancelled = false}) async {}
 }
 
+class TransferNotification {
+  TransferNotification._();
+  static Future<TransferNotification> start(Object task) async => TransferNotification._();
+  void progress(int done, int total) {}
+  Future<void> finish({bool handedOff = false}) async {}
+}
+
 bool get backgroundSupported => false;
 Future<void> initBackground() async {}
 Future<void> scheduleDrain() async {}
