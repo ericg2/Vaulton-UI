@@ -276,7 +276,7 @@ void main() {
 
       await tester.tap(find.text('Create Folder'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Encrypt This Data Folder'));
+      await tester.tap(find.text('Use Encryption'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(DropdownButtonFormField<String>));
