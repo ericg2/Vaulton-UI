@@ -309,7 +309,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (j.kind == 'backup' && j.phase == JobPhase.succeeded && j.snapshotId != null && j.options['dryRun'] != true)
               FilledButton.icon(onPressed: () => _browse(j), icon: const Icon(Icons.folder_open_outlined), label: const Text('Browse Snapshot')),
-            if (showVault) OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Vault')),
+            if (showVault) OutlinedButton.icon(onPressed: () => _openRepo(j), icon: const Icon(Icons.inventory_2_outlined), label: const Text('Open Backup Vault')),
             if (j.active) OutlinedButton.icon(onPressed: () => _cancel(j), icon: const Icon(Icons.stop_circle_outlined), label: const Text('Cancel')),
           ]),
         ]),
@@ -392,7 +392,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     }
     return _card('Details', [
       _kv('Job ID', copyable(j.id)),
-      _kv('Job Type', Text(kindLabel(j.kind))),
+      _kv('Type', Text(kindLabel(j.kind))),
       _kv('Status', Text(phaseStyle(context, j.phase).label)),
       _kv('Backup Vault', namedId(_repoName, j.repoId)),
       if (j.dataId != null) _kv('Data Folder', namedId(_dataName, j.dataId!)),
@@ -400,7 +400,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
       if (j.snapshotId != null) _kv('Snapshot ID', copyable(j.snapshotId!)),
       if (j.options['dryRun'] == true) _kv('Run Type', const Text('Test Run')),
       _kv('Created', Text(fmtDate(j.createdAt))),
-      if (j.scheduleDate != null) _kv('Not Before', Text(fmtDate(j.scheduleDate))),
+      if (j.scheduleDate != null) _kv('Scheduled For', Text(fmtDate(j.scheduleDate))),
       if (j.startDate != null) _kv('Started', Text(fmtDate(j.startDate))),
       if (j.endDate != null) _kv('Finished', Text(fmtDate(j.endDate))),
       if (j.duration != null) _kv('Duration', Text(fmtDuration(j.duration!))),
