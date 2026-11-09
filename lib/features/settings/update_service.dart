@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import '../../background/background_api.dart';
 
 class _UpdateProgress {
   const _UpdateProgress(this.message, {this.progress});
