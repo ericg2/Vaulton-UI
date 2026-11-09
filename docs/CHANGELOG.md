@@ -10,6 +10,7 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 - Encrypted folders unlock automatically when you sign in.
 - Simplified the storage and folder sync screens.
 - Simplified the dashboard and settings screens.
+- Made folder sync options and warnings easier to understand.
 - Simplified the encryption option to **Use Encryption**.
 - Improved folder unlocking and recovery.
 - Improved password checks and messages.
