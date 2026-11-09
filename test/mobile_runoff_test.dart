@@ -313,6 +313,18 @@ void main() {
       expect(find.textContaining('No data folders yet.'), findsOneWidget);
     });
 
+    testWidgets('files stale saved selection falls back to an existing folder', (tester) async {
+      await pumpScreen(
+        tester,
+        const FilesPage(),
+        _FakeVaulton(points: [_point('p2', 'Media')]),
+        prefs: {'lastPointId': 'deleted-point'},
+      );
+
+      expect(find.text('Media'), findsOneWidget);
+      expect(find.textContaining('No data folders yet.'), findsNothing);
+    });
+
     testWidgets('files populated fits', (tester) async {
       final api = _FakeVaulton(
         points: [_point('p1', 'Docs')],
