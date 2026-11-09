@@ -233,7 +233,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
               DropdownMenuItem(value: x.id, child: Text(x.name)),
           ],
           onChanged: (id) {
-            if (id != null) _selectPoint(id);
+            if (id != null) unawaited(_selectPoint(id));
           },
         ),
       );
@@ -785,7 +785,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Unlock this folder with your Vaulton password or recovery key to browse its files.',
+                    'Unlock this folder with your Vaulton account password or recovery key to browse its files.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
