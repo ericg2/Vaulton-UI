@@ -64,7 +64,7 @@ Vaulton only shows management features your account is allowed to use. Your serv
 
 - The app needs a running Vaulton server. It does not store or serve your files by itself.
 - Optional folder protection is controlled by the server and is off by default. An administrator must enable it before you can use it. It applies to new, empty Data Folders; existing folders are not changed. Save the recovery key shown when you create a protected folder.
-- Protected folders must be unlocked before use. Backups and scheduled jobs can use them, but you must unlock the folder before each run. Vaulton does not save your folder password.
+- New encrypted Data Folders use your Vaulton account password; there is no separate folder password. Vaulton attempts to unlock encrypted folders when the app starts. If you enable Remember Password, the app can restore your account password for startup unlocking; otherwise, sign in again after restarting the app. The password is never stored with the folder's encryption metadata.
 - On Linux, download `Vaulton-Linux-Install.sh` from the release assets, then run `chmod +x Vaulton-Linux-Install.sh && ./Vaulton-Linux-Install.sh`. The installer downloads and verifies the latest Linux package, installs it under `~/.local/opt/vaulton`, and registers the application-menu entry. Relaunch Vaulton from the application menu on Wayland.
 - Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
 - Web uploads are best suited to small and medium files because the browser manages the transfer.
