@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -56,6 +57,44 @@ Widget _buildReleaseNotes(String markdown, ThemeData theme) {
 
 class UpdateService {
   static const _api = 'https://api.github.com/repos/ericg2/Vaulton-UI/releases/latest';
+  static Future<FlutterLocalNotificationsPlugin>? _notificationInit;
+  static DateTime _lastNotificationAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static Future<FlutterLocalNotificationsPlugin> _notifier() => _notificationInit ??= () async {
+    final notifications = FlutterLocalNotificationsPlugin();
+    await notifications.initialize(settings: const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ));
+    final android = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
+    await android?.createNotificationChannel(const AndroidNotificationChannel(
+      'vaulton_updates', 'Vaulton updates',
+      description: 'Download and verification progress for Vaulton updates.', importance: Importance.low,
+    ));
+    return notifications;
+  }();
+
+  static Future<void> _notifyProgress(_UpdateProgress progress, {bool ongoing = true}) async {
+    if (!Platform.isAndroid) return;
+    final now = DateTime.now();
+    if (ongoing && now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) return;
+    _lastNotificationAt = now;
+    final notifications = await _notifier();
+    final percent = progress.progress == null ? null : (progress.progress! * 100).round();
+    await notifications.show(
+      id: 7301,
+      title: progress.message.toLowerCase().startsWith('downloading') ? 'Downloading Vaulton' : 'Vaulton update',
+      body: percent == null ? progress.message : progress.message + ' (' + percent.toString() + '%)',
+      notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
+        'vaulton_updates', 'Vaulton updates',
+        channelDescription: 'Download and verification progress for Vaulton updates.',
+        importance: Importance.low, priority: Priority.low, onlyAlertOnce: true,
+        ongoing: ongoing, autoCancel: !ongoing, showProgress: true,
+        maxProgress: 100, progress: percent ?? 0, indeterminate: percent == null,
+      )),
+    );
+  }
+
   static final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(minutes: 5),
@@ -179,7 +218,7 @@ class UpdateService {
         builder: (dialogContext) => ValueListenableBuilder<_UpdateProgress>(
           valueListenable: progress,
           builder: (context, value, _) => AlertDialog(
-            title: const Text('Installing Update'),
+            title: Text(value.progress != null && value.progress! >= 1 ? 'Installing Update' : 'Downloading Update'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,8 +236,9 @@ class UpdateService {
         ),
       ));
 
-      void setProgress(String message, {double? value}) {
+      void setProgress(String message, {double? value, bool ongoing = true}) {
         progress.value = _UpdateProgress(message, progress: value);
+        unawaited(_notifyProgress(progress.value, ongoing: ongoing).catchError((_) {}));
       }
 
       try {
@@ -216,17 +256,14 @@ class UpdateService {
         if (!context.mounted) return;
 
         if (Platform.isAndroid) {
-          setProgress('Download verified. Android will now ask you to confirm the installation.', value: 1);
+          setProgress('Download verified. Android will now ask you to confirm the installation.', value: 1, ongoing: false);
           await Future<void>.delayed(const Duration(milliseconds: 800));
-          if (context.mounted && progressDialogOpen) {
-            Navigator.of(context, rootNavigator: true).pop();
-            progressDialogOpen = false;
-          }
           final result = await OpenFilex.open(
             package.path,
             type: 'application/vnd.android.package-archive',
           );
           if (result.type != ResultType.done && context.mounted) {
+            await _notifyProgress(const _UpdateProgress('Could not open the Android installer.'), ongoing: false);
             messenger.showSnackBar(SnackBar(
               content: Text('Could not open the Android installer: ${result.message}'),
               duration: const Duration(seconds: 8),
@@ -236,7 +273,7 @@ class UpdateService {
         }
 
         if (Platform.isWindows) {
-          setProgress('Opening the Windows installer. Vaulton will close, then reopen when the update is complete.', value: 1);
+          setProgress('Opening the Windows installer. Vaulton will close, then reopen when the update is complete.', value: 1, ongoing: false);
           await Future<void>.delayed(const Duration(milliseconds: 800));
           final installDir = p.dirname(Platform.resolvedExecutable);
           await Process.start(
@@ -262,7 +299,7 @@ class UpdateService {
             ),
             onStatus: (message) => setProgress(message),
           );
-          setProgress('Starting the installer…', value: 1);
+          setProgress('Starting the installer…', value: 1, ongoing: false);
           await Process.start(
             'bash',
             [
@@ -286,6 +323,9 @@ class UpdateService {
         progress.dispose();
       }
     } catch (error) {
+      if (Platform.isAndroid) {
+        await _notifyProgress(_UpdateProgress('Update failed: ' + _friendlyError(error)), ongoing: false).catchError((_) {});
+      }
       if (quietErrors || !context.mounted) return;
       messenger.showSnackBar(SnackBar(
         content: Text('Update failed: ${_friendlyError(error)}'),
