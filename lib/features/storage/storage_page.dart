@@ -2517,35 +2517,16 @@ class _NewDataPointSheetState extends State<NewDataPointSheet> {
                   onChanged: _saving
                       ? null
                       : (value) => setState(() => _encryptData = value),
-                  title: const Text('Encrypt This Data Folder'),
-                  subtitle: const Text(
-                    'Protects file contents, names, and folder metadata at rest.',
-                  ),
+                  title: const Text('Use Encryption'),
                 ),
-                if (_encryptData) ...[
-                  Text(
-                    'This folder uses your Vaulton account password automatically. You will not need a separate folder password. Save the recovery key when it appears.',
-                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                  if (widget.accountPassword == null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in again to use your account password for encryption.',
+                if (_encryptData && _passwordError.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      _passwordError,
                       style: t.bodySmall?.copyWith(color: cs.error),
                     ),
-                  ] else if (validateDataFolderEncryptionPassword(widget.accountPassword!) != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Change your Vaulton account password to at least 12 characters before creating an encrypted folder.',
-                      style: t.bodySmall?.copyWith(color: cs.error),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Text(
-                    'Protection can only be enabled when creating a new, empty Data Folder. The server administrator can access files while the folder is unlocked. Some remote storage locations may have limited write support.',
-                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
-                ],
               ],
               const SizedBox(height: 18),
               TextField(
