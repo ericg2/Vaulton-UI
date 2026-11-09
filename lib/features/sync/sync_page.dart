@@ -434,12 +434,12 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 _syncEditorHeading(ctx, 'Folders', 'Choose what to copy and where it should go.'),
                 TextField(
                   controller: nameCtl,
-                  decoration: const InputDecoration(labelText: 'Sync Name'),
+                  decoration: const InputDecoration(labelText: 'Name'),
                   onChanged: (v) => name = v,
                 ),
                 const SizedBox(height: 10),
                 _PathRow(
-                  label: 'Source',
+                  label: 'From Folder',
                   value: source.location,
                   onBrowse: () async {
                     final picked = await pickSyncSource();
@@ -448,14 +448,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
                 const SizedBox(height: 14),
                 _PathRow(
-                  label: 'Destination',
+                  label: 'To Folder',
                   value: _pointName(pointId) + remoteDir,
                   onBrowse: () async {
                     final picked = await pickFolder(
                       ctx,
                       initialPointId: pointId,
                       initialPath: remoteDir,
-                      title: 'Choose Destination',
+                      title: 'Choose Folder',
                     );
                     if (picked != null) {
                       set(() {
@@ -489,18 +489,18 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   },
                 ),
                 const SizedBox(height: 18),
-                _syncEditorHeading(ctx, 'Sync Behavior', 'Control how Vaulton handles files during each run.'),
+                _syncEditorHeading(ctx, 'Sync Options', 'Choose how files are handled each time.'),
                 _SettingSwitch(
                   title: 'Skip if Already Running',
                   value: skipIfRunning,
                   onChanged: (v) => set(() => skipIfRunning = v),
                 ),
                 const SizedBox(height: 14),
-                _syncEditorHeading(ctx, 'Device & Safety', 'Choose when syncs may run and how destination files are handled.'),
+                _syncEditorHeading(ctx, 'More Options', 'Choose when automatic syncing can run.'),
                 if (backgroundSupported) ...[
                   _SettingSwitch(
-                    title: 'Wi-Fi / Unmetered Only',
-                    subtitle: 'Pause automatic syncs when the connection is metered.',
+                    title: 'Only on Wi-Fi or Unlimited Connections',
+                    subtitle: 'Pause automatic syncing when the connection has a data limit.',
                     value: wifiOnly,
                     onChanged: (v) => set(() => wifiOnly = v),
                   ),
@@ -512,20 +512,20 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   ),
                 ],
                 _SettingSwitch(
-                  title: 'Wake Server if Asleep',
-                  subtitle: 'Wake the server before syncing when it is offline.',
+                  title: 'Wake Server When Needed',
+                  subtitle: 'Wake the server before syncing if it is asleep.',
                   value: wakeServer,
                   onChanged: (v) => set(() => wakeServer = v),
                 ),
                 _SettingSwitch(
-                  title: 'Mirror Destination',
-                  subtitle: 'Remove destination files that no longer exist in the source.',
+                  title: 'Make Destination Match Source',
+                  subtitle: 'Also remove files from the destination when they are deleted from the source.',
                   value: deleteExtras,
                   onChanged: (v) => set(() => deleteExtras = v),
                 ),
                 _SettingSwitch(
-                  title: 'Enable Automatic Sync',
-                  subtitle: 'Turn this off to keep the sync profile without running it.',
+                  title: 'Run Automatically',
+                  subtitle: 'Turn this off to keep these settings without scheduled runs.',
                   value: enabled,
                   onChanged: (v) => set(() => enabled = v),
                 ),
@@ -813,7 +813,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 const SizedBox(height: 12),
                 tile(
                   Icons.add_circle_outline,
-                  'New Files',
+                  'Files to Add',
                   plan.newFiles,
                   fmtBytes(
                     plan.uploads
@@ -823,7 +823,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
                 tile(
                   Icons.sync,
-                  'Updated Files',
+                  'Files to Update',
                   plan.updatedFiles,
                   fmtBytes(
                     plan.uploads
@@ -833,14 +833,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 ),
                 tile(
                   Icons.delete_outline,
-                  'Destination Extras',
+                  'Files to Remove',
                   plan.deletedFiles,
                   fmtBytes(plan.deleteBytes),
                   danger: plan.deletedFiles > 0,
                 ),
                 tile(
                   Icons.check_circle_outline,
-                  'Already in Sync',
+                  'Already Up to Date',
                   s.unchangedFiles,
                   '0 B',
                 ),
@@ -853,7 +853,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 if (plan.changes.isNotEmpty)
                   Card(
                     child: ExpansionTile(
-                      title: const Text('All Planned Changes'),
+                      title: const Text('See All Changes'),
                       subtitle: Text('${plan.changes.length} items'),
                       children: [
                         for (final change in plan.changes.take(500))
@@ -878,7 +878,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                             ),
                             subtitle: Text(
                               change.kind == SyncChangeKind.delete
-                                  ? 'Delete from destination'
+                                  ? 'Remove from destination'
                                   : change.kind == SyncChangeKind.add
                                   ? 'New file · ${fmtBytes(change.bytes)}'
                                   : change.kind == SyncChangeKind.update
@@ -907,7 +907,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      'Mirror is enabled. Destination extras will be permanently removed.',
+                      'Files that are only in the destination will be permanently deleted.',
                       style: Theme.of(ctx).textTheme.bodySmall
                           ?.copyWith(color: cs.error),
                     ),
@@ -927,9 +927,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 if (plan.deletedFiles > 0) {
                   final ok = await confirm(
                     context,
-                    'Remove Destination Extras?',
-                    'This will permanently delete ${plan.deletedFiles} destination item${plan.deletedFiles == 1 ? '' : 's'} so the destination exactly matches the source.',
-                    ok: 'Delete Extras and Sync',
+                    'Delete Files Not in Source?',
+                    'This will permanently delete ${plan.deletedFiles} file${plan.deletedFiles == 1 ? '' : 's'} from the destination because they are not in the source folder.',
+                    ok: 'Delete Files and Sync',
                     danger: true,
                   );
                   if (!ok) return;
@@ -941,7 +941,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 }
               },
               child: Text(
-                plan.deletedFiles > 0 ? 'Sync & Delete Extras' : 'Start Sync',
+                plan.deletedFiles > 0 ? 'Delete Files and Sync' : 'Start Sync',
               ),
             ),
           ],
@@ -1269,8 +1269,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         'No folders added.',
                         icon: Icons.sync,
                         hint: kIsWeb
-                            ? 'Folder sync is available in the desktop and mobile apps.'
-                            : 'Choose a folder on this device and where it should sync in Vaulton.',
+                            ? 'Folder Sync is available in the desktop and mobile apps.'
+                            : 'Choose a folder on this device and where to keep its copy in Vaulton.',
                       ),
                     ),
                   ),
