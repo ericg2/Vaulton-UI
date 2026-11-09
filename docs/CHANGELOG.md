@@ -13,6 +13,7 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 - Made folder sync options and warnings easier to understand.
 - Clarified labels in transfer and backup activity screens.
 - Made storage setup, backup, and restore choices easier to understand.
+- Shortened backup option labels and guidance.
 - Simplified storage administration wording.
 - Simplified the encryption option to **Use Encryption**.
 - Improved folder unlocking and recovery.
