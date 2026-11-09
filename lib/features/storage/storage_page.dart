@@ -1271,9 +1271,9 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       widget.repo
           ? 'Its schedules and job history are removed. Stored backups are kept.'
           : p.isEncrypted
-          ? 'This removes the folder’s access key from Vaulton. The files remain in storage but can no longer be opened through this server. Copy anything you need before continuing.'
-          : 'Its schedules are removed. Files in the underlying storage are kept.',
-      ok: !widget.repo && p.isEncrypted ? 'Delete Permanently' : 'Delete',
+          ? 'Permanently deletes all files in this Data Folder and its encryption metadata. This cannot be undone. Independent storage backups may still contain copies.'
+          : 'Permanently deletes all files and folders stored in this Data Folder. This cannot be undone.',
+      ok: widget.repo ? 'Delete' : 'Delete Permanently',
       danger: true,
     )) {
       return;
@@ -1287,7 +1287,10 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       return true;
     });
     if (deleted != true || !mounted) return;
-    if (!widget.repo) ref.read(transferProvider.notifier).clearForPoint(p.id);
+    if (!widget.repo) {
+      ref.read(transferProvider.notifier).clearForPoint(p.id);
+      ref.read(settingsProvider.notifier).clearLastPoint(ifMatches: p.id);
+    }
     _key.currentState?.refresh();
     ref.invalidate(pointNamesProvider);
     ref.read(epochProvider.notifier).bump();
