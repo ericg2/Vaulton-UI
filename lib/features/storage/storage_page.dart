@@ -683,20 +683,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text('What Can This Location Hold?', style: tt.titleSmall),
-                  const SizedBox(height: 4),
-                  Text(
-                    'You can change these permissions later.',
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
+                  Text('Use This Location For', style: tt.titleSmall),
                   const SizedBox(height: 6),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     secondary: const Icon(Icons.folder_outlined),
                     title: const Text('Data Folders'),
-                    subtitle: const Text(
-                      'Store files that you upload and manage in Vaulton.',
-                    ),
                     value: allowData,
                     onChanged: (value) =>
                         setSheetState(() => allowData = value),
@@ -705,9 +697,6 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     contentPadding: EdgeInsets.zero,
                     secondary: const Icon(Icons.inventory_2_outlined),
                     title: const Text('Backup Vaults'),
-                    subtitle: const Text(
-                      'Store backup vaults.',
-                    ),
                     value: allowRepo,
                     onChanged: (value) =>
                         setSheetState(() => allowRepo = value),
