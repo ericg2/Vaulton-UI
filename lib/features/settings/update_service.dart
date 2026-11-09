@@ -217,8 +217,10 @@ class UpdateService {
         barrierDismissible: false,
         builder: (dialogContext) => ValueListenableBuilder<_UpdateProgress>(
           valueListenable: progress,
-          builder: (context, value, _) => AlertDialog(
-            title: Text(value.progress != null && value.progress! >= 1 ? 'Installing Update' : 'Downloading Update'),
+          builder: (context, value, _) => PopScope(
+            canPop: false,
+            child: AlertDialog(
+              title: Text(value.progress != null && value.progress! >= 1 ? 'Installing Update' : 'Downloading Update'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,6 +233,7 @@ class UpdateService {
                   Text('${(value.progress! * 100).round()}%'),
                 ],
               ],
+              ),
             ),
           ),
         ),
