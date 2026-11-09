@@ -78,8 +78,9 @@ git ls-files --error-unmatch android/key.properties >/dev/null 2>&1 && {
   exit 1
 }
 
-# Releases must be built from the current main branch. In particular, Android
-# SDK/Gradle requirements must not silently come from an older local checkout.
+
+# Releases must be built from the current main branch so Android SDK and
+# Gradle requirements cannot silently come from an older local checkout.
 git fetch origin main --tags
 LOCAL_HEAD="$(git rev-parse HEAD)"
 REMOTE_HEAD="$(git rev-parse origin/main)"
@@ -88,10 +89,7 @@ REMOTE_HEAD="$(git rev-parse origin/main)"
   echo "Run: git pull --ff-only origin main" >&2
   exit 1
 }
-grep -Eq '^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*37[[:space:]]*  echo "The working tree must be clean. Commit or stash changes before publishing." >&2
-  exit 1
-}
-git remote get-url origin >/dev/null
+grep -Eq '^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*37[[:space:]]*git remote get-url origin >/dev/null
 gh auth status >/dev/null
 
 PUBSPEC="pubspec.yaml"
@@ -181,14 +179,11 @@ printf 'Windows and Linux assets are not built by this Android-only script.\n'
   echo "Android release configuration must compile against SDK 37. Update main before publishing." >&2
   exit 1
 }
-grep -Eq 'id\\("com\\.android\\.application"\\)[[:space:]]+version[[:space:]]+"9\\.1\\.1"[[:space:]]+apply false' android/settings.gradle.kts || {
-  echo "Android Gradle Plugin 9.1.1 or newer is required for compileSdk 37. Update main before publishing." >&2
+grep -Eq 'id\("com\.android\.application"\)[[:space:]]+version[[:space:]]+"9\.1\.1"[[:space:]]+apply false' android/settings.gradle.kts || {
+  echo "Android Gradle Plugin 9.1.1 is required for compileSdk 37. Update main before publishing." >&2
   exit 1
 }
-grep -q '^android.builtInKotlin=true  echo "The working tree must be clean. Commit or stash changes before publishing." >&2
-  exit 1
-}
-git remote get-url origin >/dev/null
+grep -q '^android.builtInKotlin=truegit remote get-url origin >/dev/null
 gh auth status >/dev/null
 
 PUBSPEC="pubspec.yaml"
@@ -278,9 +273,8 @@ printf 'Windows and Linux assets are not built by this Android-only script.\n'
   echo "Android built-in Kotlin migration is missing. Update main before publishing." >&2
   exit 1
 }
-
 [[ -z "$(git status --porcelain)" ]] || {
-  echo "The working tree must be clean. Commit or stash changes before publishing." >&2
+  echo "The working tree must be clean after fetching. Commit or stash changes before publishing." >&2
   exit 1
 }
 git remote get-url origin >/dev/null
