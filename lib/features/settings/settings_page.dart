@@ -62,7 +62,7 @@ class SettingsPage extends ConsumerWidget {
                           initial: '${u.emailNotifications}',
                         ),
                       ],
-                      intro: 'Update the name and email shown to other Vaulton users. Email notifications are optional.',
+                      intro: 'Update your name and email address.',
                     );
                     if (f == null) return;
                     await guarded(
@@ -143,7 +143,7 @@ class SettingsPage extends ConsumerWidget {
                       onChanged: (v) => c.setConcurrency(v.round()),
                     ),
                     Text(
-                      'Files transferred at once. Lower this on slow or metered connections.',
+                      'Lower this on slow or metered connections.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -201,9 +201,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.password_outlined),
                 title: const Text('Change Password'),
-                subtitle: const Text(
-                  'Also used for SMB shares. Signs out other sessions.',
-                ),
+                subtitle: const Text('Updates SMB access and signs out other sessions.'),
                 onTap: () async {
                   final f = await formDialog(
                     context,
@@ -252,9 +250,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.shield_outlined),
                 title: const Text('Two-Factor Authentication'),
-                subtitle: const Text(
-                  'Protect sign-in with an authenticator app and recovery codes.',
-                ),
+                subtitle: const Text('Use an authenticator app and recovery codes.'),
                 onTap: () => showDialog<void>(
                   context: context,
                   builder: (_) => _TwoFactorDialog(v: v),
@@ -263,9 +259,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.key_outlined),
                 title: const Text('API Tokens'),
-                subtitle: const Text(
-                  'Scoped credentials for scripts, automation and integrations.',
-                ),
+                subtitle: const Text('For scripts and integrations.'),
                 onTap: () => showDialog<void>(
                   context: context,
                   builder: (_) => _ApiTokensDialog(
