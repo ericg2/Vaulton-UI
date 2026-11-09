@@ -1270,7 +1270,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         icon: Icons.sync,
                         hint: kIsWeb
                             ? 'Folder sync is available in the desktop and mobile apps.'
-                            : 'Add a folder pair to choose a folder on this device and where it should sync in Vaulton storage.',
+                            : 'Choose a folder on this device and where it should sync in Vaulton.',
                       ),
                     ),
                   ),
