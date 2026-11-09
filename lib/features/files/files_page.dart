@@ -92,6 +92,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   Timer? _autoTimer;
   int _doneUploads = -1;
   DateTime _panelSince = DateTime.now();
+  bool _initialPointResolved = false;
 
   String get _path => _segs.isEmpty ? '/' : '/${_segs.join('/')}';
   Vaulton get _v => ref.read(vaultonProvider);
@@ -164,7 +165,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       );
       final pts = await loadAllPoints(ref);
       final settings = ref.read(settingsProvider);
-      final preferred = widget.initialPointId ?? settings.lastPointId;
+      final preferred = _initialPointResolved
+          ? settings.lastPointId
+          : (widget.initialPointId ?? settings.lastPointId);
+      _initialPointResolved = true;
       final selected = pts.where((x) => x.id == preferred).firstOrNull ?? pts.firstOrNull;
       if (!mounted) return;
       final changed = _point?.id != selected?.id;
