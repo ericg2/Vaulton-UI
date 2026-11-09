@@ -45,6 +45,7 @@ Consistently apply these rules to every user-facing string, including buttons, p
 - Use **Title Case** for button labels, page titles, section headings, dialog titles, and other short UI labels. Capitalize the important words consistently; do not randomly mix sentence case and Title Case within the same category.
 - Use **sentence case** for explanatory text, descriptions, helper text, notifications written as sentences, and error messages. Start sentences with a capital letter and use normal punctuation.
 - Keep copy concise, professional, clear, and natural. Prefer familiar wording over unnecessary technical language.
+- Prefer very short, direct UI copy. Use the fewest words that clearly explain the action; favor short, familiar words and brief sentences over long headings or explanatory paragraphs. For example, use “Back Up” instead of “Choose What to Back Up.” Keep labels compact, and put extra guidance behind a help action or progressive disclosure when it is still needed.
 - Use correct grammar, spelling, punctuation, and singular/plural forms. Make counts agree with their nouns and use clear articles and verb agreement.
 - Use complete sentences with punctuation when the text is a sentence. Short labels do not need an added period.
 - Preserve established product terms and technical identifiers, including Vaulton, Snapshot ID, Data Point ID, Repository Point, and other domain-specific names. Do not alter an identifier’s value or casing for stylistic reasons.
