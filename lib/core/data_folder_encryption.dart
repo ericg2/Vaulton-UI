@@ -24,7 +24,7 @@ bool canUseDataFolderNow(Point point) => !point.isEncrypted || point.isUnlocked;
 /// but the folder must be unlocked when each scheduled job actually runs.
 bool canScheduleDataFolder(Point point) => true;
 
-final _autoUnlockAttempts = <String>{};
+final _autoUnlockAttempts = <String, Future<Point>>{};
 
 /// Tries the signed-in account password without prompting. Folders that use a
 /// legacy password simply stay locked until the user unlocks them explicitly.
@@ -37,13 +37,19 @@ Future<Point> tryAutoUnlockDataFolder(
 ) async {
   if (!point.isEncrypted || point.isUnlocked) return point;
   if (accountPassword == null || accountPassword.isEmpty) return point;
-  final attempt = '${point.id}\u0000${accountPassword.hashCode}';
-  if (!_autoUnlockAttempts.add(attempt)) return point;
-  try {
-    return await vaulton.unlockData(point.id, accountPassword);
-  } catch (_) {
-    return point;
-  }
+  final attempt = '${point.id}\\u0000${accountPassword.hashCode}';
+  final existing = _autoUnlockAttempts[attempt];
+  if (existing != null) return existing;
+
+  // Share an in-flight request between startup and page initialization. Keep
+  // the completed result too, so a legacy password is not retried on every
+  // refresh during this app session.
+  final pending = vaulton.unlockData(point.id, accountPassword).then<Point>(
+    (unlocked) => unlocked,
+    onError: (_) => point,
+  );
+  _autoUnlockAttempts[attempt] = pending;
+  return pending;
 }
 
 /// Auto-unlocks every encrypted Data Folder that uses the signed-in account
