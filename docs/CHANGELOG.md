@@ -19,6 +19,7 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 - Improved folder unlocking and recovery.
 - Improved password checks and messages.
 - Fixed issues with deleting folders and changing folder passwords.
+- Deleting a Data Folder now permanently removes its stored files and encryption metadata; the Files page falls back to a remaining folder instead of keeping a deleted selection.
 - Improved encrypted folder support for backups and syncing.
 - Fixed issues when creating encrypted folders.
 
