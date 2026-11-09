@@ -37,7 +37,7 @@ Future<Point> tryAutoUnlockDataFolder(
 ) async {
   if (!point.isEncrypted || point.isUnlocked) return point;
   if (accountPassword == null || accountPassword.isEmpty) return point;
-  final attempt = '${point.id}\\u0000${accountPassword.hashCode}';
+  final attempt = '${point.id}\u0000${accountPassword.hashCode}';
   final existing = _autoUnlockAttempts[attempt];
   if (existing != null) return existing;
 
