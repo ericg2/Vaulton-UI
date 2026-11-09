@@ -68,7 +68,7 @@ class TransfersPage extends ConsumerWidget {
                       else
                         const HintBanner(
                           id: 'transfers_basic',
-                          text: 'Failed transfers retry automatically. Use Retry to try again or Remove to clear one.',
+                          text: 'Failed transfers will retry automatically. You can also retry or remove them here.',
                         ),
                     ],
                   );
