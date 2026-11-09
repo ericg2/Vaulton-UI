@@ -171,22 +171,29 @@ Future<void> _runSyncWithNotification(ApiClient api, SharedPreferences prefs, Sy
 /// Persistent progress notifications for user-initiated uploads and downloads.
 class TransferNotification {
   TransferNotification._(this._n, this._task);
+  static Future<FlutterLocalNotificationsPlugin>? _notificationInit;
   final FlutterLocalNotificationsPlugin? _n;
   final TransferTask _task;
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
 
+  static Future<FlutterLocalNotificationsPlugin> _notifier() => _notificationInit ??= () async {
+    final n = FlutterLocalNotificationsPlugin();
+    await n.initialize(settings: const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ));
+    final android = n.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
+    await android?.createNotificationChannel(const AndroidNotificationChannel(
+      _kTransferChannel, 'File transfers',
+      description: 'Progress of file uploads and downloads.', importance: Importance.low,
+    ));
+    return n;
+  }();
+
   static Future<TransferNotification> start(TransferTask task) async {
     if (!backgroundSupported) return TransferNotification._(null, task);
     try {
-      final n = FlutterLocalNotificationsPlugin();
-      await n.initialize(settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      ));
-      final android = n.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-          await android?.createNotificationChannel(const AndroidNotificationChannel(
-        _kTransferChannel, 'File transfers',
-        description: 'Progress of file uploads and downloads.', importance: Importance.low,
-      ));
+      final n = await _notifier();
       final note = TransferNotification._(n, task);
       await note._show(0, task.total, ongoing: true);
       return note;
