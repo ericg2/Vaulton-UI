@@ -180,7 +180,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         _Stat(Icons.inventory_2_outlined, '${d.repos.length}', d.repos.length == 1 ? 'Backup Vault' : 'Backup Vaults', () => widget.onNavigate?.call('Backup Vaults')),
         if (_canJobs) _Stat(Icons.sync, '${running.length + waiting}', 'Active Jobs', () => widget.onNavigate?.call('Activity'), highlight: running.isNotEmpty),
         if (_canJobs) _Stat(failed > 0 ? Icons.error_outline : Icons.check_circle_outline, '$failed', 'Failed Jobs (24h)', () => widget.onNavigate?.call('Activity'), bad: failed > 0),
-        if (_canJobs) _Stat(Icons.verified_outlined, lastCheck == null ? '—' : fmtShort(lastCheck.endDate ?? lastCheck.startDate), 'Last Check', () => widget.onNavigate?.call('Activity'), highlight: lastCheck?.phase == JobPhase.succeeded),
         if (healthStatus.isNotEmpty)
           _Stat(
             healthBad ? Icons.warning_amber_rounded : Icons.health_and_safety_outlined,
@@ -258,16 +257,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Add a location, create a data folder, and set up a backup vault.',
-                          style: TextStyle(color: cs.onTertiaryContainer),
-                        ),
                         const SizedBox(height: 8),
                         _SetupStep(
                           title: 'Create a Location',
-                          subtitle: canManageRoots
-                              ? 'Choose where Vaulton stores files and backups.'
-                              : 'Ask an administrator to add a location.',
+                          subtitle: canManageRoots ? '' : 'Ask an administrator to add a location.',
                           complete: d.roots.isNotEmpty,
                           actionLabel: 'Set Up',
                           onPressed: canManageRoots && d.roots.isEmpty
@@ -276,14 +269,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                         _SetupStep(
                           title: 'Create a Data Folder',
-                          subtitle: 'Choose where your files will be stored.',
+                          subtitle: '',
                           complete: d.datas.isNotEmpty,
                           actionLabel: 'Set Up',
                           onPressed: d.roots.isNotEmpty && d.datas.isEmpty ? () => widget.onNavigate?.call('Data Folders') : null,
                         ),
                         _SetupStep(
                           title: 'Create a Backup Vault',
-                          subtitle: 'Choose where your backups will be kept.',
+                          subtitle: '',
                           complete: d.repos.isNotEmpty,
                           actionLabel: 'Set Up',
                           onPressed: d.roots.isNotEmpty && d.repos.isEmpty ? () => widget.onNavigate?.call('Backup Vaults') : null,
@@ -291,7 +284,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         if (_canJobs)
                           _SetupStep(
                             title: 'Run Your First Backup',
-                            subtitle: 'Save a protected copy of your files.',
+                            subtitle: '',
                             complete: lastOk != null,
                             actionLabel: 'Start',
                             onPressed: d.datas.isNotEmpty && d.repos.isNotEmpty && lastOk == null
@@ -397,16 +390,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ]),
             if (_canJobs) ...[
-              Section('Running Now', children: [
-                if (running.isEmpty && waiting == 0)
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text('No jobs running.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)))
-                else
-                  for (final j in d.jobs.where((j) => j.active))
-                    JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
-              ]),
               Section('Activity', children: [
-                if (d.jobs.where((j) => !j.active).isEmpty)
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text('No finished jobs yet.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)))
+                for (final j in d.jobs.where((j) => j.active))
+                  JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
+                if (d.jobs.where((j) => !j.active).isEmpty && running.isEmpty && waiting == 0)
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text('No recent activity.', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)))
                 else
                   for (final j in d.jobs.where((j) => !j.active).take(5))
                     JobCard(job: j, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id)))),
@@ -480,12 +468,13 @@ class _SetupStep extends StatelessWidget {
                     decoration: complete ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onTertiaryContainer.withValues(alpha: 0.85),
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: cs.onTertiaryContainer.withValues(alpha: 0.85),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
