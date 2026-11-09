@@ -23,7 +23,7 @@ class BackupsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => DefaultTabController(
         length: 2,
         child: Scaffold(
-          appBar: AppBar(title: const Text('Activity'), bottom: const TabBar(tabs: [Tab(text: 'Jobs'), Tab(text: 'Schedules')])),
+          appBar: AppBar(title: const Text('Activity'), bottom: const TabBar(tabs: [Tab(text: 'History'), Tab(text: 'Schedules')])),
           floatingActionButton: Builder(
             builder: (ctx) => AnimatedBuilder(
               animation: DefaultTabController.of(ctx),
@@ -41,7 +41,7 @@ const _statusFilters = <(String label, String? value)>[
   ('All', null),
   ('Running', 'Running'),
   ('Waiting', 'Pending'),
-  ('Succeeded', 'Succeeded'),
+  ('Completed', 'Succeeded'),
   ('Failed', 'Failed'),
   ('Cancelled', 'Cancelled'),
 ];
@@ -370,7 +370,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
         final colors = theme.colorScheme;
         return AlertDialog(
           insetPadding: const EdgeInsets.all(16),
-          title: const Text('Upcoming Backup Runs'),
+          title: const Text('Upcoming Backups'),
           content: SizedBox(
             width: 440,
             height: (MediaQuery.sizeOf(ctx).height - 220)
@@ -394,7 +394,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Schedule Preview', style: theme.textTheme.titleSmall),
+                            Text('Upcoming Backups', style: theme.textTheme.titleSmall),
                             Text('All times use ${s.timeZone}.', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
                           ],
                         ),
@@ -507,14 +507,14 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                             ),
                             chip(
                               ctx,
-                              s.lastRunAt == null ? 'Never Run' : (s.lastError == null ? 'Succeeded' : 'Failed'),
+                              s.lastRunAt == null ? 'Not Run Yet' : (s.lastError == null ? 'Completed' : 'Failed'),
                               color: s.lastRunAt == null ? null : (s.lastError == null ? Theme.of(ctx).colorScheme.primaryContainer : Theme.of(ctx).colorScheme.errorContainer),
                             ),
                             if (s.lastJobId != null)
                               TextButton.icon(
                                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: s.lastJobId!, showVaultLink: widget.repoId == null))),
                                 icon: const Icon(Icons.history, size: 18),
-                                label: const Text('Last Run'),
+                                label: const Text('Last Backup'),
                               ),
                           ],
                         ),
