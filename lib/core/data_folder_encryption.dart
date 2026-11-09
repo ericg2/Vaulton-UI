@@ -25,6 +25,7 @@ bool canUseDataFolderNow(Point point) => !point.isEncrypted || point.isUnlocked;
 bool canScheduleDataFolder(Point point) => true;
 
 final _autoUnlockAttempts = <String, Future<Point>>{};
+final _autoUnlockFailures = <String>{};
 
 /// Tries the signed-in account password without prompting. Folders that use a
 /// legacy password simply stay locked until the user unlocks them explicitly.
@@ -40,14 +41,19 @@ Future<Point> tryAutoUnlockDataFolder(
   final attempt = '${point.id}\u0000${accountPassword.hashCode}';
   final existing = _autoUnlockAttempts[attempt];
   if (existing != null) return existing;
+  if (_autoUnlockFailures.contains(attempt)) return point;
 
-  // Share an in-flight request between startup and page initialization. Keep
-  // the completed result too, so a legacy password is not retried on every
-  // refresh during this app session.
-  final pending = vaulton.unlockData(point.id, accountPassword).then<Point>(
+  // Share an in-flight request between startup and page initialization. Cache
+  // failures for this session, but allow a successful unlock to be retried if
+  // the IPC service restarts and clears its in-memory keys.
+  late final Future<Point> pending;
+  pending = vaulton.unlockData(point.id, accountPassword).then<Point>(
     (unlocked) => unlocked,
-    onError: (_) => point,
-  );
+    onError: (_) {
+      _autoUnlockFailures.add(attempt);
+      return point;
+    },
+  ).whenComplete(() => _autoUnlockAttempts.remove(attempt));
   _autoUnlockAttempts[attempt] = pending;
   return pending;
 }
