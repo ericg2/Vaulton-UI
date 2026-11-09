@@ -37,6 +37,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     });
     if (directory == null || !mounted) return null;
     final selected = <String>{};
+    final currentUser = ref.read(userProvider)?.userName;
     String search = '';
 
     return showDialog<List<String>>(
@@ -83,14 +84,18 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                       itemCount: users.length,
                       itemBuilder: (_, i) {
                         final u = users[i];
+                        final isSelf = currentUser != null &&
+                            u.userName.toLowerCase() == currentUser.toLowerCase();
                         final checked = selected.contains(u.userName);
                         return CheckboxListTile(
                           value: checked,
-                          onChanged: (v) => set(
-                            () => v == true
-                                ? selected.add(u.userName)
-                                : selected.remove(u.userName),
-                          ),
+                          onChanged: isSelf
+                              ? null
+                              : (v) => set(
+                                  () => v == true
+                                      ? selected.add(u.userName)
+                                      : selected.remove(u.userName),
+                                ),
                           secondary: CircleAvatar(
                             child: Text(
                               u.userName.isEmpty
@@ -99,7 +104,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                             ),
                           ),
                           title: Text(u.displayName),
-                          subtitle: Text(u.userName),
+                          subtitle: Text(isSelf ? '${u.userName} · You cannot message yourself' : u.userName),
                           controlAffinity: ListTileControlAffinity.trailing,
                         );
                       },
@@ -136,6 +141,12 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       recipients = picked;
     }
 
+    final currentUser = ref.read(userProvider)?.userName;
+    if (currentUser != null && recipients.any((r) => r.toLowerCase() == currentUser.toLowerCase())) {
+      toast(context, 'You cannot send a message to yourself.', error: true);
+      return;
+    }
+
     final draft = await showDialog<_MessageDraft>(
       context: context,
       builder: (_) => _MessageDraftDialog(
@@ -146,11 +157,11 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       ),
     );
     if (draft == null || !mounted) return;
-    await guarded(
-      context,
-      () => _v.send(recipients, draft.subject, draft.body, replyTo: replyTo),
-    );
-    if (!mounted) return;
+    final sent = await guarded(context, () async {
+      await _v.send(recipients, draft.subject, draft.body, replyTo: replyTo);
+      return true;
+    });
+    if (sent != true || !mounted) return;
     toast(context, 'Message sent.');
     _refreshAll();
   }
