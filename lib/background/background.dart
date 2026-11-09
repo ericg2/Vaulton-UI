@@ -21,6 +21,9 @@ const _kSync = 'vaulton.sync.periodic';
 const _kScheduledSyncIds = 'vaulton.sync.scheduled_ids';
 const _kDrain = 'vaulton.drain';
 const _kSyncChannel = 'vaulton_sync';
+const _kTransferChannel = 'vaulton_transfers';
+
+int _transferNotificationId(String id) => 7400 + (id.hashCode & 0x3fffffff);
 
 int _syncNotificationId(String id) => 7302 + (id.hashCode & 0x3fffffff);
 
@@ -165,6 +168,87 @@ Future<void> _runSyncWithNotification(ApiClient api, SharedPreferences prefs, Sy
   }
 }
 
+/// Persistent progress notifications for user-initiated uploads and downloads.
+class TransferNotification {
+  TransferNotification._(this._n, this._task);
+  final FlutterLocalNotificationsPlugin? _n;
+  final TransferTask _task;
+  DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static Future<TransferNotification> start(TransferTask task) async {
+    if (!backgroundSupported) return TransferNotification._(null, task);
+    try {
+      final n = FlutterLocalNotificationsPlugin();
+      await n.initialize(settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ));
+      final android = n.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.requestNotificationsPermission();
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        _kTransferChannel, 'File transfers',
+        description: 'Progress of file uploads and downloads.', importance: Importance.low,
+      ));
+      final note = TransferNotification._(n, task);
+      await note._show(0, task.total, ongoing: true);
+      return note;
+    } catch (_) {
+      return TransferNotification._(null, task);
+    }
+  }
+
+  void progress(int done, int total) {
+    final now = DateTime.now();
+    if (now.difference(_last) < const Duration(milliseconds: 750)) return;
+    _last = now;
+    unawaited(_show(done, total, ongoing: true).catchError((_) {}));
+  }
+
+  Future<void> finish({bool handedOff = false}) async {
+    final n = _n;
+    if (n == null) return;
+    try {
+      await n.cancel(id: _transferNotificationId(_task.id));
+      if (handedOff) return;
+      final success = _task.state == TState.done;
+      final failed = _task.state == TState.failed;
+      if (!success && !failed) return;
+      await n.show(
+        id: _transferNotificationId(_task.id),
+        title: success ? 'Transfer complete' : 'Transfer failed',
+        body: _task.name,
+        notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
+          _kTransferChannel, 'File transfers', importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority, ongoing: false, autoCancel: true,
+        )),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _show(int done, int total, {required bool ongoing}) async {
+    final percent = total > 0 ? (done * 100 / total).floor().clamp(0, 100) : null;
+    final verb = _task.kind == TKind.upload ? 'Uploading' : 'Downloading';
+    await _n!.show(
+      id: _transferNotificationId(_task.id),
+      title: percent == null ? verb + ' ' + _task.name : verb + ' ' + _task.name + ' · ' + percent.toString() + '%',
+      body: percent == null ? 'File transfer in progress' : _formatTransferBytes(done) + ' of ' + _formatTransferBytes(total),
+      notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
+        _kTransferChannel, 'File transfers', importance: Importance.low, priority: Priority.low,
+        onlyAlertOnce: true, ongoing: ongoing, autoCancel: !ongoing, showProgress: true,
+        maxProgress: 100, progress: percent ?? 0, indeterminate: percent == null,
+      )),
+    );
+  }
+}
+
+String _formatTransferBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  var value = bytes / 1024;
+  var unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+  return value.toStringAsFixed(value < 10 ? 1 : 0) + ' ' + units[unit];
+}
+
 const _kUpdateDownload = 'vaulton.update.download';
 const _updateStatusKey = 'vaulton.update.status';
 const _updatePathKey = 'vaulton.update.path';
@@ -188,7 +272,15 @@ Future<void> startBackgroundUpdateDownload({required String packageUrl, required
     inputData: {'url': packageUrl, 'checksum': checksumUrl, 'fileName': fileName, 'version': version},
     existingWorkPolicy: ExistingWorkPolicy.replace,
     constraints: Constraints(networkType: NetworkType.connected),
-    outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest);
+    outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
+    foregroundServiceConfig: const ForegroundServiceConfig(
+      notificationTitle: 'Vaulton update',
+      notificationText: 'Downloading and verifying the update',
+      notificationChannelId: 'vaulton_updates',
+      notificationChannelName: 'Vaulton updates',
+      notificationId: 7305,
+      foregroundServiceType: ForegroundServiceType.dataSync,
+    ));
 }
 
 Future<Map<String, Object?>> readBackgroundUpdateState() async {
@@ -249,19 +341,77 @@ Future<void> _drainProgress(SharedPreferences prefs, List<TransferTask> tasks) a
 }
 
 Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
+  final notifications = FlutterLocalNotificationsPlugin();
+  await notifications.initialize(settings: const InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+  ));
+  const transferChannel = AndroidNotificationChannel(
+    _kTransferChannel, 'File transfers',
+    description: 'Progress of file uploads and downloads.', importance: Importance.low,
+  );
+  await notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(transferChannel);
   final ui = prefs.getInt(kUiHeartbeat) ?? 0;
   if (DateTime.now().millisecondsSinceEpoch - ui < 15000) return false;
   final tasks = decodeQueue(prefs.getString(kQueueKey));
   final engine = TransferEngine(api);
   final started = DateTime.now();
 
+  Future<void> showTransferProgress({bool ongoing = true, String? finishedMessage}) async {
+    final active = tasks.where((task) => task.state == TState.running).toList();
+    final current = active.isNotEmpty ? active.first : tasks.where((task) => task.state == TState.queued).firstOrNull;
+    final completed = tasks.where((task) => task.state == TState.done).length;
+    final failed = tasks.where((task) => task.state == TState.failed).length;
+    if (current == null && !ongoing) {
+      await notifications.cancel(id: 7303);
+      if (completed + failed > 0) {
+        await notifications.show(
+          id: 7303, title: 'File transfers finished',
+          body: completed.toString() + ' completed, ' + failed.toString() + ' failed',
+          notificationDetails: const NotificationDetails(android: AndroidNotificationDetails(
+            _kTransferChannel, 'File transfers', importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority, ongoing: false, autoCancel: true,
+          )),
+        );
+      }
+      return;
+    }
+    final task = current;
+    final total = task?.total ?? 0;
+    final done = task?.done ?? 0;
+    final percent = total > 0 ? (done * 100 / total).floor().clamp(0, 100) : null;
+    final verb = task?.kind == TKind.upload ? 'Uploading' : 'Downloading';
+    final body = finishedMessage ?? (task == null
+        ? 'Preparing remaining files…'
+        : percent == null
+            ? verb + ' ' + task.name
+            : verb + ' ' + task.name + ' · ' + percent.toString() + '%');
+    await notifications.show(
+      id: 7303,
+      title: 'File transfers',
+      body: body,
+      notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
+        _kTransferChannel, 'File transfers', importance: Importance.low, priority: Priority.low,
+        onlyAlertOnce: true, ongoing: ongoing, autoCancel: !ongoing, showProgress: true,
+        maxProgress: 100, progress: percent ?? 0, indeterminate: percent == null,
+      )),
+    );
+  }
+
   Future<void> runOne(TransferTask t) async {
     t.state = TState.running;
+    await showTransferProgress();
     try {
+      var lastNotification = DateTime.fromMillisecondsSinceEpoch(0);
       void prog(int a, int b) {
         t.done = a;
         if (b > 0) t.total = b;
         _drainProgress(prefs, tasks);
+        final now = DateTime.now();
+        if (now.difference(lastNotification) >= const Duration(milliseconds: 750)) {
+          lastNotification = now;
+          unawaited(showTransferProgress().catchError((_) {}));
+        }
       }
       if (t.kind == TKind.upload) {
         await engine.upload(t, onProgress: prog);
@@ -280,6 +430,7 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
       t.error = e.toString();
     }
     await _drainProgress(prefs, tasks);
+    await showTransferProgress();
   }
 
   const budget = Duration(minutes: 9);
@@ -290,6 +441,11 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
   }
   await _drainProgress(prefs, tasks);
   final more = tasks.any((t) => t.state == TState.queued);
+  if (more) {
+    await showTransferProgress(ongoing: true, finishedMessage: 'Preparing remaining files…');
+  } else {
+    await showTransferProgress(ongoing: false);
+  }
   await prefs.setInt(kBgHeartbeat, 0);
   return more;
 }
@@ -510,12 +666,30 @@ Future<void> cancelSyncNow(String profileId) async {
 
 Future<void> scheduleDrain() async {
   if (!backgroundSupported) return;
+  final notifications = FlutterLocalNotificationsPlugin();
+  await notifications.initialize(settings: const InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+  ));
+  final android = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await android?.requestNotificationsPermission();
+  await android?.createNotificationChannel(const AndroidNotificationChannel(
+    _kTransferChannel, 'File transfers',
+    description: 'Progress of file uploads and downloads.', importance: Importance.low,
+  ));
   await Workmanager().registerOneOffTask(
     'transfer-drain',
     _kDrain,
     existingWorkPolicy: ExistingWorkPolicy.replace,
     constraints: Constraints(networkType: NetworkType.connected),
     outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
+    foregroundServiceConfig: const ForegroundServiceConfig(
+      notificationTitle: 'File transfers',
+      notificationText: 'Uploading and downloading files',
+      notificationChannelId: _kTransferChannel,
+      notificationChannelName: 'File transfers',
+      notificationId: 7304,
+      foregroundServiceType: ForegroundServiceType.dataSync,
+    ),
   );
 }
 
