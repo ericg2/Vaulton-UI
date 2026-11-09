@@ -200,6 +200,25 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     } catch (_) {}
   }
 
+  Widget _pointMenu(Point point) => DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: point.id,
+          isExpanded: true,
+          borderRadius: BorderRadius.circular(12),
+          items: [
+            for (final x in _points!)
+              DropdownMenuItem(value: x.id, child: Text(x.name)),
+          ],
+          onChanged: (id) {
+            ref.read(settingsProvider.notifier).setLastPoint(id!);
+            setState(
+              () => _point = _points!.firstWhere((x) => x.id == id),
+            );
+            _go([]);
+          },
+        ),
+      );
+
   void _toggle(Node n) => setState(() {
     if (!_sel.remove(n.name)) _sel.add(n.name);
   });

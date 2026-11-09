@@ -1327,7 +1327,22 @@ class _PointsTabState extends ConsumerState<PointsTab> {
             ? Icons.inventory_2_outlined
             : Icons.folder_outlined,
         autoRefresh: const Duration(seconds: 30),
-        fetch: (c) => widget.repo ? _v.repos(cursor: c) : _v.datas(cursor: c),
+        fetch: (c) async {
+          final page = widget.repo
+              ? await _v.repos(cursor: c)
+              : await _v.datas(cursor: c);
+          if (widget.repo) return page;
+          final accountPassword = ref
+              .read(authProvider.notifier)
+              .accountPassword;
+          final items = <Point>[];
+          for (final point in page.items) {
+            items.add(
+              await tryAutoUnlockDataFolder(_v, point, accountPassword),
+            );
+          }
+          return Paged(items, page.nextCursor, page.hasMore);
+        },
         itemBuilder: (ctx, p, i) => _pointCard(ctx, p),
       ),
     );

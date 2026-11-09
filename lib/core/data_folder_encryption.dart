@@ -24,6 +24,49 @@ bool canUseDataFolderNow(Point point) => !point.isEncrypted || point.isUnlocked;
 /// but the folder must be unlocked when each scheduled job actually runs.
 bool canScheduleDataFolder(Point point) => true;
 
+final _autoUnlockAttempts = <String>{};
+
+/// Tries the signed-in account password without prompting. Folders that use a
+/// legacy password simply stay locked until the user unlocks them explicitly.
+/// Failures are remembered for this app session so polling does not keep
+/// retrying a password that does not belong to the folder.
+Future<Point> tryAutoUnlockDataFolder(
+  Vaulton vaulton,
+  Point point,
+  String? accountPassword,
+) async {
+  if (!point.isEncrypted || point.isUnlocked) return point;
+  if (accountPassword == null || accountPassword.isEmpty) return point;
+  final attempt = '${point.id}\u0000${accountPassword.hashCode}';
+  if (!_autoUnlockAttempts.add(attempt)) return point;
+  try {
+    return await vaulton.unlockData(point.id, accountPassword);
+  } catch (_) {
+    return point;
+  }
+}
+
+/// Auto-unlocks every encrypted Data Folder that uses the signed-in account
+/// password. Used once when the app starts and when a folder list is loaded.
+Future<void> autoUnlockAllDataFolders(
+  Vaulton vaulton,
+  String? accountPassword,
+) async {
+  if (accountPassword == null || accountPassword.isEmpty) return;
+  try {
+    String? cursor;
+    do {
+      final page = await vaulton.datas(cursor: cursor, limit: 100);
+      for (final point in page.items) {
+        await tryAutoUnlockDataFolder(vaulton, point, accountPassword);
+      }
+      cursor = page.hasMore ? page.nextCursor : null;
+    } while (cursor != null);
+  } catch (_) {
+    // Startup must never fail because a folder could not be unlocked.
+  }
+}
+
 /// Tries the signed-in account password first, then prompts for a password or
 /// recovery key. Dialog credentials are cleared when the dialog closes or fails.
 Future<bool> unlockDataFolderWithPrompt(

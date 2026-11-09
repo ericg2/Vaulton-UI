@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app.dart';
+import '../../core/data_folder_encryption.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/scopes.dart';
@@ -51,6 +54,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _life = AppLifecycleListener(
       onStateChange: (s) => ref.read(transferProvider.notifier).onLifecycle(s),
     );
+    // Encrypted Data Folders use the signed-in account password. Try them once
+    // as the app starts so users do not have to unlock the same folder again.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        autoUnlockAllDataFolders(
+          ref.read(vaultonProvider),
+          ref.read(authProvider.notifier).accountPassword,
+        ),
+      );
+    });
     // Desktop: closing with active transfers offers to minimize instead of quitting.
     setCloseGuard(
       () => ref.read(transferProvider.notifier).hasActive,

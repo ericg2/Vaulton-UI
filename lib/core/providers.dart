@@ -139,7 +139,7 @@ class AuthController extends Notifier<AuthState> {
       if (generation != _restoreGeneration) return;
       final ex = ApiException.from(e);
       if (ex.status == null) {
-        state = const AuthState(AuthStatus.signedOut, message: 'Server unreachable. Check the address and sign in again.');
+        state = const AuthState(AuthStatus.signedOut, message: 'Server unreachable. Check the address and try again.');
       } else {
         state = const AuthState(AuthStatus.signedOut);
       }

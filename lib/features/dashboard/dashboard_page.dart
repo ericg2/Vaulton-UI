@@ -37,6 +37,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   _Data? _data;
   Object? _error;
   Timer? _t;
+  final _healthKey = GlobalKey();
   bool _busy = false, _wasVisible = true, _dirty = false;
 
   bool get _canJobs => ref.read(userProvider)?.has(Scopes.jobsManage) ?? false;
@@ -128,6 +129,20 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     }
   }
 
+  Future<void> _showHealth() async {
+    final health = _healthKey.currentContext;
+    if (health == null) {
+      widget.onNavigate?.call('Administration');
+      return;
+    }
+    await Scrollable.ensureVisible(
+      health,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
+      alignment: 0.08,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(epochProvider, (_, _) => _load());
@@ -171,7 +186,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             healthBad ? Icons.warning_amber_rounded : Icons.health_and_safety_outlined,
             healthStatus,
             'System Health',
-            () => widget.onNavigate?.call('Administration'),
+            _showHealth,
             bad: healthStatus == 'Unhealthy',
           ),
       ];
@@ -179,10 +194,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       body = RefreshIndicator(
         key: const ValueKey('data'),
         onRefresh: _load,
-        child: ListView(
+        child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
-          children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (MediaQuery.sizeOf(context).width < 800)
               const Card(margin: EdgeInsets.fromLTRB(16, 4, 16, 4), child: ServerBadge(inline: true)),
             Padding(
@@ -367,7 +382,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ]),
             if (_canSeeHealth && health != null && healthChecks.isNotEmpty)
-              Section('System Health', children: [
+              Section('System Health', key: _healthKey, children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Card(
@@ -405,7 +420,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ),
               ]),
             ],
-          ],
+          ]),
         ),
       );
     }
@@ -501,19 +516,16 @@ class _HealthRow extends StatelessWidget {
 
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Row(children: [
-        Expanded(child: Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall)),
-        const SizedBox(width: 8),
-        Container(
-          constraints: const BoxConstraints(minWidth: 76, maxWidth: 104),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-          alignment: Alignment.center,
-          child: Text(status, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
-        ),
-      ]),
+      title: Text(_healthName('${check['name'] ?? ''}'), style: t.titleSmall),
       subtitle: details.isEmpty ? null : Text(details, style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+      trailing: Container(
+        constraints: const BoxConstraints(minWidth: 76, maxWidth: 104),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+        alignment: Alignment.center,
+        child: Text(status, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+      ),
     );
   }
 }
@@ -532,17 +544,23 @@ String? _diskSummary(Json check) {
   final data = check['data'];
   if (data is! Map) return null;
 
-  final parts = <String>[];
+  final entries = <({String path, String text})>[];
   data.forEach((path, value) {
     if (value is! Map) return;
     final free = (value['freeBytes'] as num?)?.toInt();
     final total = (value['totalBytes'] as num?)?.toInt();
-    final percent = (value['freePercent'] as num?)?.toDouble();
-    if (free == null || total == null) return;
-    parts.add('${path.split('/').last}: ${fmtBytes(free)} free / ${fmtBytes(total)}'
-        '${percent == null ? '' : ' · ${percent.toStringAsFixed(0)}% free'}');
+    if (free == null || total == null || total <= 0) return;
+    final percent = ((value['freePercent'] as num?)?.toDouble() ?? free / total * 100).clamp(0, 100);
+    entries.add((
+      path: '$path',
+      text: '${fmtBytes(free)} free of ${fmtBytes(total)} (${percent.toStringAsFixed(0)}% free)',
+    ));
   });
-  return parts.isEmpty ? null : parts.join('\n');
+  if (entries.isEmpty) return null;
+  // A single volume does not need a path prefix; multiple volumes do.
+  return entries
+      .map((e) => entries.length == 1 ? e.text : '${e.path} — ${e.text}')
+      .join('\n');
 }
 
 class _Stat extends StatelessWidget {

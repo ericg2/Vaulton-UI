@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/data_folder_encryption.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/util.dart';
@@ -17,11 +18,14 @@ Future<PickedFolder?> pickFolder(BuildContext context, {String? initialPointId, 
 
 Future<List<Point>> loadAllPoints(WidgetRef ref) async {
   final v = ref.read(vaultonProvider);
+  final accountPassword = ref.read(authProvider.notifier).accountPassword;
   final out = <Point>[];
   String? cursor;
   do {
     final p = await v.datas(cursor: cursor, limit: 100);
-    out.addAll(p.items);
+    for (final point in p.items) {
+      out.add(await tryAutoUnlockDataFolder(v, point, accountPassword));
+    }
     cursor = p.hasMore ? p.nextCursor : null;
   } while (cursor != null);
   return out;
