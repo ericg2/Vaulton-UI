@@ -124,7 +124,7 @@ class SettingsPage extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            'Simultaneous Transfers',
+                            'Transfers at Once',
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
                         ),
@@ -143,7 +143,7 @@ class SettingsPage extends ConsumerWidget {
                       onChanged: (v) => c.setConcurrency(v.round()),
                     ),
                     Text(
-                      'Lower this on slow or metered connections.',
+                      'Use fewer transfers on slower or limited connections.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -201,7 +201,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.password_outlined),
                 title: const Text('Change Password'),
-                subtitle: const Text('Updates SMB access and signs out other sessions.'),
+                subtitle: const Text('Updates the password used for shared folders and signs out your other sessions.'),
                 onTap: () async {
                   final f = await formDialog(
                     context,
@@ -221,7 +221,7 @@ class SettingsPage extends ConsumerWidget {
                       ),
                     ],
                     ok: 'Change Password',
-                    intro: 'Choose at least 8 characters; if you have encrypted Data Folders, use at least 12. Changing it signs out your other sessions and also updates the password used for SMB shares.',
+                    intro: 'Choose at least 8 characters; if you have encrypted Data Folders, use at least 12. Changing it signs out your other sessions and also updates the password used for shared folders.',
                   );
                   if (f == null) return;
                   if (f['new']!.length < 8) {
