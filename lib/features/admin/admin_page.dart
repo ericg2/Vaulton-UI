@@ -704,8 +704,8 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
     final pointName = '${p['name']}';
     final ok = await confirm(
       context,
-      'Reset Quota Usage?',
-      'This permanently resets Vaulton’s tracked quota usage to 0; use only after the remote data has been deleted.',
+      'Reset Tracked Usage?',
+      'This sets Vaulton’s recorded usage to zero. Only do this after the files have been deleted from the remote storage.',
       ok: 'Reset Usage',
       danger: true,
     );
@@ -717,7 +717,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
     );
     if (!mounted) return;
     await _key.currentState?.refresh();
-    if (mounted) toast(context, 'Quota usage reset for $pointName.');
+    if (mounted) toast(context, 'Recorded usage reset for $pointName.');
   }
 
   @override
@@ -725,7 +725,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
     final v = ref.read(vaultonProvider);
     return CursorList<Json>(
       key: _key,
-      empty: 'No Points',
+      empty: 'No storage entries yet.',
       fetch: (c) => v.vfs(cursor: c),
       itemBuilder: (ctx, p, i) {
         final err = toStr(p['error']);
@@ -773,7 +773,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Read/Write' : 'Read-Only'}',
+                      '${fmtBytes(toInt(p['usedBytes']))} of ${fmtBytes(toInt(p['maxBytes']))} · ${toBool(p['canWrite']) ? 'Can Make Changes' : 'View Only'}',
                     ),
                     if (err != null && err.isNotEmpty)
                       Align(
@@ -786,7 +786,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                           onPressed: () => showDialog<void>(
                             context: ctx,
                             builder: (dialogContext) => AlertDialog(
-                              title: Text('Storage Error · ${p['name']}'),
+                              title: Text('Storage Issue · ${p['name']}'),
                               content: SingleChildScrollView(
                                 child: SelectableText(err),
                               ),
@@ -826,7 +826,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                 isThreeLine: true,
                 trailing: narrow
                     ? IconButton(
-                        tooltip: 'Reload User VFS',
+                        tooltip: 'Refresh User Storage',
                         icon: const Icon(Icons.refresh),
                         onPressed: () async {
                           await guarded(ctx, () => v.reloadVfs('${p['user']}'));
@@ -856,7 +856,7 @@ class _VfsTabState extends ConsumerState<_VfsTab> {
                               ),
                             ),
                           IconButton(
-                            tooltip: 'Reload User VFS',
+                            tooltip: 'Refresh User Storage',
                             icon: const Icon(Icons.refresh),
                             onPressed: () async {
                               await guarded(
