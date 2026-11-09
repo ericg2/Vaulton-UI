@@ -209,7 +209,7 @@ class UpdateService {
       if (install != true || !context.mounted) return;
 
       final progress = ValueNotifier<_UpdateProgress>(
-        const _UpdateProgress('Preparing the update…'),
+        _UpdateProgress('Downloading Vaulton ' + latestVersion + '…'),
       );
       var progressDialogOpen = true;
       unawaited(showDialog<void>(
