@@ -136,14 +136,14 @@ class _BackupSheetState extends State<_BackupSheet> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Start a Backup', style: t.headlineSmall),
               const SizedBox(height: 4),
-              Text('Saves a snapshot, a restorable copy of your files as they are now.',
+              Text('Save a copy of your files that you can restore later.',
                   style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
               const SizedBox(height: 16),
               if (widget.datas.length > 1)
                 DropdownButtonFormField<Point>(
                   isExpanded: true,
                   initialValue: _data,
-                  decoration: const InputDecoration(labelText: 'Backup From', prefixIcon: Icon(Icons.folder_outlined)),
+                  decoration: const InputDecoration(labelText: 'Back Up', prefixIcon: Icon(Icons.folder_outlined)),
                   items: [for (final d in widget.datas) DropdownMenuItem(value: d, child: Text(d.name))],
                   onChanged: (d) => setState(() {
                     if (d != null) {
@@ -172,12 +172,12 @@ class _BackupSheetState extends State<_BackupSheet> {
                   onTap: _chooseFolder,
                 ),
               ),
-              _heading('What to include', 'Back up everything, or only certain kinds of files.'),
+              _heading('Choose What to Back Up', 'Back up everything or choose specific file types.'),
               SegmentedButton<bool>(
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(value: false, label: Text('Everything')),
-                  ButtonSegment(value: true, label: Text('Only Certain Files')),
+                  ButtonSegment(value: true, label: Text('Choose File Types')),
                 ],
                 selected: {_onlySome},
                 onSelectionChanged: (s) => setState(() => _onlySome = s.first),
@@ -192,27 +192,27 @@ class _BackupSheetState extends State<_BackupSheet> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _kinds(_includePresets, _includeKinds),
                           const SizedBox(height: 12),
-                          ChipInput(label: 'Other File Types', hint: 'For example *.csv', values: _customInclude, onChanged: (v) => setState(() => _customInclude = v)),
+                          ChipInput(label: 'More File Types', hint: 'For example *.csv', values: _customInclude, onChanged: (v) => setState(() => _customInclude = v)),
                         ]),
                       )
                     : const SizedBox(width: double.infinity),
               ),
-              _heading('What to skip', 'Leave out files you don’t need to keep.'),
+              _heading('Choose What to Skip', 'Leave out files you don’t need in this backup.'),
               _kinds(_skipPresets, _skipKinds),
               const SizedBox(height: 12),
-              ChipInput(label: 'Other files or folders to skip', hint: 'For example, *.iso or Downloads.', values: _customSkip, onChanged: (v) => setState(() => _customSkip = v)),
-              _heading('Skip very large files', 'Files bigger than this won’t be backed up.'),
+              ChipInput(label: 'Files and Folders to Skip', hint: 'For example, *.iso or Downloads.', values: _customSkip, onChanged: (v) => setState(() => _customSkip = v)),
+              _heading('Skip Large Files', 'Files larger than the selected size won’t be backed up.'),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final c in _sizeChoices)
                   ChoiceChip(label: Text(c.$1), selected: _maxSize == c.$2, onSelected: (_) => setState(() => _maxSize = c.$2)),
               ]),
-              _heading('Labels', 'Optional. Add a word or two to help you find this snapshot later.'),
+              _heading('Labels', 'Optional. Add a label to help you find this backup later.'),
               ChipInput(label: 'Add a Label', hint: 'For example, Before upgrade.', values: _labels, onChanged: (v) => setState(() => _labels = v)),
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Test Run Only'),
-                subtitle: const Text('See what would be backed up without saving anything.'),
+                title: const Text('Preview Only'),
+                subtitle: const Text('See what would be backed up without saving a copy.'),
                 value: _dry,
                 onChanged: (v) => setState(() => _dry = v),
               ),
