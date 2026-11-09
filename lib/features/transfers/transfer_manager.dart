@@ -333,6 +333,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
     _changed(persistSoon: true);
     final token = CancelToken();
     _tokens[t.id] = token;
+    final notification = await TransferNotification.start(t);
     try {
       // Use the first authoritative total reported by the transport. Some
       // adapters revise their estimate as headers/resume state settle; letting
@@ -344,6 +345,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
           t.total = b;
           totalLocked = true;
         }
+        notification.progress(a, t.total);
         _changed();
       }
 
@@ -378,6 +380,7 @@ class TransferManager extends Notifier<List<TransferTask>> {
       t.error = '$e';
     } finally {
       _tokens.remove(t.id);
+      await notification.finish(handedOff: _handedOff);
       _running--;
       _changed(persistSoon: true);
       _pump();
