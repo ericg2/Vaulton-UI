@@ -353,14 +353,15 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
   final ui = prefs.getInt(kUiHeartbeat) ?? 0;
   if (DateTime.now().millisecondsSinceEpoch - ui < 15000) return false;
   final tasks = decodeQueue(prefs.getString(kQueueKey));
+  final workerTaskIds = tasks.where((task) => task.state == TState.queued).map((task) => task.id).toSet();
   final engine = TransferEngine(api);
   final started = DateTime.now();
 
   Future<void> showTransferProgress({bool ongoing = true, String? finishedMessage}) async {
     final active = tasks.where((task) => task.state == TState.running).toList();
     final current = active.isNotEmpty ? active.first : tasks.where((task) => task.state == TState.queued).firstOrNull;
-    final completed = tasks.where((task) => task.state == TState.done).length;
-    final failed = tasks.where((task) => task.state == TState.failed).length;
+    final completed = tasks.where((task) => workerTaskIds.contains(task.id) && task.state == TState.done).length;
+    final failed = tasks.where((task) => workerTaskIds.contains(task.id) && task.state == TState.failed).length;
     if (current == null && !ongoing) {
       await notifications.cancel(id: 7303);
       if (completed + failed > 0) {
@@ -680,7 +681,7 @@ Future<void> scheduleDrain() async {
     existingWorkPolicy: ExistingWorkPolicy.replace,
     constraints: Constraints(networkType: NetworkType.connected),
     outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
-    foregroundServiceConfig: const ForegroundServiceConfig(
+    foregroundServiceConfig: ForegroundServiceConfig(
       notificationTitle: 'File transfers',
       notificationText: 'Uploading and downloading files',
       notificationChannelId: _kTransferChannel,
