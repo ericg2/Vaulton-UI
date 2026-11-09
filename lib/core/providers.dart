@@ -265,6 +265,16 @@ class EpochNotifier extends Notifier<int> {
 
 final epochProvider = NotifierProvider<EpochNotifier, int>(EpochNotifier.new);
 
+/// Bumped only when the user's Data Folder collection changes.
+class PointListEpochNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state++;
+}
+
+final pointListEpochProvider =
+    NotifierProvider<PointListEpochNotifier, int>(PointListEpochNotifier.new);
+
 /// Basic server facts for the sidebar. `/admin/status` is used when permitted.
 class ServerInfo {
   const ServerInfo({required this.host, this.version, this.environment, this.reachable = true, this.uptime});
