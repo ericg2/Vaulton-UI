@@ -4,82 +4,62 @@
 
 <h1 align="center">Vaulton</h1>
 <p align="center"><strong>Your files. Your backups. Your server.</strong></p>
-<p align="center">A simple way to manage your files and keep your data protected on a server you control.</p>
+<p align="center">Manage your files and backups on a server you control.</p>
 <p align="center">
   <a href="https://github.com/ericg2/Vaulton-UI/releases">Download the App</a> ·
   <a href="https://github.com/ericg2/Vaulton">Vaulton Server</a> ·
   <a href="https://github.com/ericg2/Vaulton-UI/issues">Get Help</a>
 </p>
 
-Vaulton gives you one place to browse files, manage backups, keep folders in sync, and check on your server. Your data stays on your own server, and you choose who can access it.
+Vaulton brings your files, backups, and folder syncing together in one app. Your data stays on your server, and you control who can access it.
 
 ## Getting Started
 
-1. **Set up your server.** Follow the [server setup guide](https://github.com/ericg2/Vaulton/blob/main/docs/SETUP.md). You will need a computer or server that can stay online and a place to store your files.
-2. **Start Vaulton.** Once setup is complete, open the app and enter your server address. The default connection uses port `5141`.
-3. **Sign in.** Use the account created during server setup. Follow any password-change or security prompts.
-4. **Add a storage location.** Open Storage to connect a folder or supported storage service. Then you can browse and manage your files.
-5. **Set up a backup.** Create a repository and schedule backups so your important files are protected.
+1. **Set up your server.** Follow the [server setup guide](https://github.com/ericg2/Vaulton/blob/main/docs/SETUP.md).
+2. **Download and open the app.** Choose the version for your device below.
+3. **Connect and sign in.** Enter your server address and sign in with your account.
+4. **Add storage.** Create a location, then add a Data Folder and a Backup Vault.
+5. **Protect your files.** Set up a backup to save a copy of your files.
 
-New to Vaulton? Start with the [server setup guide](https://github.com/ericg2/Vaulton/blob/main/docs/SETUP.md), then use the [user guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md) for everyday tasks.
+For help using Vaulton, see the [user guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md).
 
 ## Download
 
-Get the latest version from [Vaulton Releases](https://github.com/ericg2/Vaulton-UI/releases). Choose the download for your device:
+Get the latest version from [Vaulton Releases](https://github.com/ericg2/Vaulton-UI/releases).
 
-- **Windows:** Download and run the Windows installer.
-- **Linux:** Download the Linux package and the `Vaulton-Linux-Install.sh` installer from the release assets.
-- **Android:** Download the APK, open it on your device, and approve installation when prompted.
-- **Web:** Host the built web app on a web server. The app connects to your Vaulton server; it is not a standalone file server.
+- **Windows:** Download and run the installer.
+- **Linux:** Download the Linux package and installer.
+- **Android:** Download and install the APK.
+- **Web:** Host the web app and connect it to your Vaulton server.
 
-Always download releases from the official repository. The app needs access to a running Vaulton server to sign in and manage your files.
-
-## Connecting to Your Server
-
-On the sign-in screen, enter your server address and port. For most installations, the port is `5141`.
-
-- If the app and server are on the same home network, use the server's local IP address, such as `192.168.1.20`.
-- If you are connecting from outside your home, use a secure address that you have configured for remote access.
-- Keep the default port unless you changed it during server setup.
-- If you cannot connect, check that the server is running and that your network or firewall allows the connection.
-
-Do not expose the server directly to the internet without configuring secure remote access. Use HTTPS through a trusted reverse proxy or VPN for connections outside your local network.
+The app requires a running Vaulton server. For connections outside your home network, use a secure remote connection such as a VPN or HTTPS.
 
 ## Features
 
-| Feature | What it helps you do |
+| Feature | What you can do |
 |---|---|
-| File management | Browse, search, upload, download, move, copy, rename, and preview files. |
-| Backups | Create scheduled backups, browse saved snapshots, and restore files or folders. |
-| Folder sync | Keep selected folders in sync with a storage location. |
+| File Management | Browse, search, upload, download, move, copy, rename, and preview files. |
+| Backups | Schedule backups, browse saved versions, and restore files or folders. |
+| Folder Sync | Keep selected folders in sync with a storage location. |
 | Storage | Choose where your files and backups are kept, and manage shared storage. |
-| Transfers | Track uploads and downloads, retry failed transfers, and view progress. |
-| Account security | Use two-factor authentication and scoped API tokens. |
-| Server management | Check server health, manage users, review jobs, and view activity when your account has permission. |
-| Mobile photo backup | Back up selected photos on Android with configurable conditions. |
+| Transfers | Track uploads and downloads. |
+| Account Security | Protect your account and manage access. |
+| Server Management | Check server health, manage users, and review activity when permitted. |
+| Mobile Photo Backup | Back up selected photos on Android. |
 
-Vaulton only shows management features your account is allowed to use. Your server remains in control of access and permissions.
+Vaulton only shows features your account is allowed to use.
 
-## Helpful Notes
+## A Few Things to Know
 
-- The app needs a running Vaulton server. It does not store or serve your files by itself.
-- You can protect new Data Folders with encryption when it is enabled on your server. Use your Vaulton account password to unlock them, and save the recovery key shown during setup.
-- Vaulton unlocks protected folders when you sign in. Turn on **Remember Password** to unlock them automatically after restarting the app.
-- On Linux, download `Vaulton-Linux-Install.sh` from the release assets, then run `chmod +x Vaulton-Linux-Install.sh && ./Vaulton-Linux-Install.sh`. The installer downloads and verifies the latest Linux package, installs it under `~/.local/opt/vaulton`, and registers the application-menu entry. Relaunch Vaulton from the application menu on Wayland.
-- Folder sync needs access to a local folder, so it is available in the installed desktop and mobile apps, not in a web browser.
-- Web uploads are best suited to small and medium files because the browser manages the transfer.
-- Android background tasks are scheduled by the operating system. Battery-saving settings can delay photo backups and other background work.
-- When restoring a folder, Vaulton creates that folder inside the destination you select. A restored file is placed directly in the selected destination.
-- If you are unsure what a restore will change, review the **Test Run** before starting it.
+- You can protect Data Folders with encryption when it is enabled on your server. Use your Vaulton account password to unlock them, and keep the recovery key shown during setup.
+- Turn on **Remember Password** to unlock protected folders automatically after restarting the app.
+- Before restoring files, review the **Test Run** to see what will change.
 
-## Release Notes
+## Help
 
-See the [changelog](docs/CHANGELOG.md) for recent fixes and changes.
+- [User Guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md)
+- [Administrator Guide](https://github.com/ericg2/Vaulton/blob/main/docs/ADMIN_GUIDE.md)
+- [Troubleshooting](https://github.com/ericg2/Vaulton/blob/main/docs/TROUBLESHOOTING.md)
+- [Report a Problem](https://github.com/ericg2/Vaulton-UI/issues)
 
-## Need Help?
-
-- Read the [user guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md) for help with everyday tasks.
-- Read the [administrator guide](https://github.com/ericg2/Vaulton/blob/main/docs/ADMIN_GUIDE.md) if you manage the server.
-- If something is not working, check the [troubleshooting guide](https://github.com/ericg2/Vaulton/blob/main/docs/TROUBLESHOOTING.md).
-- Report a problem through [GitHub Issues](https://github.com/ericg2/Vaulton-UI/issues).
-
+See the [changelog](docs/CHANGELOG.md) for recent changes.
