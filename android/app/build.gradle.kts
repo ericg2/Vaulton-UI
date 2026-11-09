@@ -2,11 +2,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    // gradle.properties sets android.builtInKotlin=false (Flutter's default while plugins migrate
-    // to AGP 9), so the Kotlin plugin must be applied here or MainActivity.kt is never compiled.
-    // When every plugin supports built-in Kotlin: set android.builtInKotlin=true and drop this line.
-    id("org.jetbrains.kotlin.android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -19,7 +14,8 @@ val keystoreProps = Properties().apply {
 
 android {
     namespace = "com.ericg2.vaulton"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_local_notifications 23 requires Android SDK 37.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
