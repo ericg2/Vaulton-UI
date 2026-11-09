@@ -771,6 +771,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   // ------------------------------------------------------------------ build
   @override
   Widget build(BuildContext context) {
+    ref.listen(epochProvider, (_, _) {
+      if (_point != null) unawaited(_refreshUsage());
+    });
     if (_pointsError != null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Files')),
