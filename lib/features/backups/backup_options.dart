@@ -172,7 +172,7 @@ class _BackupSheetState extends State<_BackupSheet> {
                   onTap: _chooseFolder,
                 ),
               ),
-              _heading('Choose What to Back Up', 'Choose which files to save.'),
+              _heading('What to Include', 'Back up everything, or only certain kinds of files.'),
               SegmentedButton<bool>(
                 showSelectedIcon: false,
                 segments: const [
