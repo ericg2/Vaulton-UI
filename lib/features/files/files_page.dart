@@ -165,11 +165,12 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       );
       final pts = await loadAllPoints(ref);
       final settings = ref.read(settingsProvider);
-      final preferred = _initialPointResolved
-          ? settings.lastPointId
-          : (widget.initialPointId ?? settings.lastPointId);
+      final initial = _initialPointResolved
+          ? null
+          : pts.where((x) => x.id == widget.initialPointId).firstOrNull;
       _initialPointResolved = true;
-      final selected = pts.where((x) => x.id == preferred).firstOrNull ?? pts.firstOrNull;
+      final saved = pts.where((x) => x.id == settings.lastPointId).firstOrNull;
+      final selected = initial ?? saved ?? pts.firstOrNull;
       if (!mounted) return;
       final changed = _point?.id != selected?.id;
       setState(() {
