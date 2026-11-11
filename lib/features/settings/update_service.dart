@@ -128,34 +128,44 @@ class UpdateService {
       final assets = (release['assets'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList();
-      final names = Platform.isAndroid
-          ? ('Vaulton-Android.apk', 'Vaulton-Android.apk.sha256')
-          : Platform.isWindows
-              ? ('Vaulton-Windows-Setup.exe', 'Vaulton-Windows-Setup.exe.sha256')
-              : Platform.isLinux
-                  ? ('Vaulton-Linux.tar.gz', 'Vaulton-Linux.tar.gz.sha256')
-                  : (null, null);
-      if (names.$1 == null) {
+
+      // Linux ships both a Debian and an RPM package, so pick the one this
+      // distribution understands.
+      final linuxPackage = Platform.isLinux ? _linuxPackageName() : null;
+      if (Platform.isLinux && linuxPackage == null) {
+        throw const FormatException(
+          'Vaulton could not tell which Linux package to install. Download it from the release page.',
+        );
+      }
+      final String? packageName;
+      final String? checksumName;
+      if (Platform.isAndroid) {
+        packageName = 'Vaulton-Android.apk';
+        checksumName = 'Vaulton-Android.apk.sha256';
+      } else if (Platform.isWindows) {
+        packageName = 'Vaulton-Windows-Setup.exe';
+        checksumName = 'Vaulton-Windows-Setup.exe.sha256';
+      } else if (Platform.isLinux) {
+        packageName = linuxPackage;
+        checksumName = '$linuxPackage.sha256';
+      } else {
+        packageName = null;
+        checksumName = null;
+      }
+      if (packageName == null) {
         throw const FormatException('Automatic updates are not supported on this platform.');
       }
 
       String? packageUrl;
       String? checksumUrl;
-      String? installerUrl;
-      String? installerChecksumUrl;
       for (final asset in assets) {
         final name = asset['name'] as String? ?? '';
         final url = asset['browser_download_url'] as String?;
-        if (name == names.$1) packageUrl = url;
-        if (name == names.$2) checksumUrl = url;
-        if (name == 'Vaulton-Linux-Install.sh') installerUrl = url;
-        if (name == 'Vaulton-Linux-Install.sh.sha256') installerChecksumUrl = url;
+        if (name == packageName) packageUrl = url;
+        if (name == checksumName) checksumUrl = url;
       }
       if (packageUrl == null || checksumUrl == null) {
         throw const FormatException('The latest release is still being prepared or is missing its package/checksum.');
-      }
-      if (Platform.isLinux && (installerUrl == null || installerChecksumUrl == null)) {
-        throw const FormatException('The latest release is missing the Linux update installer.');
       }
 
       if (!context.mounted) return;
@@ -182,8 +192,10 @@ class UpdateService {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Vaulton will download and verify the update before opening the installer.',
+                    Text(
+                      Platform.isLinux
+                          ? 'Vaulton will download and verify the update, then open your package installer.'
+                          : 'Vaulton will download and verify the update before opening the installer.',
                     ),
                     if (releaseNotes.isNotEmpty) ...[
                       const SizedBox(height: 18),
@@ -249,7 +261,7 @@ class UpdateService {
         final package = await _downloadVerified(
           packageUrl,
           checksumUrl,
-          p.join(directory.path, names.$1!),
+          p.join(directory.path, packageName),
           onProgress: (received, total) => setProgress(
             'Downloading Vaulton $latestVersion…',
             value: total > 0 ? (received / total).clamp(0.0, 1.0).toDouble() : null,
@@ -292,31 +304,20 @@ class UpdateService {
         }
 
         if (Platform.isLinux) {
-          final helper = await _downloadVerified(
-            installerUrl!,
-            installerChecksumUrl!,
-            p.join(directory.path, 'Vaulton-Linux-Install.sh'),
-            onProgress: (received, total) => setProgress(
-              'Downloading the Linux installer…',
-              value: total > 0 ? (received / total).clamp(0.0, 1.0).toDouble() : null,
-            ),
-            onStatus: (message) => setProgress(message),
-          );
-          setProgress('Starting the installer…', value: 1, ongoing: false);
-          await Process.start(
-            'bash',
-            [
-              helper.path,
-              '--update',
-              '--pid',
-              '$pid',
-              '--archive',
-              package.path,
-              '--target',
-              p.dirname(Platform.resolvedExecutable),
-            ],
-            mode: ProcessStartMode.detached,
-          );
+          setProgress('Opening the package installer…', value: 1, ongoing: false);
+          await Future<void>.delayed(const Duration(milliseconds: 800));
+          final opened = await _openWithDesktopInstaller(package.path);
+          if (!opened) {
+            if (context.mounted) {
+              messenger.showSnackBar(SnackBar(
+                content: Text('Install the downloaded package with your package manager: ${package.path}'),
+                duration: const Duration(seconds: 10),
+              ));
+            }
+            return;
+          }
+          // Close Vaulton so the package installer can replace the files.
+          await Future<void>.delayed(const Duration(milliseconds: 800));
           exit(0);
         }
       } finally {
@@ -335,6 +336,49 @@ class UpdateService {
         duration: const Duration(seconds: 8),
       ));
     }
+  }
+
+  /// The Linux package that matches the running distribution.
+  ///
+  /// Debian and Ubuntu take a .deb; Fedora, RHEL and openSUSE take a .rpm.
+  static String? _linuxPackageName() {
+    String? id;
+    String? idLike;
+    try {
+      final release = File('/etc/os-release');
+      if (!release.existsSync()) return null;
+      for (final line in release.readAsLinesSync()) {
+        if (line.startsWith('ID=')) id = line.substring(3).trim().replaceAll('"', '').toLowerCase();
+        if (line.startsWith('ID_LIKE=')) idLike = line.substring(8).trim().replaceAll('"', '').toLowerCase();
+      }
+    } catch (_) {
+      return null;
+    }
+    final ids = '$id $idLike';
+    if (ids.contains('debian') || ids.contains('ubuntu') || ids.contains('mint')) {
+      return 'Vaulton-Linux.deb';
+    }
+    if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
+      return 'Vaulton-Linux.rpm';
+    }
+    return null;
+  }
+
+  /// Hands the package to the desktop so the system installer can install it.
+  static Future<bool> _openWithDesktopInstaller(String path) async {
+    const openers = <(String, List<String>)>[
+      ('xdg-open', <String>[]),
+      ('gio', <String>['open']),
+    ];
+    for (final opener in openers) {
+      try {
+        final result = await Process.run(opener.$1, [...opener.$2, path]);
+        if (result.exitCode == 0) return true;
+      } catch (_) {
+        // Try the next opener.
+      }
+    }
+    return false;
   }
 
   static Future<File> _downloadVerified(

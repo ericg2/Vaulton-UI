@@ -71,10 +71,22 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     try {
       final j = await _v.job(widget.jobId, admin: widget.admin);
       if (!mounted) return;
-      setState(() {
-        _job = j;
-        _error = null;
-      });
+      // Only rebuild when the job actually shows something new, so a poll
+      // never interrupts a scroll through the log.
+      final old = _job;
+      final changed = old == null ||
+          old.statusRaw != j.statusRaw ||
+          old.error != j.error ||
+          old.snapshotId != j.snapshotId ||
+          old.endDate != j.endDate ||
+          old.progressDone != j.progressDone ||
+          old.progressTotal != j.progressTotal;
+      if (changed) {
+        setState(() {
+          _job = j;
+          _error = null;
+        });
+      }
       if (_loadedContextJobId != j.id) {
         _loadedContextJobId = j.id;
         await _loadContext(j);

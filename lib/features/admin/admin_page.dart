@@ -38,7 +38,12 @@ class AdminPage extends ConsumerWidget {
             tabs: [for (final t in tabs) Tab(text: t.$1)],
           ),
         ),
-        body: TabBarView(children: [for (final t in tabs) t.$2]),
+        body: TabBarView(
+          children: [
+            for (var i = 0; i < tabs.length; i++)
+              TabVisibility(index: i, child: tabs[i].$2),
+          ],
+        ),
       ),
     );
   }

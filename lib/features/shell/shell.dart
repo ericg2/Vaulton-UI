@@ -135,6 +135,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int _pageForNav(int nav) => nav < 3 ? nav : (nav == 3 ? 3 + _storageTab : 6);
   int _navForPage(int page) => page < 3 ? page : (page < 6 ? 3 : 4);
 
+  /// True when the given phone page is the one on screen.
+  ///
+  /// Off-screen pages stop their animations and their background polling, the
+  /// same way the wide layout does.
+  bool _phonePageActive(int page) {
+    if (page < 3) return page == _index;
+    if (page < 6) return _index == 3 && page == 3 + _storageTab;
+    return _index == 4;
+  }
+
   /// Switches tab. On phones the page slides, so taps and swipes feel the same.
   void _select(int i, {String? label, bool isMore = false}) {
     final from = _index;
@@ -405,14 +415,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 },
                 children: [
                   for (var i = 0; i < 3; i++)
-                    _KeepAlive(child: dests[i].build()),
+                    TickerMode(
+                      enabled: _phonePageActive(i),
+                      child: _KeepAlive(child: dests[i].build()),
+                    ),
                   for (var i = 0; i < 3; i++)
-                    _KeepAlive(child: StorageSection(index: i)),
-                  _KeepAlive(
-                    child: _MorePage(
-                      items: rest,
-                      onSignOut: () => signOutFlow(context, ref),
-                      onOpen: _openMoreDestination,
+                    TickerMode(
+                      enabled: _phonePageActive(3 + i),
+                      child: _KeepAlive(child: StorageSection(index: i)),
+                    ),
+                  TickerMode(
+                    enabled: _phonePageActive(6),
+                    child: _KeepAlive(
+                      child: _MorePage(
+                        items: rest,
+                        onSignOut: () => signOutFlow(context, ref),
+                        onOpen: _openMoreDestination,
+                      ),
                     ),
                   ),
                 ],

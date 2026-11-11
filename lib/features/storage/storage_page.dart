@@ -38,8 +38,12 @@ class StoragePage extends StatelessWidget {
           ],
         ),
       ),
-      body: const TabBarView(
-        children: [PointsTab(repo: false), PointsTab(repo: true), RootsTab()],
+      body: TabBarView(
+        children: [
+          const TabVisibility(index: 0, child: PointsTab(repo: false)),
+          const TabVisibility(index: 1, child: PointsTab(repo: true)),
+          const TabVisibility(index: 2, child: RootsTab()),
+        ],
       ),
     ),
   );
@@ -1056,6 +1060,11 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 30),
         fetch: (c) => _v.roots(cursor: c),
+        isSame: (a, b) =>
+            a.id == b.id &&
+            a.name == b.name &&
+            a.allocatedBytes == b.allocatedBytes &&
+            a.freeBytes == b.freeBytes,
         itemBuilder: (ctx, r, i) {
           final allocated = r.allocatedBytes;
           final scheme = '${r.source?['scheme'] ?? ''}';
@@ -1233,11 +1242,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     );
     if (created == true && mounted) {
       _key.currentState?.refresh();
-      ref.invalidate(pointNamesProvider);
-      if (!widget.repo) {
-        ref.read(pointListEpochProvider.notifier).bump();
-      }
-      ref.read(epochProvider.notifier).bump();
+      notifyPointsChanged(ref);
     }
   }
 
@@ -1260,6 +1265,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     );
     if (saved != null && mounted) {
       _key.currentState?.refresh();
+      notifyPointsChanged(ref);
       toast(
         context,
         '${widget.repo ? 'Backup vault' : 'Data folder'} updated.',
@@ -1295,11 +1301,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       ref.read(settingsProvider.notifier).clearLastPoint(ifMatches: p.id);
     }
     _key.currentState?.refresh();
-    ref.invalidate(pointNamesProvider);
-    if (!widget.repo) {
-      ref.read(pointListEpochProvider.notifier).bump();
-    }
-    ref.read(epochProvider.notifier).bump();
+    notifyPointsChanged(ref);
   }
 
   @override
@@ -1308,6 +1310,10 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     ref.listen(epochProvider, (_, _) {
       _key.currentState?.silentRefresh(force: true);
       _loadRoots();
+    });
+    // A folder was created, renamed, locked or unlocked elsewhere.
+    ref.listen(pointListEpochProvider, (_, _) {
+      _key.currentState?.silentRefresh(force: true);
     });
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -1341,6 +1347,13 @@ class _PointsTabState extends ConsumerState<PointsTab> {
           }
           return Paged(items, page.nextCursor, page.hasMore);
         },
+        isSame: (a, b) =>
+            a.id == b.id &&
+            a.name == b.name &&
+            a.usedBytes == b.usedBytes &&
+            a.health == b.health &&
+            a.isError == b.isError &&
+            a.isUnlocked == b.isUnlocked,
         itemBuilder: (ctx, p, i) => _pointCard(ctx, p),
       ),
     );
@@ -1360,7 +1373,11 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       point: point,
       accountPassword: ref.read(authProvider.notifier).accountPassword,
     );
-    if (unlocked && mounted) _key.currentState?.refresh();
+    if (unlocked && mounted) {
+      _key.currentState?.refresh();
+      // The folder is now open everywhere, not just on this screen.
+      notifyPointsChanged(ref);
+    }
   }
 
   Future<void> _changeDataPassword(BuildContext ctx, Point point) async {
@@ -1507,6 +1524,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
     confirmPassword.dispose();
     if (changed == true && ctx.mounted) {
       _key.currentState?.refresh();
+      notifyPointsChanged(ref);
       toast(
         ctx,
         syncPending
@@ -1663,6 +1681,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       recoveryKey = '';
       if (saved == true && mounted) {
         _key.currentState?.refresh();
+        notifyPointsChanged(ref);
         toast(
           ctx,
           syncPending
@@ -1702,7 +1721,11 @@ class _PointsTabState extends ConsumerState<PointsTab> {
       try {
         await _v.lockData(point.id);
         markDataFolderManuallyLocked(point.id);
-        if (mounted) _key.currentState?.refresh();
+        if (mounted) {
+          _key.currentState?.refresh();
+          // The folder is closed everywhere, not just on this screen.
+          notifyPointsChanged(ref);
+        }
       } catch (e) {
         if (mounted) toast(context, e.toString(), error: true);
       }

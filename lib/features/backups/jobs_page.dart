@@ -32,7 +32,10 @@ class BackupsPage extends ConsumerWidget {
                   : const SizedBox.shrink(),
             ),
           ),
-          body: const TabBarView(children: [JobsList(), SchedulesList()]),
+          body: TabBarView(children: [
+            const TabVisibility(index: 0, child: JobsList()),
+            const TabVisibility(index: 1, child: SchedulesList()),
+          ]),
         ),
       );
 }
@@ -105,6 +108,8 @@ class _JobsListState extends ConsumerState<JobsList> {
   @override
   Widget build(BuildContext context) {
     final v = ref.read(vaultonProvider);
+    // Look the names up once for the whole list instead of once per row.
+    final names = ref.watch(pointNamesProvider);
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -128,8 +133,10 @@ class _JobsListState extends ConsumerState<JobsList> {
               emptyIcon: Icons.work_history_outlined,
               onChanged: (l) => _anyActive = l.any((j) => j.active),
               fetch: (c) => v.jobs(cursor: c, repoId: widget.repoId, dataId: widget.dataId, admin: widget.admin, status: widget.externalStatus ?? _status),
+              isSame: _sameJob,
               itemBuilder: (ctx, j, i) => JobCard(
                 job: j,
+                names: names,
                 onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => JobDetailPage(jobId: j.id, admin: widget.admin)))
                     .then((_) => _key.currentState?.refresh()),
               ),
@@ -141,14 +148,31 @@ class _JobsListState extends ConsumerState<JobsList> {
   }
 }
 
-class JobCard extends ConsumerWidget {
-  const JobCard({super.key, required this.job, required this.onTap});
+/// True when a refreshed job still shows exactly what the row already does.
+/// Keeps background polling from rebuilding the list while you scroll.
+bool _sameJob(RepoJob a, RepoJob b) =>
+    a.id == b.id &&
+    a.statusRaw == b.statusRaw &&
+    a.error == b.error &&
+    a.snapshotId == b.snapshotId &&
+    a.endDate == b.endDate &&
+    a.progressDone == b.progressDone &&
+    a.progressTotal == b.progressTotal;
+
+/// A single job row.
+///
+/// The names of the folder and vault come from [names] so the caller can look
+/// them up once instead of every row subscribing to the shared lookup itself.
+class JobCard extends StatelessWidget {
+  const JobCard({super.key, required this.job, required this.onTap, this.names = const <String, String>{}});
   final RepoJob job;
   final VoidCallback onTap;
 
+  /// id -> display name for the data folders and backup vaults.
+  final Map<String, String> names;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final names = ref.watch(pointNamesProvider).value ?? const <String, String>{};
+  Widget build(BuildContext context) {
     final repoName = names[job.repoId];
     final dataName = job.dataId == null ? null : names[job.dataId!];
     final t = Theme.of(context).textTheme;
@@ -436,7 +460,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
 
   @override
   Widget build(BuildContext context) {
-    final names = ref.watch(pointNamesProvider).value ?? const <String, String>{};
+    final names = ref.watch(pointNamesProvider);
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(onPressed: _edit, icon: const Icon(Icons.add), label: const Text('New Schedule')),
       body: Align(
@@ -450,6 +474,13 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
             emptyIcon: Icons.schedule,
             autoRefresh: const Duration(seconds: 30),
             fetch: (c) => _v.schedules(cursor: c, repoId: widget.repoId),
+            isSame: (a, b) =>
+                a.id == b.id &&
+                a.enabled == b.enabled &&
+                a.lastRunAt == b.lastRunAt &&
+                a.lastError == b.lastError &&
+                a.runCount == b.runCount &&
+                a.nextRunAt == b.nextRunAt,
             itemBuilder: (ctx, s, i) {
               final repoName = names[s.repoId] ?? 'Backup Vault';
               return Card(

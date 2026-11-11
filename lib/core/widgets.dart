@@ -122,6 +122,7 @@ class CursorList<T> extends StatefulWidget {
     this.header,
     this.autoRefresh,
     this.emptyHint,
+    this.isSame,
   });
   final PageFetcher<T> fetch;
   final Widget Function(BuildContext, T item, int index) itemBuilder;
@@ -137,6 +138,10 @@ class CursorList<T> extends StatefulWidget {
   /// Silently reloads the first page on this interval while the list is visible.
   final Duration? autoRefresh;
 
+  /// Tells whether a refreshed item still matches the one on screen. When
+  /// every item matches, the list is left alone instead of rebuilt.
+  final bool Function(T a, T b)? isSame;
+
   @override
   State<CursorList<T>> createState() => CursorListState<T>();
 }
@@ -148,10 +153,16 @@ class CursorListState<T> extends State<CursorList<T>> {
   Object? _error;
   int _gen = 0;
   Timer? _timer;
+  Timer? _scrollEnd;
   DateTime _lastUserScroll = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastRefresh = DateTime.fromMillisecondsSinceEpoch(0);
   int _firstPageSize = 0;
   bool _wasVisible = true, _loadedOnce = false;
+
+  /// True while the user is moving the list. Background refreshes wait for
+  /// the scroll to settle so a rebuild never interrupts the gesture.
+  bool _scrolling = false;
+  bool _deferred = false;
 
   @override
   void didChangeDependencies() {
@@ -184,6 +195,7 @@ class CursorListState<T> extends State<CursorList<T>> {
   @override
   void dispose() {
     _timer?.cancel();
+    _scrollEnd?.cancel();
     super.dispose();
   }
 
@@ -193,6 +205,12 @@ class CursorListState<T> extends State<CursorList<T>> {
   /// Used by background polling so the UI does not flicker.
   Future<void> silentRefresh({bool force = false}) async {
     if (_loading) return;
+    // Rebuilding the rows mid-gesture makes the list stutter. Wait until the
+    // scroll settles and refresh then instead.
+    if (_scrolling) {
+      _deferred = true;
+      return;
+    }
     // A first-page refresh resets the cursor. Preserve already-loaded pages
     // in large directories/lists; an explicit pull-to-refresh still resets them.
     if (items.length > _firstPageSize && _firstPageSize > 0) {
@@ -204,6 +222,12 @@ class CursorListState<T> extends State<CursorList<T>> {
     try {
       final page = await widget.fetch(null);
       if (!mounted || gen != _gen) return;
+      if (_unchanged(page.items)) {
+        _cursor = page.nextCursor;
+        _hasMore = page.hasMore;
+        widget.onChanged?.call(List.unmodifiable(items));
+        return;
+      }
       setState(() {
         items
           ..clear()
@@ -217,6 +241,17 @@ class CursorListState<T> extends State<CursorList<T>> {
     } catch (_) {
       // Keep the current list on a background refresh failure.
     }
+  }
+
+  /// True when the refreshed rows are the same as the ones on screen, so the
+  /// list does not need to be rebuilt.
+  bool _unchanged(List<T> fresh) {
+    final same = widget.isSame;
+    if (same == null || fresh.length != items.length) return false;
+    for (var i = 0; i < fresh.length; i++) {
+      if (!same(fresh[i], items[i])) return false;
+    }
+    return true;
   }
 
   Future<void> load({bool reset = false}) async {
@@ -275,6 +310,17 @@ class CursorListState<T> extends State<CursorList<T>> {
       onNotification: (n) {
         if (n is ScrollUpdateNotification || n is UserScrollNotification) {
           _lastUserScroll = DateTime.now();
+          _scrolling = true;
+          // The list settles shortly after the last scroll event.
+          _scrollEnd?.cancel();
+          _scrollEnd = Timer(const Duration(milliseconds: 250), () {
+            if (!mounted) return;
+            _scrolling = false;
+            if (_deferred) {
+              _deferred = false;
+              silentRefresh();
+            }
+          });
         }
         return false;
       },
@@ -336,6 +382,30 @@ class _AsyncBodyState<T> extends State<AsyncBody<T>> {
       );
 }
 
+/// Keeps a tab's timers running only while that tab is on screen.
+///
+/// Tabs keep their state, but a hidden list stops polling and rebuilding, so
+/// switching tabs never leaves work running in the background.
+class TabVisibility extends StatelessWidget {
+  const TabVisibility({super.key, required this.index, required this.child, this.controller});
+  final int index;
+  final Widget child;
+
+  /// Set when the page uses its own [TabController] instead of a
+  /// [DefaultTabController].
+  final TabController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller ?? DefaultTabController.maybeOf(context);
+    if (c == null) return child;
+    return AnimatedBuilder(
+      animation: c,
+      builder: (context, _) => TickerMode(enabled: c.index == index, child: child),
+    );
+  }
+}
+
 class Section extends StatelessWidget {
   const Section(this.title, {super.key, required this.children});
   final String title;
@@ -351,25 +421,72 @@ class Section extends StatelessWidget {
       ]);
 }
 
-class UsageBar extends StatelessWidget {
+/// A thin usage bar.
+///
+/// The bar fills without a transition the first time it appears, so a row that
+/// scrolls into view never restarts an animation mid-scroll. It only moves
+/// when the value itself changes.
+class UsageBar extends StatefulWidget {
   const UsageBar({super.key, required this.used, required this.max});
   final int used, max;
   @override
+  State<UsageBar> createState() => _UsageBarState();
+}
+
+class _UsageBarState extends State<UsageBar> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 400),
+  );
+  Animation<double>? _anim;
+  double _value = 0, _target = 0;
+
+  double? _fraction() {
+    if (widget.max <= 0) return null;
+    return (widget.used / widget.max).clamp(0, 1).toDouble();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _value = _target = _fraction() ?? 0;
+  }
+
+  @override
+  void didUpdateWidget(covariant UsageBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = _fraction();
+    if (next == null || next == _target) return;
+    _target = next;
+    _anim = Tween<double>(begin: _anim?.value ?? _value, end: next)
+        .animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+    _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final over = max > 0 && used > max;
-    final f = max > 0 ? (used / max).clamp(0, 1).toDouble() : null;
+    final f = _fraction();
+    final over = widget.max > 0 && widget.used > widget.max;
     // Warn before it is full: amber-ish tertiary at 90%, red when over quota.
     final color = over ? cs.error : (f != null && f >= 0.9 ? cs.tertiary : null);
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: f == null
           ? const LinearProgressIndicator(value: 0, minHeight: 6)
-          : TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: f),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: 6, color: color),
+          : AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) => LinearProgressIndicator(
+                value: _anim?.value ?? _value,
+                minHeight: 6,
+                color: color,
+              ),
             ),
     );
   }

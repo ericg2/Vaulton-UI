@@ -338,23 +338,45 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     final prefs = ref.read(prefsProvider);
     await prefs.reload();
     if (!mounted) return;
-    setState(() {
-      _profiles = SyncProfile.loadAll(prefs);
-      for (final p in _profiles) {
-        final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
-        if (destination != null && !canUseDataFolderNow(destination)) {
-          _status[p.id] = SyncRunStatus(
-            phase: 'Paused',
-            message: 'Unlock the destination Data Folder in Storage before syncing.',
-          );
-          continue;
-        }
-        final live = _status[p.id];
-        // Keep in-memory progress; periodic refresh must not roll back a live scan.
-        if (_cancelTokens.containsKey(p.id) && live?.running == true) continue;
-        _status[p.id] = SyncRunStatus.load(prefs, p.id);
+    final profiles = SyncProfile.loadAll(prefs);
+    final next = <String, SyncRunStatus>{};
+    for (final p in profiles) {
+      final destination = _points.where((x) => x.id == p.pointId).firstOrNull;
+      if (destination != null && !canUseDataFolderNow(destination)) {
+        next[p.id] = SyncRunStatus(
+          phase: 'Paused',
+          message: 'Unlock the destination Data Folder in Storage before syncing.',
+        );
+        continue;
       }
+      final live = _status[p.id];
+      // Keep in-memory progress; periodic refresh must not roll back a live scan.
+      if (live != null && _cancelTokens.containsKey(p.id) && live.running) {
+        next[p.id] = live;
+        continue;
+      }
+      next[p.id] = SyncRunStatus.load(prefs, p.id);
+    }
+    // Nothing changed: leave the cards alone instead of rebuilding them.
+    if (_signature(profiles, next) == _signature(_profiles, _status)) return;
+    setState(() {
+      _profiles = profiles;
+      _status
+        ..clear()
+        ..addAll(next);
     });
+  }
+
+  /// A compact fingerprint of everything the sync cards show.
+  String _signature(List<SyncProfile> profiles, Map<String, SyncRunStatus> status) {
+    final b = StringBuffer();
+    for (final p in profiles) {
+      b.write('${p.id}|${p.name}|${p.enabled}|${p.lastRun}|${p.nextRun}|${p.deleteExtras}|${p.intervalMinutes}|${p.cron}|${p.timeZone}|${p.remoteDir}|${p.sourceLocation}|');
+      final s = status[p.id];
+      b.write('${s?.phase}|${s?.message}|${s?.error}|${s?.running}|${s?.current}|${s?.bytesDone}|${s?.bytesTotal}|${s?.completed}|${s?.failed}|${s?.totalFiles}|');
+      b.write(';');
+    }
+    return b.toString();
   }
 
   Future<void> _openRequestedSettings(List<SyncProfile> profiles) async {

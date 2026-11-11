@@ -1,0 +1,42 @@
+# nFPM configuration for the Vaulton Linux packages.
+#
+# The release workflow builds one Debian package and one RPM package from this
+# file, so both formats ship the same application bundle.
+#
+#   nfpm package --packager deb --config installer/nfpm.yaml --target build/release-assets
+#   nfpm package --packager rpm --config installer/nfpm.yaml --target build/release-assets
+name: vaulton
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: "1"
+section: net
+priority: optional
+maintainer: Eric G2
+vendor: Vaulton
+homepage: https://github.com/ericg2/Vaulton-UI
+license: Proprietary
+description: |
+  Vaulton is a desktop client for the Vaulton API.
+  Manage your files, backups and folder syncing on a server you control.
+contents:
+  # The application bundle keeps its own layout: the executable loads its
+  # libraries and assets relative to itself.
+  - src: build/linux/x64/release/bundle/vaulton
+    dst: /opt/vaulton/vaulton
+    file_info:
+      mode: 0755
+  - src: build/linux/x64/release/bundle/data
+    dst: /opt/vaulton/data
+    type: dir
+  - src: build/linux/x64/release/bundle/lib
+    dst: /opt/vaulton/lib
+    type: dir
+  - src: linux/com.ericg2.vaulton.desktop
+    dst: /usr/share/applications/com.ericg2.vaulton.desktop
+  - src: assets/branding/vaulton-mark.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/com.ericg2.vaulton.svg
+  # The desktop entry launches "vaulton" from the PATH.
+  - src: /opt/vaulton/vaulton
+    dst: /usr/bin/vaulton
+    type: symlink

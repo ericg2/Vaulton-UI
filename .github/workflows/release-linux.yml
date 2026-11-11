@@ -16,6 +16,10 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
+      - name: Resolve the release version
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -34,7 +38,7 @@ jobs:
       - name: Build Linux release
         run: flutter build linux --release
 
-      - name: Package Linux application and installer
+      - name: Package Linux application
         shell: bash
         run: |
           set -euo pipefail
@@ -44,12 +48,37 @@ jobs:
           archive='build/release-assets/Vaulton-Linux.tar.gz'
           tar -czf "$archive" -C "$bundle" .
           (cd build/release-assets && sha256sum Vaulton-Linux.tar.gz > Vaulton-Linux.tar.gz.sha256)
-          cp installer/Vaulton-Linux-Install.sh build/release-assets/Vaulton-Linux-Install.sh
-          chmod +x build/release-assets/Vaulton-Linux-Install.sh
-          (cd build/release-assets && sha256sum Vaulton-Linux-Install.sh > Vaulton-Linux-Install.sh.sha256)
+
+      - name: Install nFPM
+        shell: bash
+        env:
+          NFPM_VERSION: 2.48.0
+        run: |
+          set -euo pipefail
+          base="https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}"
+          curl -fsSL "$base/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" -o /tmp/nfpm.tar.gz
+          curl -fsSL "$base/checksums.txt" -o /tmp/nfpm-checksums.txt
+          (cd /tmp && grep " nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz\$" nfpm-checksums.txt | sha256sum -c -)
+          tar -xzf /tmp/nfpm.tar.gz -C /tmp nfpm
+          sudo install -m 0755 /tmp/nfpm /usr/local/bin/nfpm
+          nfpm --version
+
+      - name: Build Linux packages
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          nfpm package --packager deb --config installer/nfpm.yaml --target build/release-assets/vaulton.deb
+          nfpm package --packager rpm --config installer/nfpm.yaml --target build/release-assets/vaulton.rpm
+          cd build/release-assets
+          mv vaulton.deb Vaulton-Linux.deb
+          mv vaulton.rpm Vaulton-Linux.rpm
+          sha256sum Vaulton-Linux.deb > Vaulton-Linux.deb.sha256
+          sha256sum Vaulton-Linux.rpm > Vaulton-Linux.rpm.sha256
 
       - name: Attach Linux packages to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$TAG" build/release-assets/Vaulton-Linux.tar.gz build/release-assets/Vaulton-Linux.tar.gz.sha256 build/release-assets/Vaulton-Linux-Install.sh build/release-assets/Vaulton-Linux-Install.sh.sha256 --clobber
+        run: gh release upload "$TAG" build/release-assets/Vaulton-Linux.tar.gz build/release-assets/Vaulton-Linux.tar.gz.sha256 build/release-assets/Vaulton-Linux.deb build/release-assets/Vaulton-Linux.deb.sha256 build/release-assets/Vaulton-Linux.rpm build/release-assets/Vaulton-Linux.rpm.sha256 --clobber

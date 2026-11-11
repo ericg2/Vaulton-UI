@@ -268,8 +268,8 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
       return Scaffold(
         appBar: AppBar(title: title, actions: [_menu()], bottom: _tabs()),
         body: TabBarView(controller: _tc, children: [
-          VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true),
-          VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, header: _summary()),
+          TabVisibility(index: 0, controller: _tc, child: VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true)),
+          TabVisibility(index: 1, controller: _tc, child: VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, header: _summary())),
           _automation(),
         ]),
       );
@@ -287,8 +287,8 @@ class _RepoPageState extends ConsumerState<RepoPage> with SingleTickerProviderSt
                 _tabs(),
                 Expanded(
                   child: TabBarView(controller: _tc, children: [
-                    VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true, showFab: false),
-                    VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false),
+                    TabVisibility(index: 0, controller: _tc, child: VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, snapshotOnly: true, showFab: false)),
+                    TabVisibility(index: 1, controller: _tc, child: VaultTimeline(repoId: widget.repoId, repo: _repo, onBackup: _backup, showFab: false)),
                     _automation(),
                   ]),
                 ),

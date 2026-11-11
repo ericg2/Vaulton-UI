@@ -93,21 +93,32 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   int _doneUploads = -1;
   DateTime _panelSince = DateTime.now();
   bool _initialPointResolved = false;
+  List<SyncProfile> _profiles = const <SyncProfile>[];
+  final Map<String, String?> _syncErrors = {};
 
   String get _path => _segs.isEmpty ? '/' : '/${_segs.join('/')}';
   Vaulton get _v => ref.read(vaultonProvider);
   TransferManager get _mgr => ref.read(transferProvider.notifier);
 
-  List<SyncProfile> get _syncProfiles =>
-      SyncProfile.loadAll(ref.read(prefsProvider));
-
-  SyncProfile? _syncForPath(String path, String pointId) => _syncProfiles
+  SyncProfile? _syncForPath(String path, String pointId) => _profiles
       .where(
         (p) =>
             p.pointId == pointId &&
             _normalizeSyncPath(p.remoteDir) == _normalizeSyncPath(path),
       )
       .firstOrNull;
+
+  /// Re-reads the sync profiles and their last error once, instead of once per
+  /// row while the file list is drawn.
+  void _reloadSyncProfiles() {
+    final prefs = ref.read(prefsProvider);
+    _profiles = SyncProfile.loadAll(prefs);
+    _syncErrors
+      ..clear()
+      ..addEntries([
+        for (final p in _profiles) MapEntry(p.id, SyncRunStatus.load(prefs, p.id).error),
+      ]);
+  }
 
   static String _normalizeSyncPath(String path) {
     if (path.isEmpty) return '/';
@@ -126,6 +137,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   @override
   void initState() {
     super.initState();
+    _reloadSyncProfiles();
     _initPoints();
     // Quietly re-sync the listing and usage in the background. This never clears
     // the list or shows a spinner, so there is no flicker while you browse.
@@ -155,11 +167,15 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       point: point,
       accountPassword: ref.read(authProvider.notifier).accountPassword,
     );
-    if (unlocked) await _initPoints();
+    if (!unlocked) return;
+    await _initPoints();
+    // The folder is now open on every screen, not just this one.
+    notifyPointsChanged(ref);
   }
 
   Future<void> _initPoints() async {
     if (!mounted) return;
+    _reloadSyncProfiles();
     setState(() => _pointsError = null);
     try {
       // Wait for startup unlock attempts before loading the visible folder list.
@@ -202,6 +218,28 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       }
     } catch (e) {
       if (mounted) setState(() => _pointsError = e);
+    }
+  }
+
+  /// Reloads the folder list and the open folder after a change made
+  /// elsewhere, so a rename, a lock or a delete is picked up right away.
+  Future<void> _reloadPoints() async {
+    if (!mounted || _point == null) return;
+    try {
+      final pts = await loadAllPoints(ref);
+      if (!mounted) return;
+      final current = pts.where((p) => p.id == _point!.id).firstOrNull;
+      if (current == null) {
+        // The open folder is gone: fall back to another one.
+        await _initPoints();
+        return;
+      }
+      setState(() {
+        _points = pts;
+        _point = current;
+      });
+    } catch (_) {
+      // Keep the current view when the reload fails.
     }
   }
 
@@ -254,6 +292,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     if (mounted && _point?.id == id && unlocked.isUnlocked) {
       setState(() => _point = unlocked);
       _refresh();
+      // The folder is now open on every screen, not just this one.
+      notifyPointsChanged(ref);
     }
   }
 
@@ -780,7 +820,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       if (_point == null) {
         unawaited(_initPoints());
       } else {
-        unawaited(_refreshUsage());
+        unawaited(_reloadPoints());
       }
     });
     if (_pointsError != null) {
@@ -1199,6 +1239,11 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                               order: _desc ? 'Desc' : 'Asc',
                             ),
                             onChanged: (l) => _loaded = l,
+                            isSame: (a, b) =>
+                                a.name == b.name &&
+                                a.bytes == b.bytes &&
+                                a.modified == b.modified &&
+                                a.isDir == b.isDir,
                             itemBuilder: (c, n, i) {
                               final sel = _sel.contains(n.name);
                               final sync = n.isDir
@@ -1206,10 +1251,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                                   : null;
                               final syncError = sync == null
                                   ? null
-                                  : SyncRunStatus.load(
-                                      ref.read(prefsProvider),
-                                      sync.id,
-                                    ).error;
+                                  : _syncErrors[sync.id];
                               final syncColor = syncError != null
                                   ? Theme.of(context).colorScheme.error
                                   : Theme.of(context).colorScheme.primary;

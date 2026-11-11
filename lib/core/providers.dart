@@ -237,22 +237,48 @@ final unreadProvider = StreamProvider<int>((ref) async* {
 
 
 // ------------------------------------------------- shared lookups / refresh
-/// id -> display name for every data folder and backup vault (used to label jobs).
-final pointNamesProvider = FutureProvider<Map<String, String>>((ref) async {
+/// Every data folder and backup vault the signed-in user can see.
+class PointLists {
+  PointLists(this.datas, this.repos)
+      : names = {
+          for (final x in datas) x.id: x.name,
+          for (final x in repos) x.id: x.name,
+        };
+
+  final List<Point> datas, repos;
+
+  /// id -> display name for every folder and vault.
+  final Map<String, String> names;
+}
+
+/// The full, paginated list of data folders and backup vaults.
+///
+/// Loaded once and shared by the dashboard, the job list and the timeline so a
+/// single set of requests serves every screen that needs point names.
+/// Invalidate this when folders or vaults are created or deleted.
+final allPointsProvider = FutureProvider<PointLists>((ref) async {
   final v = ref.watch(vaultonProvider);
   ref.watch(_signedInUserProvider);
-  final out = <String, String>{};
-  for (final fetch in [(String? c) => v.datas(cursor: c, limit: 200), (String? c) => v.repos(cursor: c, limit: 200)]) {
+
+  Future<List<Point>> load(Future<Paged<Point>> Function(String? cursor) fetch) async {
+    final out = <Point>[];
     String? cur;
     do {
       final p = await fetch(cur);
-      for (final x in p.items) {
-        out[x.id] = x.name;
-      }
+      out.addAll(p.items);
       cur = p.hasMore ? p.nextCursor : null;
     } while (cur != null);
+    return out;
   }
-  return out;
+
+  final datas = await load((c) => v.datas(cursor: c, limit: 200));
+  final repos = await load((c) => v.repos(cursor: c, limit: 200));
+  return PointLists(datas, repos);
+});
+
+/// id -> display name for every data folder and backup vault (used to label jobs).
+final pointNamesProvider = Provider<Map<String, String>>((ref) {
+  return ref.watch(allPointsProvider).value?.names ?? const <String, String>{};
 });
 
 /// Bumped whenever something changes server-side (upload finished, job queued...)
@@ -265,7 +291,11 @@ class EpochNotifier extends Notifier<int> {
 
 final epochProvider = NotifierProvider<EpochNotifier, int>(EpochNotifier.new);
 
-/// Bumped only when the user's Data Folder collection changes.
+/// Bumped when a Data Folder or Backup Vault changes: it is created,
+/// deleted, renamed, locked or unlocked.
+///
+/// Screens that show points listen to this so they reload instead of keeping
+/// a stale copy of the collection.
 class PointListEpochNotifier extends Notifier<int> {
   @override
   int build() => 0;
@@ -274,6 +304,16 @@ class PointListEpochNotifier extends Notifier<int> {
 
 final pointListEpochProvider =
     NotifierProvider<PointListEpochNotifier, int>(PointListEpochNotifier.new);
+
+/// Tells every screen that a Data Folder or Backup Vault changed.
+///
+/// Reloads the shared point list and marks the general refresh signal, so the
+/// dashboard, the storage lists and the file browser all pick the change up.
+void notifyPointsChanged(WidgetRef ref) {
+  ref.read(pointListEpochProvider.notifier).bump();
+  ref.invalidate(allPointsProvider);
+  ref.read(epochProvider.notifier).bump();
+}
 
 /// Basic server facts for the sidebar. `/admin/status` is used when permitted.
 class ServerInfo {

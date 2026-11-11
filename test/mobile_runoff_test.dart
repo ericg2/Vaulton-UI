@@ -86,6 +86,10 @@ class _FakeVaulton extends Vaulton {
   }) async => Paged(rootList, null, false);
 
   @override
+  Future<Point> data(String id) async =>
+      points.where((p) => p.id == id).firstOrNull ?? _point(id, 'Folder');
+
+  @override
   Future<Paged<Node>> list(
     String pointId,
     String path, {

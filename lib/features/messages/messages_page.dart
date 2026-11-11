@@ -253,6 +253,8 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       fetch: (c) => inbox
           ? _v.inbox(cursor: c, unread: _unreadOnly ? true : null)
           : _v.sent(cursor: c),
+      isSame: (a, b) =>
+          a.id == b.id && a.isRead == b.isRead && a.subject == b.subject && a.preview == b.preview,
       itemBuilder: (ctx, m, i) => Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -367,7 +369,10 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
           icon: const Icon(Icons.edit_outlined),
           label: const Text('Compose'),
         ),
-        body: TabBarView(children: [_list(true), _list(false)]),
+        body: TabBarView(children: [
+          TabVisibility(index: 0, child: _list(true)),
+          TabVisibility(index: 1, child: _list(false)),
+        ]),
       ),
     );
   }

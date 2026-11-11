@@ -68,6 +68,10 @@ class _FuncApi extends Vaulton {
   }) async => Paged(const [], null, false);
 
   @override
+  Future<Point> data(String id) async =>
+      points.where((p) => p.id == id).firstOrNull ?? _point(id, 'Folder');
+
+  @override
   Future<Paged<RepoJob>> jobs({
     String? repoId,
     String? dataId,

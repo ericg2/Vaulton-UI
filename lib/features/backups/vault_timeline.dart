@@ -119,6 +119,8 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   final Set<String> _selectedSnapshots = {};
   String? _deleteJobId;
   Timer? _timer;
+  Timer? _scrollEnd;
+  bool _scrolling = false, _deferred = false;
   Vaulton get _v => ref.read(vaultonProvider);
 
   @override
@@ -136,16 +138,28 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   @override
   void dispose() {
     _timer?.cancel();
+    _scrollEnd?.cancel();
     super.dispose();
   }
 
   Future<void> _load({bool spinner = false, bool replace = false}) async {
+    // Rebuilding the rows mid-gesture makes the list stutter, so a background
+    // poll waits until the scroll settles.
+    if (!spinner && _scrolling) {
+      _deferred = true;
+      return;
+    }
     if (spinner) setState(() { _loading = true; _error = null; });
     try {
       final r = await Future.wait([_v.jobs(repoId: widget.repoId, limit: 100), _v.snapshots(widget.repoId, limit: 100)]);
       final jp = r[0] as Paged<RepoJob>;
       final sp = r[1] as Paged<Snapshot>;
       if (!mounted) return;
+      // Nothing changed since the last poll: leave the list exactly as it is.
+      if (!replace && _paged == false && !_changed(jp, sp)) {
+        if (_loading) setState(() => _loading = false);
+        return;
+      }
       setState(() {
         if (replace || !_paged) {
           _jobs.clear();
@@ -165,6 +179,19 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
     } catch (e) {
       if (mounted && (spinner || _jobs.isEmpty)) setState(() { _error = e; _loading = false; });
     }
+  }
+
+  /// True when the fetched page holds nothing the timeline does not show yet.
+  bool _changed(Paged<RepoJob> jp, Paged<Snapshot> sp) {
+    for (final j in jp.items) {
+      final old = _jobs[j.id];
+      if (old == null || old.statusRaw != j.statusRaw || old.progressDone != j.progressDone) return true;
+    }
+    for (final s in sp.items) {
+      final old = _snaps[s.id];
+      if (old == null || old.locked != s.locked) return true;
+    }
+    return false;
   }
 
   Future<void> _more() async {
@@ -550,7 +577,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
   @override
   Widget build(BuildContext context) {
     ref.listen(epochProvider, (_, _) => _load());
-    final names = ref.watch(pointNamesProvider).value ?? const <String, String>{};
+    final names = ref.watch(pointNamesProvider);
     final all = buildTimeline(_jobs.values, _snaps.values);
     final entries = all.where(_match).toList();
     final hasHeader = widget.header != null;
@@ -580,7 +607,23 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
           constraints: const BoxConstraints(maxWidth: 920),
           child: RefreshIndicator(
             onRefresh: () => _load(replace: true),
-            child: CustomScrollView(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                if (n is ScrollUpdateNotification || n is UserScrollNotification) {
+                  _scrolling = true;
+                  _scrollEnd?.cancel();
+                  _scrollEnd = Timer(const Duration(milliseconds: 250), () {
+                    if (!mounted) return;
+                    _scrolling = false;
+                    if (_deferred) {
+                      _deferred = false;
+                      _load();
+                    }
+                  });
+                }
+                return false;
+              },
+              child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 if (hasHeader) SliverToBoxAdapter(child: widget.header!),
@@ -622,6 +665,7 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
                   ),
                 ),
               ],
+              ),
             ),
           ),
         ),
