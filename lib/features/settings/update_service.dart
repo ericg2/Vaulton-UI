@@ -10,10 +10,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class _UpdateProgress {
-  const _UpdateProgress(this.message, {this.progress});
+  const _UpdateProgress(this.message, {this.progress, this.canInstall = false});
 
   final String message;
   final double? progress;
+  final bool canInstall;
 }
 
 Widget _buildReleaseNotes(String markdown, ThemeData theme) {
@@ -129,25 +130,27 @@ class UpdateService {
           .whereType<Map<String, dynamic>>()
           .toList();
 
-      // Linux ships both a Debian and an RPM package, so pick the one this
-      // distribution understands.
-      final linuxPackage = Platform.isLinux ? _linuxPackageName() : null;
-      if (Platform.isLinux && linuxPackage == null) {
-        throw const FormatException(
-          'Vaulton could not tell which Linux package to install. Download it from the release page.',
-        );
+      if (Platform.isLinux) {
+        if (!quietIfUpToDate && context.mounted) {
+          final command = _linuxPackageManagerCommand();
+          messenger.showSnackBar(SnackBar(
+            content: Text(command == null
+                ? 'Update Vaulton from your Linux package manager or the download page.'
+                : 'Update Vaulton with: $command'),
+            duration: const Duration(seconds: 10),
+          ));
+        }
+        return;
       }
-      final String? packageName;
-      final String? checksumName;
+
+      final String packageName;
+      final String checksumName;
       if (Platform.isAndroid) {
-        packageName = 'Vaulton-Android.apk';
-        checksumName = 'Vaulton-Android.apk.sha256';
+        packageName = 'vaulton-$latestVersion-android.apk';
+        checksumName = '$packageName.sha256';
       } else if (Platform.isWindows) {
-        packageName = 'Vaulton-Windows-Setup.exe';
-        checksumName = 'Vaulton-Windows-Setup.exe.sha256';
-      } else if (Platform.isLinux) {
-        packageName = linuxPackage;
-        checksumName = '$linuxPackage.sha256';
+        packageName = 'vaulton-$latestVersion-windows-setup.exe';
+        checksumName = '$packageName.sha256';
       } else {
         packageName = null;
         checksumName = null;
@@ -224,6 +227,7 @@ class UpdateService {
         _UpdateProgress('Downloading Vaulton ' + latestVersion + '…'),
       );
       var progressDialogOpen = true;
+      final installTrigger = Completer<void>();
       unawaited(showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -232,7 +236,7 @@ class UpdateService {
           builder: (context, value, _) => PopScope(
             canPop: false,
             child: AlertDialog(
-              title: Text(value.progress != null && value.progress! >= 1 ? 'Installing Update' : 'Downloading Update'),
+              title: Text(value.canInstall ? 'Ready to Install' : 'Downloading Update'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,12 +244,24 @@ class UpdateService {
                 Text(value.message),
                 const SizedBox(height: 16),
                 LinearProgressIndicator(value: value.progress),
-                if (value.progress != null) ...[
+                if (value.progress != null && !value.canInstall) ...[
                   const SizedBox(height: 8),
                   Text('${(value.progress! * 100).round()}%'),
                 ],
               ],
               ),
+              actions: [
+                if (value.canInstall)
+                  FilledButton.icon(
+                    onPressed: () {
+                      if (!installTrigger.isCompleted) installTrigger.complete();
+                      progressDialogOpen = false;
+                      Navigator.of(dialogContext).pop();
+                    },
+                    icon: const Icon(Icons.install_desktop_outlined),
+                    label: const Text('Install Now'),
+                  ),
+              ],
             ),
           ),
         ),
@@ -269,9 +285,12 @@ class UpdateService {
           onStatus: (message) => setProgress(message),
         );
         if (!context.mounted) return;
+        setProgress('Download verified. Review the installer prompt to continue.', value: 1, ongoing: true, canInstall: true);
+        await installTrigger.future;
+        if (!context.mounted) return;
 
         if (Platform.isAndroid) {
-          setProgress('Download verified. Android will now ask you to confirm the installation.', value: 1, ongoing: false);
+          setProgress('Opening Android installation confirmation…', value: 1, ongoing: false);
           await Future<void>.delayed(const Duration(milliseconds: 800));
           final result = await OpenFilex.open(
             package.path,
@@ -341,7 +360,7 @@ class UpdateService {
   /// The Linux package that matches the running distribution.
   ///
   /// Debian and Ubuntu take a .deb; Fedora, RHEL and openSUSE take a .rpm.
-  static String? _linuxPackageName() {
+  static String? _linuxPackageManagerCommand() {
     String? id;
     String? idLike;
     try {
@@ -356,10 +375,10 @@ class UpdateService {
     }
     final ids = '$id $idLike';
     if (ids.contains('debian') || ids.contains('ubuntu') || ids.contains('mint')) {
-      return 'Vaulton-Linux.deb';
+      return 'sudo apt update && sudo apt install --only-upgrade vaulton';
     }
     if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
-      return 'Vaulton-Linux.rpm';
+      return 'sudo dnf upgrade vaulton';
     }
     return null;
   }
