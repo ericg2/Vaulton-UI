@@ -14,7 +14,7 @@ on:
       - 'pubspec.yaml'
       - 'installer/windows.iss'
       - 'windows/**'
-      - '.github/workflows/release-windows.yml'
+      - 'lib/**'
 
 permissions:
   contents: write
@@ -59,16 +59,18 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.version.outputs.value }}
           EVENT: ${{ github.event_name }}
+          FORCE_REBUILD: ${{ contains(github.event.head_commit.message, '[rebuild-release-assets]') }}
         run: |
           set -euo pipefail
           skip=false
-          if [[ "$EVENT" == "push" ]]; then
+          if [[ "$EVENT" == "push" && "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
-            if [[ "$current_version" != "$VERSION" ]]; then
-              skip=true
+            setup_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-setup.exe" || true)"
+            zip_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-x64.zip" || true)"
+            if [[ "$current_version" != "$VERSION" || -z "$setup_exists" || -z "$zip_exists" ]]; then
+              skip=false
             else
-              exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-setup.exe" || true)"
-              [[ -n "$exists" ]] && skip=true
+              skip=true
             fi
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
@@ -127,6 +129,23 @@ jobs:
           Set-Content -Path "$setup.sha256" -Value "$setupHash  $setupName" -Encoding ascii
 
       - name: Attach Windows packages to GitHub Release
+      - name: Remove legacy unversioned Windows assets
+        if: always() && steps.release.outputs.tag != '' && steps.version.outputs.value != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
+          if grep -Fxq "vaulton-$VERSION-windows-setup.exe" <<< "$assets" &&
+             grep -Fxq "vaulton-$VERSION-windows-x64.zip" <<< "$assets"; then
+            for asset in Vaulton-Windows-Setup.exe Vaulton-Windows-Setup.exe.sha256 Vaulton-Windows.zip Vaulton-Windows.zip.sha256; do
+              if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
+            done
+          fi
+
         if: steps.guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
