@@ -52,6 +52,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Keeps user-initiated APK downloads alive when Vaulton moves to the background. -->
+        <service
+            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="dataSync" />
         <!-- WorkManager's foreground service must declare its type, or Android 14+ throws
              when a sync tries to go foreground. -->
         <service
