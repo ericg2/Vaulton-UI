@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to build, for example v1.3.21
+        description: Release tag to build, for example v1.3.22
         required: true
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
-      - name: Package Windows installer and portable archive
+      - name: Package versioned Windows assets
         shell: pwsh
         env:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
@@ -59,10 +59,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
           $bundle = Join-Path $PWD 'build/windows/x64/runner/Release'
           if (-not (Test-Path (Join-Path $bundle 'vaulton.exe'))) { throw 'Windows executable was not produced.' }
-          $zip = Join-Path $releaseDir 'Vaulton-Windows.zip'
+          $zipName = "vaulton-$version-windows-x64.zip"
+          $zip = Join-Path $releaseDir $zipName
           Compress-Archive -Path (Join-Path $bundle '*') -DestinationPath $zip -Force
           $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          Set-Content -Path "$zip.sha256" -Value "$zipHash  Vaulton-Windows.zip" -Encoding ascii
+          Set-Content -Path "$zip.sha256" -Value "$zipHash  $zipName" -Encoding ascii
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
           Push-Location installer
@@ -72,14 +73,22 @@ jobs:
           } finally {
             Pop-Location
           }
-          $setup = Join-Path $releaseDir 'Vaulton-Windows-Setup.exe'
-          if (-not (Test-Path $setup)) { throw 'Windows installer was not produced.' }
+          $setupName = "vaulton-$version-windows-setup.exe"
+          $setup = Join-Path $releaseDir $setupName
+          if (-not (Test-Path $setup)) { throw "Windows installer was not produced: $setup" }
           $setupHash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
-          Set-Content -Path "$setup.sha256" -Value "$setupHash  Vaulton-Windows-Setup.exe" -Encoding ascii
+          Set-Content -Path "$setup.sha256" -Value "$setupHash  $setupName" -Encoding ascii
 
       - name: Attach Windows packages to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.tag }}
         shell: bash
-        run: gh release upload "$TAG" build/release-assets/Vaulton-Windows.zip build/release-assets/Vaulton-Windows.zip.sha256 build/release-assets/Vaulton-Windows-Setup.exe build/release-assets/Vaulton-Windows-Setup.exe.sha256 --clobber
+        run: |
+          VERSION="${VERSION#v}"
+          gh release upload "$TAG" \
+            "build/release-assets/vaulton-$VERSION-windows-x64.zip" \
+            "build/release-assets/vaulton-$VERSION-windows-x64.zip.sha256" \
+            "build/release-assets/vaulton-$VERSION-windows-setup.exe" \
+            "build/release-assets/vaulton-$VERSION-windows-setup.exe.sha256" --clobber
