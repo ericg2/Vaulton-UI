@@ -434,7 +434,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Jobs'), findsOneWidget);
+      expect(find.text('History'), findsOneWidget);
       await tapTab(tester, 'Schedules');
       expect(find.text('Nightly backup of everything'), findsOneWidget);
     });
