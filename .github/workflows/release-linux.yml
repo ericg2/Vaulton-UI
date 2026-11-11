@@ -56,7 +56,7 @@ jobs:
           skip=false
           if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
-            deb_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb" || true)"
+            deb_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb" || true)"
             deb_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb.sha256" || true)"
             rpm_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm" || true)"
             rpm_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm.sha256" || true)"
