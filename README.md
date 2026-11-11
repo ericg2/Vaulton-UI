@@ -73,7 +73,7 @@ Some features depend on your account permissions and the devices you use.
 - [Troubleshooting](https://github.com/ericg2/Vaulton/blob/main/docs/TROUBLESHOOTING.md)
 - [Report a Problem](https://github.com/ericg2/Vaulton-UI/issues)
 
-See the [changelog](docs/CHANGELOG.md) for recent updates.
+See the [changelog](docs/CHANGELOG.md) for recent updates. Maintainers can follow the [release process](docs/release-process.md) to publish a complete, versioned release.
 
 
 **Linux repository security:** Repository installation requires signed APT metadata, signed RPM packages, and signed RPM metadata. The one-line installer refuses to configure the repository until signing is active. See [Linux repository signing and automatic publication](docs/linux-repository-signing.md) for maintainer setup.
