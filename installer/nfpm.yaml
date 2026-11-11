@@ -26,10 +26,12 @@ contents:
     dst: /opt/vaulton/vaulton
     file_info:
       mode: 0755
-  - src: build/linux/x64/release/bundle/data
+  - src: build/linux/x64/release/bundle/data/
     dst: /opt/vaulton/data
-  - src: build/linux/x64/release/bundle/lib
+    type: tree
+  - src: build/linux/x64/release/bundle/lib/
     dst: /opt/vaulton/lib
+    type: tree
   - src: linux/com.ericg2.vaulton.desktop
     dst: /usr/share/applications/com.ericg2.vaulton.desktop
   - src: assets/branding/vaulton-mark.svg
