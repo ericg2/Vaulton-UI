@@ -6,6 +6,10 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 
 ### Fixed
 
+- Linux DEB/RPM launchers now set the bundled library search path so Flutter desktop plugins such as `desktop_drop` load correctly from `/opt/vaulton/lib`.
+- Android update downloads now run in a real data-sync foreground service, with a persistent progress notification and a visible progress dialog until the user explicitly chooses Install.
+- Update notifications always show the completed verification state instead of throttling the final progress update.
+
 - You can switch folders in the Files page even when the current folder is locked.
 - Encrypted folders unlock automatically when you sign in.
 - Simplified the storage and folder sync screens.
