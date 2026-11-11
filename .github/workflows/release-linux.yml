@@ -12,8 +12,9 @@ on:
     branches: [main]
     paths:
       - 'pubspec.yaml'
-      - 'installer/**'
+      - 'installer/nfpm.yaml'
       - 'linux/**'
+      - 'lib/**'
       - '.github/workflows/release-linux.yml'
 
 permissions:
@@ -58,16 +59,18 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.version.outputs.value }}
           EVENT: ${{ github.event_name }}
+          FORCE_REBUILD: ${{ contains(github.event.head_commit.message, '[rebuild-release-assets]') }}
         run: |
           set -euo pipefail
           skip=false
-          if [[ "$EVENT" == "push" ]]; then
+          if [[ "$EVENT" == "push" && "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
-            if [[ "$current_version" != "$VERSION" ]]; then
-              skip=true
+            deb_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb" || true)"
+            rpm_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm" || true)"
+            if [[ "$current_version" != "$VERSION" || -z "$deb_exists" || -z "$rpm_exists" ]]; then
+              skip=false
             else
-              exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb" || true)"
-              [[ -n "$exists" ]] && skip=true
+              skip=true
             fi
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
@@ -133,6 +136,22 @@ jobs:
           sha256sum "vaulton-${VERSION}-linux-x64.tar.gz" > "vaulton-${VERSION}-linux-x64.tar.gz.sha256"
 
       - name: Attach Linux packages to GitHub Release
+      - name: Remove legacy unversioned Linux assets
+        if: always() && steps.release.outputs.tag != '' && steps.version.outputs.value != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
+          if grep -Fxq "vaulton-$VERSION-linux-amd64.deb" <<< "$assets" &&
+             grep -Fxq "vaulton-$VERSION-linux-x86_64.rpm" <<< "$assets"; then
+            for asset in Vaulton-Linux.deb Vaulton-Linux.deb.sha256 Vaulton-Linux.rpm Vaulton-Linux.rpm.sha256 Vaulton-Linux.tar.gz Vaulton-Linux.tar.gz.sha256; do
+              if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
+            done
+          fi
+
         if: steps.guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
