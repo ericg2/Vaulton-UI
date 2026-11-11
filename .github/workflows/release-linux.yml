@@ -57,11 +57,11 @@ jobs:
           if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
             deb_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb" || true)"
-            deb_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb.sha256" || true)"
-            rpm_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm" || true)"
-            rpm_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm.sha256" || true)"
-            tar_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x64.tar.gz" || true)"
-            tar_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x64.tar.gz.sha256" || true)"
+            deb_sha_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb.sha256" || true)"
+            rpm_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm" || true)"
+            rpm_sha_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm.sha256" || true)"
+            tar_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x64.tar.gz" || true)"
+            tar_sha_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x64.tar.gz.sha256" || true)"
             if [[ "$current_version" != "$VERSION" || -z "$deb_exists" || -z "$deb_sha_exists" || -z "$rpm_exists" || -z "$rpm_sha_exists" || -z "$tar_exists" || -z "$tar_sha_exists" ]]; then
               skip=false
             else
@@ -158,7 +158,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           set -euo pipefail
-          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           if grep -Fxq "vaulton-$VERSION-linux-amd64.deb" <<< "$assets" &&
              grep -Fxq "vaulton-$VERSION-linux-x86_64.rpm" <<< "$assets"; then
             for asset in Vaulton-Linux.deb Vaulton-Linux.deb.sha256 Vaulton-Linux.rpm Vaulton-Linux.rpm.sha256 Vaulton-Linux.tar.gz Vaulton-Linux.tar.gz.sha256; do
