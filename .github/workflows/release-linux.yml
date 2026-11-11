@@ -35,7 +35,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'release' && steps.release.outputs.tag || github.ref_name }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.event_name == 'release' && steps.release.outputs.tag || github.ref_name) }}
 
       - name: Resolve the release version
         id: version
