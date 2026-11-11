@@ -12,7 +12,7 @@ version: ${VERSION}
 release: "1"
 section: net
 priority: optional
-maintainer: Eric E. Gold <97804381+ericg2@users.noreply.github.com>
+maintainer: Eric E. Gold <littlelettere@gmail.com>
 vendor: Vaulton
 homepage: https://github.com/ericg2/Vaulton-UI
 license: Proprietary
