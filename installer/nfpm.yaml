@@ -12,7 +12,7 @@ version: ${VERSION}
 release: "1"
 section: net
 priority: optional
-maintainer: Eric G2
+maintainer: Eric E. Gold <97804381+ericg2@users.noreply.github.com>
 vendor: Vaulton
 homepage: https://github.com/ericg2/Vaulton-UI
 license: Proprietary
@@ -28,10 +28,8 @@ contents:
       mode: 0755
   - src: build/linux/x64/release/bundle/data
     dst: /opt/vaulton/data
-    type: dir
   - src: build/linux/x64/release/bundle/lib
     dst: /opt/vaulton/lib
-    type: dir
   - src: linux/com.ericg2.vaulton.desktop
     dst: /usr/share/applications/com.ericg2.vaulton.desktop
   - src: assets/branding/vaulton-mark.svg
