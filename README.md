@@ -34,7 +34,7 @@ Visit [ericg2.github.io](https://ericg2.github.io) for downloads and installatio
 curl -fsSL https://ericg2.github.io/install.sh | sh
 ```
 
-The installer configures the Vaulton APT, DNF or Zypper package source, so updates arrive through your normal package manager.
+Once signed Linux repositories are enabled, the installer configures the Vaulton APT, DNF or Zypper source so updates arrive through your normal package manager. Until then, use the versioned packages on the Releases page.
 
 **Windows (PowerShell):**
 
@@ -76,4 +76,4 @@ Some features depend on your account permissions and the devices you use.
 See the [changelog](docs/CHANGELOG.md) for recent updates.
 
 
-**Linux repository security:** The initial GitHub Pages APT and RPM repositories are served over HTTPS but are not yet signed. The installer explicitly trusts the APT repository and disables RPM/Zypper signature checks. For security-sensitive systems, use the GitHub Releases packages and verify their SHA-256 checksums until repository signing is configured.
+**Linux repository security:** Repository installation requires signed APT metadata, signed RPM packages, and signed RPM metadata. The one-line installer refuses to configure the repository until signing is active. See [Linux repository signing and automatic publication](docs/linux-repository-signing.md) for maintainer setup.
