@@ -247,7 +247,7 @@ class UpdateService {
         _UpdateProgress('Downloading Vaulton ' + latestVersion + '…'),
       );
       var progressDialogOpen = true;
-      final installTrigger = Completer<void>();
+      final installTrigger = Completer<bool>();
       unawaited(showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -255,6 +255,12 @@ class UpdateService {
           valueListenable: progress,
           builder: (context, value, _) => PopScope(
             canPop: value.canInstall,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop && !installTrigger.isCompleted) {
+                installTrigger.complete(false);
+                progressDialogOpen = false;
+              }
+            },
             child: AlertDialog(
               title: Text(value.canInstall ? 'Ready to Install' : 'Downloading Update'),
             content: Column(
@@ -274,7 +280,7 @@ class UpdateService {
                 if (value.canInstall)
                   FilledButton.icon(
                     onPressed: () {
-                      if (!installTrigger.isCompleted) installTrigger.complete();
+                      if (!installTrigger.isCompleted) installTrigger.complete(true);
                       progressDialogOpen = false;
                       Navigator.of(dialogContext).pop();
                     },
@@ -306,8 +312,8 @@ class UpdateService {
         );
         if (!context.mounted) return;
         setProgress('Download verified. Review the installer prompt to continue.', value: 1, ongoing: true, canInstall: true);
-        await installTrigger.future;
-        if (!context.mounted) return;
+        final installRequested = await installTrigger.future;
+        if (!installRequested || !context.mounted) return;
 
         if (Platform.isAndroid) {
           setProgress('Opening Android installation confirmation…', value: 1, ongoing: false);
