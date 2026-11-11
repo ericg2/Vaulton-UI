@@ -3,6 +3,11 @@ name: Build Linux release assets
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build, for example v1.3.21
+        required: true
 
 permissions:
   contents: write
@@ -11,10 +16,17 @@ jobs:
   linux:
     runs-on: ubuntu-24.04
     steps:
+      - name: Resolve the release tag
+        id: release
+        env:
+          DISPATCH_TAG: ${{ inputs.tag }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+        run: echo "tag=${DISPATCH_TAG:-$EVENT_TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Check out release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.release.outputs.tag }}
 
       - name: Resolve the release version
         id: version
@@ -56,10 +68,11 @@ jobs:
         run: |
           set -euo pipefail
           base="https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}"
-          curl -fsSL "$base/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" -o /tmp/nfpm.tar.gz
+          archive="nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz"
+          curl -fsSL "$base/$archive" -o "/tmp/$archive"
           curl -fsSL "$base/checksums.txt" -o /tmp/nfpm-checksums.txt
-          (cd /tmp && grep " nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz\$" nfpm-checksums.txt | sha256sum -c -)
-          tar -xzf /tmp/nfpm.tar.gz -C /tmp nfpm
+          (cd /tmp && grep " ${archive}\$" nfpm-checksums.txt | sha256sum -c -)
+          tar -xzf "/tmp/$archive" -C /tmp nfpm
           sudo install -m 0755 /tmp/nfpm /usr/local/bin/nfpm
           nfpm --version
 
@@ -80,5 +93,5 @@ jobs:
       - name: Attach Linux packages to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: gh release upload "$TAG" build/release-assets/Vaulton-Linux.tar.gz build/release-assets/Vaulton-Linux.tar.gz.sha256 build/release-assets/Vaulton-Linux.deb build/release-assets/Vaulton-Linux.deb.sha256 build/release-assets/Vaulton-Linux.rpm build/release-assets/Vaulton-Linux.rpm.sha256 --clobber
