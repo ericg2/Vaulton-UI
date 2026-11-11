@@ -61,6 +61,10 @@ jobs:
             version="${tag#v}"
             [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release tag: $tag"; exit 1; }
           fi
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            git tag "$tag" "$GITHUB_SHA"
+            git push origin "$tag"
+          fi
           if release_json="$(gh release view "$tag" --json isDraft 2>/dev/null)"; then
             is_draft="$(jq -r '.isDraft' <<< "$release_json")"
             [[ "$is_draft" == true ]] || { echo "Release $tag is already published; refusing to overwrite it."; exit 1; }
