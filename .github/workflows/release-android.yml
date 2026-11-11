@@ -8,6 +8,12 @@ on:
       tag:
         description: Release tag to build, for example v1.3.22
         required: true
+  push:
+    branches: [main]
+    paths:
+      - 'pubspec.yaml'
+      - 'android/**'
+      - '.github/workflows/release-android.yml'
 
 permissions:
   contents: write
@@ -21,12 +27,22 @@ jobs:
         env:
           DISPATCH_TAG: ${{ inputs.tag }}
           EVENT_TAG: ${{ github.event.release.tag_name }}
-        run: echo "tag=${DISPATCH_TAG:-$EVENT_TAG}" >> "$GITHUB_OUTPUT"
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$DISPATCH_TAG" ]]; then
+            tag="$DISPATCH_TAG"
+          elif [[ -n "$EVENT_TAG" ]]; then
+            tag="$EVENT_TAG"
+          else
+            tag="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Check out release tag
+      - name: Check out release source
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.release.outputs.tag }}
+          ref: ${{ github.event_name == 'release' && steps.release.outputs.tag || github.ref_name }}
 
       - name: Resolve the release version
         id: version
@@ -34,7 +50,29 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
         run: echo "value=${TAG#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Skip if the current release already has a versioned Android APK
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          skip=false
+          if [[ "$EVENT" == "push" ]]; then
+            current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
+            if [[ "$current_version" != "$VERSION" ]]; then
+              skip=true
+            else
+              exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq --arg name "vaulton-$VERSION-android.apk" 'any(.assets[]; .name == $name)')"
+              [[ "$exists" == true ]] && skip=true
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
       - name: Set up Flutter
+        if: steps.guard.outputs.skip != 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -42,12 +80,14 @@ jobs:
           cache: true
 
       - name: Set up Java
+        if: steps.guard.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Restore the Android signing key
+        if: steps.guard.outputs.skip != 'true'
         env:
           KEYSTORE: ${{ secrets.VAULTON_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.VAULTON_KEYSTORE_PASSWORD }}
@@ -64,9 +104,11 @@ jobs:
           } > android/key.properties
 
       - name: Build signed Android release
+        if: steps.guard.outputs.skip != 'true'
         run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Attach Android package to GitHub Release
+        if: steps.guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
