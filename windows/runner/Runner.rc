@@ -90,7 +90,7 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "Eric E. Gold" "\0"
-            VALUE "Comments", "Contact: 97804381+ericg2@users.noreply.github.com" "\0"
+            VALUE "Comments", "Manage your files, backups, and syncing." "\0"
             VALUE "FileDescription", "Vaulton" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "Vaulton" "\0"
