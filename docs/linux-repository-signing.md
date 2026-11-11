@@ -10,7 +10,7 @@ Vaulton's APT, DNF, and Zypper repositories are hosted on `ericg2.github.io`. Th
    bash tool/setup-linux-repository-signing.sh
    ```
 
-   The script stores the private key under `~/.vaulton/` and a base64 copy for GitHub Actions. If GitHub CLI is authenticated, it automatically uploads the public key and configures `VAULTON_REPO_SIGNING_KEY_BASE64`; otherwise it prints the exact manual steps. Back up both files securely. Do not commit the private key.
+   The script stores the private key under `~/.vaulton/` and a base64 copy for GitHub Actions. If GitHub CLI is authenticated, it automatically uploads both public keys and configures `VAULTON_REPO_SIGNING_KEY_BASE64`; otherwise it prints the exact manual steps. Back up both files securely. Do not commit the private key.
 
 2. Upload only `~/.vaulton/vaulton-archive-keyring.gpg` to the Pages repository as `keys/vaulton-archive-keyring.gpg`.
 
@@ -23,7 +23,7 @@ Vaulton's APT, DNF, and Zypper repositories are hosted on `ericg2.github.io`. Th
 
 4. Create a fine-grained GitHub token restricted to the `ericg2/ericg2.github.io` repository with Contents: Read and write. Store it as `VAULTON_PAGES_TOKEN` in `ericg2/Vaulton-UI` using `gh secret set VAULTON_PAGES_TOKEN -R ericg2/Vaulton-UI`. The token is used only to send the Pages repository-dispatch event. The normal release workflow continues to use its repository-scoped `GITHUB_TOKEN` for release assets.
 
-5. The versioned release workflow creates a draft release, builds all three platform packages, verifies that every expected asset exists, and only then publishes the release. After publication, it dispatches the Pages repository refresh. The installer refuses to configure unsigned Linux repositories. Once the signing secret and public key are present, the Pages workflow builds signed APT Release/InRelease metadata, signs the RPM package, and signs RPM repository metadata. The installer then configures APT, DNF, and Zypper signature verification.
+5. After the public keys and signing secret are configured, manually dispatch **Publish Vaulton installation site** once from the Actions tab in `ericg2/ericg2.github.io` (or run `gh workflow run pages.yml --repo ericg2/ericg2.github.io --ref main`). This first publication makes the repositories signed. The versioned release workflow then creates a draft release, builds all three platform packages, verifies that every expected asset exists, and only then publishes the release. After publication, it dispatches the Pages repository refresh. The installer refuses to configure unsigned Linux repositories. The Pages workflow builds signed APT Release/InRelease metadata, signs the RPM package, and signs RPM repository metadata. The installer then configures APT, DNF, and Zypper signature verification.
 
 ## Security and recovery
 
