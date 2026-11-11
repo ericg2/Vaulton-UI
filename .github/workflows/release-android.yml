@@ -56,7 +56,7 @@ jobs:
           skip=false
           if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
-            exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk" || true)"
+            exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk" || true)"
             sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk.sha256" || true)"
             if [[ "$current_version" != "$VERSION" || -z "$exists" || -z "$sha_exists" ]]; then
               skip=false
