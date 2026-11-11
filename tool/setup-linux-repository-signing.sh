@@ -69,6 +69,7 @@ else
   echo "GitHub CLI is not authenticated. Configure these manually:"
   echo "  1. Upload $PUBLIC_KEY as keys/vaulton-archive-keyring.gpg and $RPM_PUBLIC_KEY as keys/vaulton-archive-key.asc"
   echo "  2. Run: gh secret set VAULTON_REPO_SIGNING_KEY_BASE64 -R ericg2/ericg2.github.io < $PRIVATE_KEY_BASE64"
+  echo "  3. Dispatch the Publish Vaulton installation site workflow in ericg2/ericg2.github.io."
 fi
 
 echo
