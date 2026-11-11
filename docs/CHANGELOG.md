@@ -4,6 +4,8 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 
 ## Unreleased
 
+## 1.3.22
+
 ### Fixed
 
 - Linux DEB/RPM launchers now set the bundled library search path so Flutter desktop plugins such as `desktop_drop` load correctly from `/opt/vaulton/lib`.
