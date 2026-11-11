@@ -49,7 +49,8 @@ contents:
     dst: /usr/share/applications/com.ericg2.vaulton.desktop
   - src: assets/branding/vaulton-mark.svg
     dst: /usr/share/icons/hicolor/scalable/apps/com.ericg2.vaulton.svg
-  # The desktop entry launches "vaulton" from the PATH.
-  - src: /opt/vaulton/vaulton
+  # Resolve bundled Flutter plugin libraries for every launch path.
+  - src: installer/vaulton-launcher
     dst: /usr/bin/vaulton
-    type: symlink
+    file_info:
+      mode: 0755
