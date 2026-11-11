@@ -121,10 +121,10 @@ jobs:
           archive="build/release-assets/vaulton-${VERSION}-linux-x64.tar.gz"
           nfpm package --packager deb --config installer/nfpm.yaml --target "$deb"
           nfpm package --packager rpm --config installer/nfpm.yaml --target "$rpm"
-          dpkg-deb --contents "$deb" | grep -Fq '/usr/bin/vaulton'
-          dpkg-deb --contents "$deb" | grep -Fq '/opt/vaulton/lib/libdesktop_drop_plugin.so'
-          rpm -qpl "$rpm" | grep -Fxq '/usr/bin/vaulton'
-          rpm -qpl "$rpm" | grep -Fxq '/opt/vaulton/lib/libdesktop_drop_plugin.so'
+          dpkg-deb --contents "$deb" | grep -F '/usr/bin/vaulton' >/dev/null
+          dpkg-deb --contents "$deb" | grep -F '/opt/vaulton/lib/libdesktop_drop_plugin.so' >/dev/null
+          rpm -qpl "$rpm" | grep -Fx '/usr/bin/vaulton' >/dev/null
+          rpm -qpl "$rpm" | grep -Fx '/opt/vaulton/lib/libdesktop_drop_plugin.so' >/dev/null
           tar -czf "$archive" -C "$bundle" .
           cd build/release-assets
           sha256sum "vaulton-${VERSION}-linux-amd64.deb" > "vaulton-${VERSION}-linux-amd64.deb.sha256"
