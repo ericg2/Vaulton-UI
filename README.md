@@ -6,6 +6,7 @@
 <p align="center"><strong>Your files. Your backups. Your server.</strong></p>
 <p align="center">Manage your files and backups on a server you control.</p>
 <p align="center">
+  <a href="https://ericg2.github.io">Install Vaulton</a> ·
   <a href="https://github.com/ericg2/Vaulton-UI/releases">Download Vaulton</a> ·
   <a href="https://github.com/ericg2/Vaulton">Server Setup</a> ·
   <a href="https://github.com/ericg2/Vaulton-UI/issues">Get Help</a>
@@ -27,13 +28,13 @@ For help using the app, see the [user guide](https://github.com/ericg2/Vaulton/b
 
 Visit [ericg2.github.io](https://ericg2.github.io) for downloads and installation instructions.
 
-**Linux (Debian, Ubuntu, Fedora and compatible distributions):**
+**Linux (Debian, Ubuntu, Fedora, RHEL and openSUSE):**
 
 ```sh
 curl -fsSL https://ericg2.github.io/install.sh | sh
 ```
 
-The installer configures the Vaulton APT or DNF package source, so updates arrive through your normal package manager.
+The installer configures the Vaulton APT, DNF or Zypper package source, so updates arrive through your normal package manager.
 
 **Windows (PowerShell):**
 
@@ -75,4 +76,4 @@ Some features depend on your account permissions and the devices you use.
 See the [changelog](docs/CHANGELOG.md) for recent updates.
 
 
-**Linux repository security:** The initial GitHub Pages APT and DNF repositories are served over HTTPS but are not yet signed. The installer explicitly trusts the APT repository and disables RPM signature checks. For security-sensitive systems, use the GitHub Releases packages and verify their SHA-256 checksums until repository signing is configured.
+**Linux repository security:** The initial GitHub Pages APT and RPM repositories are served over HTTPS but are not yet signed. The installer explicitly trusts the APT repository and disables RPM/Zypper signature checks. For security-sensitive systems, use the GitHub Releases packages and verify their SHA-256 checksums until repository signing is configured.
