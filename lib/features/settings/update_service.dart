@@ -309,6 +309,8 @@ class UpdateService {
         unawaited(_notifyProgress(progress.value, ongoing: ongoing).catchError((_) {}));
       }
 
+      setProgress('Preparing your update…');
+
       try {
         final directory = await getTemporaryDirectory();
         final package = await _downloadVerified(
