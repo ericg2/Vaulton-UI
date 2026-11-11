@@ -396,7 +396,7 @@ class UpdateService {
     }
   }
 
-  // Keep repository-installed builds on the native package-manager update path.
+  // Managed Linux installs update through APT, DNF or Zypper; archives keep the in-app updater.
   static Future<bool> _isLinuxPackageManaged() async {
     String? id;
     String? idLike;
