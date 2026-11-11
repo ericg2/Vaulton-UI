@@ -277,7 +277,15 @@ class UpdateService {
               ],
               ),
               actions: [
-                if (value.canInstall)
+                if (value.canInstall) ...[
+                  TextButton(
+                    onPressed: () {
+                      if (!installTrigger.isCompleted) installTrigger.complete(false);
+                      progressDialogOpen = false;
+                      Navigator.of(dialogContext).pop();
+                    },
+                    child: const Text('Later'),
+                  ),
                   FilledButton.icon(
                     onPressed: () {
                       if (!installTrigger.isCompleted) installTrigger.complete(true);
@@ -287,6 +295,7 @@ class UpdateService {
                     icon: const Icon(Icons.install_desktop_outlined),
                     label: const Text('Install Now'),
                   ),
+                ],
               ],
             ),
           ),
