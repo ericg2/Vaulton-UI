@@ -143,8 +143,8 @@ class UpdateService {
         return;
       }
 
-      final String packageName;
-      final String checksumName;
+      String? packageName;
+      String? checksumName;
       if (Platform.isAndroid) {
         packageName = 'vaulton-$latestVersion-android.apk';
         checksumName = '$packageName.sha256';
@@ -234,7 +234,7 @@ class UpdateService {
         builder: (dialogContext) => ValueListenableBuilder<_UpdateProgress>(
           valueListenable: progress,
           builder: (context, value, _) => PopScope(
-            canPop: false,
+            canPop: value.canInstall,
             child: AlertDialog(
               title: Text(value.canInstall ? 'Ready to Install' : 'Downloading Update'),
             content: Column(
@@ -267,8 +267,8 @@ class UpdateService {
         ),
       ));
 
-      void setProgress(String message, {double? value, bool ongoing = true}) {
-        progress.value = _UpdateProgress(message, progress: value);
+      void setProgress(String message, {double? value, bool ongoing = true, bool canInstall = false}) {
+        progress.value = _UpdateProgress(message, progress: value, canInstall: canInstall);
         unawaited(_notifyProgress(progress.value, ongoing: ongoing).catchError((_) {}));
       }
 
