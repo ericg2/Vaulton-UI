@@ -1092,7 +1092,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                           ),
                         ),
                         if (r.isOwner)
-                          PopupMenuButton<String>(
+                          RowMenuButton(
                             onSelected: (a) {
                               switch (a) {
                                 case 'edit':
@@ -1103,7 +1103,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                   _delete(r);
                               }
                             },
-                            itemBuilder: (_) => const [
+                            items: const [
                               PopupMenuItem(value: 'edit', child: Text('Edit')),
                               PopupMenuItem(
                                 value: 'share',
@@ -1849,7 +1849,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                     color: p.isError ? cs.errorContainer : null,
                     inline: true,
                   ),
-                  PopupMenuButton<String>(
+                  RowMenuButton(
                     onSelected: (a) {
                       switch (a) {
                         case 'edit':
@@ -1879,7 +1879,7 @@ class _PointsTabState extends ConsumerState<PointsTab> {
                           _delete(p);
                       }
                     },
-                    itemBuilder: (_) => [
+                    items: [
                       const PopupMenuItem(value: 'edit', child: Text('Edit')),
                       if (!widget.repo && p.isEncrypted) ...[
                         PopupMenuItem(

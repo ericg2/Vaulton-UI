@@ -602,7 +602,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                   ),
                   isThreeLine: true,
                   trailing: _manage
-                      ? PopupMenuButton<String>(
+                      ? RowMenuButton(
                           onSelected: (a) async {
                             switch (a) {
                               case 'scopes':
@@ -658,7 +658,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                 }
                             }
                           },
-                          itemBuilder: (_) => [
+                          items: [
                             const PopupMenuItem(
                               value: 'scopes',
                               child: Text('Edit Permissions'),

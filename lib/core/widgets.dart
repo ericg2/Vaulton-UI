@@ -406,6 +406,46 @@ class TabVisibility extends StatelessWidget {
   }
 }
 
+/// A compact menu button for list rows.
+///
+/// It shows the same overflow icon as [PopupMenuButton] with fewer widgets
+/// around it. Long lists pay for every widget in a row on each scroll frame,
+/// so the plain trigger keeps them smooth.
+class RowMenuButton extends StatelessWidget {
+  const RowMenuButton({super.key, required this.items, required this.onSelected, this.icon = Icons.more_vert});
+  final List<PopupMenuEntry<String>> items;
+  final ValueChanged<String> onSelected;
+  final IconData icon;
+
+  Future<void> _show(BuildContext context) async {
+    final button = context.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+    final offset = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final action = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + button.size.height,
+        overlay.size.width - offset.dx,
+        overlay.size.height - offset.dy,
+      ),
+      items: items,
+    );
+    if (action != null) onSelected(action);
+  }
+
+  @override
+  Widget build(BuildContext context) => Builder(
+        builder: (context) => InkWell(
+          onTap: () => _show(context),
+          onLongPress: () => _show(context),
+          borderRadius: BorderRadius.circular(20),
+          child: Icon(icon),
+        ),
+      );
+}
+
 class Section extends StatelessWidget {
   const Section(this.title, {super.key, required this.children});
   final String title;

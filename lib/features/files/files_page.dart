@@ -243,6 +243,56 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     }
   }
 
+  /// The actions available for one file or folder.
+  static const _rowMenuItems = <PopupMenuEntry<String>>[
+    PopupMenuItem(value: 'open', child: Text('Open')),
+    PopupMenuItem(value: 'download', child: Text('Download')),
+    PopupMenuItem(value: 'rename', child: Text('Rename')),
+    PopupMenuItem(value: 'move', child: Text('Move To…')),
+    PopupMenuItem(value: 'copy', child: Text('Copy To…')),
+    PopupMenuItem(value: 'select', child: Text('Select')),
+    PopupMenuItem(value: 'info', child: Text('Details')),
+    PopupMenuDivider(),
+    PopupMenuItem(value: 'delete', child: Text('Delete')),
+  ];
+
+  /// Opens the row menu at the pointer, used for a right click.
+  Future<void> _showRowMenu(BuildContext context, Node n, Offset position) async {
+    final action = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        MediaQuery.sizeOf(context).width - position.dx,
+        MediaQuery.sizeOf(context).height - position.dy,
+      ),
+      items: _rowMenuItems,
+    );
+    if (!mounted || action == null) return;
+    _runRowAction(action, n);
+  }
+
+  void _runRowAction(String action, Node n) {
+    switch (action) {
+      case 'open':
+        _open(n);
+      case 'download':
+        _download([n]);
+      case 'rename':
+        _rename(n);
+      case 'move':
+        _moveCopy([n], false);
+      case 'copy':
+        _moveCopy([n], true);
+      case 'select':
+        _toggle(n);
+      case 'info':
+        _info(n);
+      case 'delete':
+        _delete([n]);
+    }
+  }
+
   void _go(List<String> segs) {
     setState(() {
       _segs = segs;
@@ -1255,196 +1305,81 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                               final syncColor = syncError != null
                                   ? Theme.of(context).colorScheme.error
                                   : Theme.of(context).colorScheme.primary;
-                              return GestureDetector(
-                                onSecondaryTapUp: (details) async {
-                                  final action = await showMenu<String>(
-                                    context: context,
-                                    position: RelativeRect.fromLTRB(
-                                      details.globalPosition.dx,
-                                      details.globalPosition.dy,
-                                      MediaQuery.sizeOf(context).width -
-                                          details.globalPosition.dx,
-                                      MediaQuery.sizeOf(context).height -
-                                          details.globalPosition.dy,
-                                    ),
-                                    items: const [
-                                      PopupMenuItem(
-                                        value: 'open',
-                                        child: Text('Open'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'download',
-                                        child: Text('Download'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'rename',
-                                        child: Text('Rename'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'move',
-                                        child: Text('Move To…'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'copy',
-                                        child: Text('Copy To…'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'select',
-                                        child: Text('Select'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'info',
-                                        child: Text('Details'),
-                                      ),
-                                      PopupMenuDivider(),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Text('Delete'),
-                                      ),
-                                    ],
-                                  );
-                                  if (!context.mounted || action == null) {
-                                    return;
-                                  }
-                                  switch (action) {
-                                    case 'open':
-                                      _open(n);
-                                    case 'download':
-                                      _download([n]);
-                                    case 'rename':
-                                      _rename(n);
-                                    case 'move':
-                                      _moveCopy([n], false);
-                                    case 'copy':
-                                      _moveCopy([n], true);
-                                    case 'select':
-                                      _toggle(n);
-                                    case 'info':
-                                      _info(n);
-                                    case 'delete':
-                                      _delete([n]);
-                                  }
-                                },
-                                child: ListTile(
-                                  key: ValueKey(
-                                    '${pt.id}:$_path:${n.isDir ? "d" : "f"}:${n.name}',
-                                  ),
-                                  selected: sel,
-                                  leading: selecting
-                                      ? SizedBox(
-                                          width: 56,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child: Checkbox(
-                                                  value: sel,
-                                                  onChanged: (_) => _toggle(n),
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                ),
+                              // Right-clicking only happens with a mouse, so the
+                              // extra gesture detector stays off touch screens.
+                              final supportsSecondaryTap = kIsWeb || isDesktop;
+                              final row = ListTile(
+                                key: ValueKey(
+                                  '${pt.id}:$_path:${n.isDir ? "d" : "f"}:${n.name}',
+                                ),
+                                selected: sel,
+                                leading: selecting
+                                    ? SizedBox(
+                                        width: 56,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: Checkbox(
+                                                value: sel,
+                                                onChanged: (_) => _toggle(n),
+                                                visualDensity:
+                                                    VisualDensity.compact,
                                               ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                sync != null
-                                                    ? Icons.sync
-                                                    : iconFor(n),
-                                                size: 24,
-                                                color: sync != null
-                                                    ? syncColor
-                                                    : (n.isDir
-                                                          ? Colors.orange
-                                                          : null),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : sync != null
-                                      ? Icon(Icons.sync, color: syncColor)
-                                      : Icon(
-                                          iconFor(n),
-                                          color: n.isDir ? Colors.orange : null,
-                                        ),
-                                  title: Text(
-                                    n.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  subtitle: Text(
-                                    sync != null
-                                        ? (syncError != null
-                                              ? 'Sync Error'
-                                              : 'Sync Folder')
-                                        : (n.isDir
-                                              ? 'Folder · ${fmtShort(n.modified)}'
-                                              : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}'),
-                                  ),
-                                  trailing: selecting
-                                      ? null
-                                      : PopupMenuButton<String>(
-                                          onSelected: (a) {
-                                            switch (a) {
-                                              case 'open':
-                                                _open(n);
-                                              case 'download':
-                                                _download([n]);
-                                              case 'rename':
-                                                _rename(n);
-                                              case 'move':
-                                                _moveCopy([n], false);
-                                              case 'copy':
-                                                _moveCopy([n], true);
-                                              case 'select':
-                                                _toggle(n);
-                                              case 'info':
-                                                _info(n);
-                                              case 'delete':
-                                                _delete([n]);
-                                            }
-                                          },
-                                          itemBuilder: (_) => const [
-                                            PopupMenuItem(
-                                              value: 'open',
-                                              child: Text('Open'),
                                             ),
-                                            PopupMenuItem(
-                                              value: 'download',
-                                              child: Text('Download'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'rename',
-                                              child: Text('Rename'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'move',
-                                              child: Text('Move To…'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'copy',
-                                              child: Text('Copy To…'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'select',
-                                              child: Text('Select'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'info',
-                                              child: Text('Details'),
-                                            ),
-                                            PopupMenuDivider(),
-                                            PopupMenuItem(
-                                              value: 'delete',
-                                              child: Text('Delete'),
+                                            const SizedBox(width: 8),
+                                            Icon(
+                                              sync != null
+                                                  ? Icons.sync
+                                                  : iconFor(n),
+                                              size: 24,
+                                              color: sync != null
+                                                  ? syncColor
+                                                  : (n.isDir
+                                                        ? Colors.orange
+                                                        : null),
                                             ),
                                           ],
                                         ),
-                                  onTap: () => (kIsWeb || isDesktop)
-                                      ? _open(n)
-                                      : (selecting ? _toggle(n) : _open(n)),
-                                  onLongPress: () => _toggle(n),
+                                      )
+                                    : sync != null
+                                    ? Icon(Icons.sync, color: syncColor)
+                                    : Icon(
+                                        iconFor(n),
+                                        color: n.isDir ? Colors.orange : null,
+                                      ),
+                                title: Text(
+                                  n.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                                subtitle: Text(
+                                  sync != null
+                                      ? (syncError != null
+                                            ? 'Sync Error'
+                                            : 'Sync Folder')
+                                      : (n.isDir
+                                            ? 'Folder · ${fmtShort(n.modified)}'
+                                            : '${fmtBytes(n.bytes)} · ${fmtShort(n.modified)}'),
+                                ),
+                                trailing: selecting
+                                    ? null
+                                    : RowMenuButton(
+                                        onSelected: (a) => _runRowAction(a, n),
+                                        items: _rowMenuItems,
+                                      ),
+                                onTap: () => (kIsWeb || isDesktop)
+                                    ? _open(n)
+                                    : (selecting ? _toggle(n) : _open(n)),
+                                onLongPress: () => _toggle(n),
+                              );
+                              if (!supportsSecondaryTap) return row;
+                              return GestureDetector(
+                                onSecondaryTapUp: (details) =>
+                                    _showRowMenu(context, n, details.globalPosition),
+                                child: row,
                               );
                             },
                           ),

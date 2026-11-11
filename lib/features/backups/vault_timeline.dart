@@ -531,9 +531,9 @@ class _VaultTimelineState extends ConsumerState<VaultTimeline> {
               if (s != null && _locking.contains(s.id))
                 const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
               else if (s != null)
-                PopupMenuButton<String>(
+                RowMenuButton(
                   onSelected: (a) => _menu(a, s),
-                  itemBuilder: (_) => [
+                  items: [
                     const PopupMenuItem(value: 'browse', child: Text('Browse Files')),
                     const PopupMenuItem(value: 'restore', child: Text('Restore…')),
                     PopupMenuItem(value: 'lock', child: Text(s.locked ? 'Unlock' : 'Lock')),

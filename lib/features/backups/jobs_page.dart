@@ -497,7 +497,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                           '${kindLabel(s.mode)} · ${describeCron(s.cron, context)} · ${s.timeZone}\nNext (local): ${fmtDate(s.nextRunAt)} · Runs: ${s.runCount}',
                         ),
                         isThreeLine: true,
-                        trailing: PopupMenuButton<String>(
+                        trailing: RowMenuButton(
                           onSelected: (a) async {
                             switch (a) {
                               case 'run':
@@ -516,7 +516,7 @@ class _SchedulesListState extends ConsumerState<SchedulesList> {
                                 }
                             }
                           },
-                          itemBuilder: (_) => [
+                          items: [
                             const PopupMenuItem(value: 'run', child: Text('Run Now')),
                             PopupMenuItem(value: 'toggle', child: Text(s.enabled ? 'Disable' : 'Enable')),
                             const PopupMenuItem(value: 'preview', child: Text('Preview Next Runs')),

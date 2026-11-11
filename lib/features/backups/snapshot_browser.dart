@@ -849,7 +849,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                       : '${fmtBytes(n.bytes)} · ${n.modified == null ? 'Snapshot ${fmtShort(snap.time)}' : fmtShort(n.modified)}'),
                   trailing: selecting
                       ? null
-                      : PopupMenuButton<String>(
+                      : RowMenuButton(
                           onSelected: (a) {
                             switch (a) {
                               case 'open': _open(n);
@@ -860,7 +860,7 @@ class _SnapshotBrowserPageState extends ConsumerState<SnapshotBrowserPage> {
                               case 'copy': copyText(context, n.pathIn(_cur), 'Path copied');
                             }
                           },
-                          itemBuilder: (_) => const [
+                          items: const [
                             PopupMenuItem(value: 'open', child: Text('Open')),
                             PopupMenuItem(value: 'download', child: Text('Download')),
                             PopupMenuItem(value: 'restore', child: Text('Restore…')),
