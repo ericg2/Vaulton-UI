@@ -54,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           skip=false
-          if [[ "$EVENT" == "push" && "$FORCE_REBUILD" != "true" ]]; then
+          if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
             deb_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-amd64.deb" || true)"
             rpm_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-linux-x86_64.rpm" || true)"
