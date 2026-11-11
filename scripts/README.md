@@ -41,11 +41,10 @@ chmod +x tool/publish-release.sh
 ```
 
 The publishing script checks that the working tree is clean, the current branch
-is `main`, GitHub CLI is authenticated, and Android signing is configured. It
-increments the patch and build numbers in `pubspec.yaml`, keeps the displayed
-app version in sync, resolves dependencies, builds the signed Android APK,
-creates a SHA-256 checksum, commits and pushes the version update, and creates
-a GitHub Release.
+is `main`, and GitHub CLI is authenticated. It increments the patch and build
+numbers in `pubspec.yaml`, keeps the displayed app version in sync, commits and
+pushes the version update, and creates a GitHub Release. The release workflows
+then build and attach every package.
 
 GitHub CLI authentication is used for publishing. Sign in once with
 `gh auth login`; the script never asks for or stores a personal access token.
@@ -108,7 +107,6 @@ or is not ignored by Git.
 
 ## Scope
 
-The release scripts build the Android APK only. After the release is published,
-the repository's release-triggered GitHub Actions workflows build and attach
-the Windows and Linux packages. Monitor those workflow runs to confirm the
-desktop assets were uploaded.
+The publishing scripts create the GitHub Release. Every package is built by the
+release workflows, so nothing has to be built on the publishing machine. Watch
+the workflow runs to confirm the assets were uploaded.

@@ -18,17 +18,6 @@ Require-Command 'gh'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $root
 try {
-    if (-not (Test-Path (Join-Path $root 'android/key.properties'))) {
-        throw 'No android/key.properties. Releases would be signed with a throwaway debug key and fail to update over installed apps. Run .\tool\setup-signing.ps1 first.'
-    }
-    git check-ignore -q -- android/key.properties
-    if ($LASTEXITCODE -ne 0) {
-        throw 'android/key.properties is not ignored by Git. Refusing to continue because it contains signing passwords.'
-    }
-    git ls-files --error-unmatch android/key.properties *> $null
-    if ($LASTEXITCODE -eq 0) {
-        throw 'android/key.properties is already tracked by Git. Remove it from the repository history and rotate the signing credentials before publishing.'
-    }
     $branch = (git branch --show-current).Trim()
     if ($branch -ne 'main') {
         throw "Switch to the main branch before publishing (current branch: '$branch')."
@@ -88,22 +77,6 @@ try {
         flutter pub get
         if ($LASTEXITCODE -ne 0) { throw 'flutter pub get failed.' }
 
-        Write-Host 'Building Android APK...' -ForegroundColor Cyan
-        flutter build apk --release
-        if ($LASTEXITCODE -ne 0) { throw 'Flutter Android release build failed.' }
-
-        $builtApk = Join-Path $root 'build/app/outputs/flutter-apk/app-release.apk'
-        if (-not (Test-Path $builtApk)) { throw "Android build output not found: $builtApk" }
-
-        $stage = Join-Path ([System.IO.Path]::GetTempPath()) "vaulton-release-$version"
-        if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
-        New-Item -ItemType Directory -Path $stage | Out-Null
-        $apk = Join-Path $stage 'Vaulton-Android.apk'
-        Copy-Item $builtApk $apk
-        $androidHash = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLowerInvariant()
-        $androidChecksum = Join-Path $stage 'Vaulton-Android.apk.sha256'
-        Set-Content -Path $androidChecksum -Value "$androidHash  Vaulton-Android.apk" -Encoding ascii
-
         git add -- pubspec.yaml pubspec.lock lib/features/settings/settings_page.dart
         git commit -m "Prepare Vaulton UI release $tag"
         if ($LASTEXITCODE -ne 0) { throw 'Could not commit the release version.' }
@@ -111,15 +84,16 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Could not push the release version to origin/main.' }
 
         if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
-            gh release create $tag $apk $androidChecksum --title "Vaulton $version" --generate-notes --target main
+            gh release create $tag --title "Vaulton $version" --generate-notes --target main
         } else {
-            gh release create $tag $apk $androidChecksum --title "Vaulton $version" --notes $ReleaseNotes --target main
+            gh release create $tag --title "Vaulton $version" --notes $ReleaseNotes --target main
         }
-        if ($LASTEXITCODE -ne 0) { throw 'The APK was built and the version commit was pushed, but creating the GitHub Release failed. Re-run after resolving the GitHub CLI error.' }
+        if ($LASTEXITCODE -ne 0) { throw 'The version commit was pushed, but creating the GitHub Release failed. Re-run after resolving the GitHub CLI error.' }
 
         Write-Host ""
         Write-Host "Published Vaulton v$version successfully." -ForegroundColor Green
-        Write-Host "This script publishes the Android APK only. Build and attach Windows/Linux packages separately." -ForegroundColor Cyan
+        Write-Host "The Android, Windows and Linux packages are built by the release workflows." -ForegroundColor Cyan
+        Write-Host "Watch them in the Actions tab: https://github.com/ericg2/Vaulton-UI/actions"
         Write-Host "Release: https://github.com/ericg2/Vaulton-UI/releases/tag/$tag"
     }
     catch {

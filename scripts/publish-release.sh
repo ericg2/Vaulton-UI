@@ -2,13 +2,10 @@
 set -Eeuo pipefail
 
 # Publish a Vaulton release from the repository root.
-#
-# The script only versions the app, pushes it and creates the GitHub Release.
-# The release workflows then build and attach the Windows, Linux and signed
-# Android packages, so no signing credential is needed on this machine.
-#
-# Authentication is provided by the GitHub CLI (gh auth login); no tokens or
-# signing credentials belong in this script or in source control.
+# The release workflows in .github/workflows build and attach every package
+# (Android, Windows and Linux). Authentication is provided by the GitHub CLI
+# (gh auth login); no tokens or signing credentials belong in this script or in
+# source control.
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -28,7 +25,10 @@ Options:
   -h, --help         Show this help.
 
 Requirements:
-  git, Flutter, GitHub CLI (gh) and an authenticated gh session.
+  git, Flutter, GitHub CLI (gh), and an authenticated gh session.
+
+The Android signing key lives in repository secrets, so no signing file is
+needed on this machine.
 EOF
 }
 
@@ -96,9 +96,9 @@ if [[ -n "$NOTES_FILE" ]]; then
   NOTES="$(cat "$NOTES_FILE")"
 fi
 
-printf '\nVaulton release preview\n  Version: %s (build %s)\n  Tag:     %s\n  Assets:  built by the release workflows\n' "$VERSION" "$NEXT_BUILD" "$TAG"
+printf '\nVaulton release preview\n  Version: %s (build %s)\n  Tag:     %s\n' "$VERSION" "$NEXT_BUILD" "$TAG"
 if [[ "$YES" -ne 1 ]]; then
-  read -r -p "Version, push main, and publish this release? [y/N] " answer
+  read -r -p "Commit, push main, and publish this release? [y/N] " answer
   [[ "$answer" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
 fi
 
@@ -139,4 +139,5 @@ gh "${RELEASE_ARGS[@]}"
 
 printf '\nPublished Vaulton %s successfully.\n' "$VERSION"
 printf 'Release: https://github.com/ericg2/Vaulton-UI/releases/tag/%s\n' "$TAG"
-printf 'The release workflows build and attach the Windows, Linux and Android packages.\n'
+printf 'The Android, Windows and Linux packages are built by the release workflows.\n'
+printf 'Watch them in the Actions tab: https://github.com/ericg2/Vaulton-UI/actions\n'
