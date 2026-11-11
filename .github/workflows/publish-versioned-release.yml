@@ -44,7 +44,7 @@ jobs:
           set -euo pipefail
           flutter pub get
           flutter analyze --no-fatal-infos
-          flutter test
+          flutter test --concurrency=1
 
       - name: Create a draft release
         id: release
