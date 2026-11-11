@@ -23,9 +23,29 @@ Vaulton brings your files, backups, and folder syncing together in one app. Your
 
 For help using the app, see the [user guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md).
 
+## Install Vaulton
+
+Visit [ericg2.github.io](https://ericg2.github.io) for downloads and installation instructions.
+
+**Linux (Debian, Ubuntu, Fedora and compatible distributions):**
+
+```sh
+curl -fsSL https://ericg2.github.io/install.sh | sh
+```
+
+The installer configures the Vaulton APT or DNF package source, so updates arrive through your normal package manager.
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://ericg2.github.io/install.ps1 | iex
+```
+
+Android users can download the signed APK from [Vaulton Releases](https://github.com/ericg2/Vaulton-UI/releases/latest).
+
 ## Downloads
 
-Get the latest version from [Vaulton Releases](https://github.com/ericg2/Vaulton-UI/releases).
+Get the latest version from [Vaulton Releases](https://github.com/ericg2/Vaulton-UI/releases). Release assets include the version in their lowercase filenames and publish SHA-256 checksum files.
 
 - **Windows:** Download and run the installer.
 - **Linux:** Download the app package and installer.
