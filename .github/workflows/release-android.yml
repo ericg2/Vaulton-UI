@@ -57,7 +57,7 @@ jobs:
           if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
             exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk" || true)"
-            sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk.sha256" || true)"
+            sha_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk.sha256" || true)"
             if [[ "$current_version" != "$VERSION" || -z "$exists" || -z "$sha_exists" ]]; then
               skip=false
             else
@@ -126,7 +126,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           set -euo pipefail
-          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           if grep -Fxq "vaulton-$VERSION-android.apk" <<< "$assets"; then
             for asset in Vaulton-Android.apk Vaulton-Android.apk.sha256; do
               if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
