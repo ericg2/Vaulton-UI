@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths:
       - 'pubspec.yaml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag to retry (optional)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -44,16 +50,24 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          DISPATCH_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid app version: $version"; exit 1; }
           tag="v$version"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; refusing to overwrite it."
-            exit 1
+          if [[ -n "$DISPATCH_TAG" ]]; then
+            tag="$DISPATCH_TAG"
+            version="${tag#v}"
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release tag: $tag"; exit 1; }
           fi
-          gh release create "$tag" --draft --title "Vaulton $version" --generate-notes
+          if release_json="$(gh release view "$tag" --json isDraft 2>/dev/null)"; then
+            is_draft="$(jq -r '.isDraft' <<< "$release_json")"
+            [[ "$is_draft" == true ]] || { echo "Release $tag is already published; refusing to overwrite it."; exit 1; }
+            echo "Reusing existing draft release $tag."
+          else
+            gh release create "$tag" --draft --title "Vaulton $version" --generate-notes
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Build and verify every platform package
