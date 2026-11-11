@@ -58,6 +58,10 @@ if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     -f message="Publish Vaulton Linux repository signing public key" \
     -f branch=main \
     -f content="$(base64 -w0 "$PUBLIC_KEY")" >/dev/null
+  gh api --method PUT repos/ericg2/ericg2.github.io/contents/keys/vaulton-archive-key.asc \
+    -f message="Publish Vaulton Linux RPM signing public key" \
+    -f branch=main \
+    -f content="$(base64 -w0 "$RPM_PUBLIC_KEY")" >/dev/null
   gh secret set VAULTON_REPO_SIGNING_KEY_BASE64 \
     -R ericg2/ericg2.github.io < "$PRIVATE_KEY_BASE64"
   echo "Public key and repository signing secret configured."
