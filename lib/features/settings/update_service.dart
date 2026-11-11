@@ -259,6 +259,7 @@ class UpdateService {
               if (didPop && !installTrigger.isCompleted) {
                 installTrigger.complete(false);
                 progressDialogOpen = false;
+                unawaited(_notifyProgress(const _UpdateProgress('Installation postponed.'), ongoing: false).catchError((_) {}));
               }
             },
             child: AlertDialog(
@@ -282,6 +283,7 @@ class UpdateService {
                     onPressed: () {
                       if (!installTrigger.isCompleted) installTrigger.complete(false);
                       progressDialogOpen = false;
+                      unawaited(_notifyProgress(const _UpdateProgress('Installation postponed.'), ongoing: false).catchError((_) {}));
                       Navigator.of(dialogContext).pop();
                     },
                     child: const Text('Later'),
