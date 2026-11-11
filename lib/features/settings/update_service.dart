@@ -79,7 +79,9 @@ class UpdateService {
     if (!Platform.isAndroid) return;
     final now = DateTime.now();
     if (ongoing && !progress.canInstall && progress.progress != 1 &&
-        now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) return;
+        now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) {
+      return;
+    }
     _lastNotificationAt = now;
 
     final notifications = await _notifier();
@@ -88,7 +90,7 @@ class UpdateService {
     final title = progress.message.toLowerCase().startsWith('downloading')
         ? 'Downloading Vaulton'
         : 'Vaulton update';
-    final body = percent == null ? progress.message : progress.message + ' (' + percent.toString() + '%)';
+    final body = percent == null ? progress.message : '${progress.message} ($percent%)';
     final details = AndroidNotificationDetails(
       'vaulton_updates', 'Vaulton updates',
       channelDescription: 'Download and verification progress for Vaulton updates.',
@@ -277,7 +279,7 @@ class UpdateService {
       if (install != true || !context.mounted) return;
 
       final progress = ValueNotifier<_UpdateProgress>(
-        _UpdateProgress('Downloading Vaulton ' + latestVersion + '…'),
+        _UpdateProgress('Downloading Vaulton $latestVersion…'),
       );
       var progressDialogOpen = true;
       final installTrigger = Completer<bool>();
@@ -419,7 +421,7 @@ class UpdateService {
       }
     } catch (error) {
       if (Platform.isAndroid) {
-        await _notifyProgress(_UpdateProgress('Update failed: ' + _friendlyError(error)), ongoing: false).catchError((_) {});
+        await _notifyProgress(_UpdateProgress('Update failed: ${_friendlyError(error)}'), ongoing: false).catchError((_) {});
       }
       if (quietErrors || !context.mounted) return;
       messenger.showSnackBar(SnackBar(
