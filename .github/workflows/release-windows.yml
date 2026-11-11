@@ -58,9 +58,9 @@ jobs:
           if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
             setup_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-setup.exe" || true)"
-            setup_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-setup.exe.sha256" || true)"
-            zip_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-x64.zip" || true)"
-            zip_sha_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-x64.zip.sha256" || true)"
+            setup_sha_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-setup.exe.sha256" || true)"
+            zip_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-x64.zip" || true)"
+            zip_sha_exists="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-x64.zip.sha256" || true)"
             if [[ "$current_version" != "$VERSION" || -z "$setup_exists" || -z "$setup_sha_exists" || -z "$zip_exists" || -z "$zip_sha_exists" ]]; then
               skip=false
             else
@@ -145,7 +145,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           if grep -Fxq "vaulton-$VERSION-windows-setup.exe" <<< "$assets" &&
              grep -Fxq "vaulton-$VERSION-windows-x64.zip" <<< "$assets"; then
             for asset in Vaulton-Windows-Setup.exe Vaulton-Windows-Setup.exe.sha256 Vaulton-Windows.zip Vaulton-Windows.zip.sha256; do
