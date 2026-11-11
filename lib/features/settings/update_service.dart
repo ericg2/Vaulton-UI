@@ -81,19 +81,51 @@ class UpdateService {
     if (ongoing && !progress.canInstall && progress.progress != 1 &&
         now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) return;
     _lastNotificationAt = now;
+
     final notifications = await _notifier();
+    final android = notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     final percent = progress.progress == null ? null : (progress.progress! * 100).round();
+    final title = progress.message.toLowerCase().startsWith('downloading')
+        ? 'Downloading Vaulton'
+        : 'Vaulton update';
+    final body = percent == null ? progress.message : progress.message + ' (' + percent.toString() + '%)';
+    final details = AndroidNotificationDetails(
+      'vaulton_updates', 'Vaulton updates',
+      channelDescription: 'Download and verification progress for Vaulton updates.',
+      importance: Importance.low, priority: Priority.low, onlyAlertOnce: true,
+      ongoing: ongoing, autoCancel: !ongoing, showProgress: true,
+      maxProgress: 100, progress: percent ?? 0, indeterminate: percent == null,
+    );
+
+    if (ongoing && android != null) {
+      try {
+        await android.startForegroundService(
+          id: 7301,
+          title: title,
+          body: body,
+          notificationDetails: details,
+          startType: AndroidServiceStartType.startNotSticky,
+          foregroundServiceTypes: {
+            AndroidServiceForegroundType.foregroundServiceTypeDataSync,
+          },
+        );
+        return;
+      } catch (_) {
+        // Fall back to a normal ongoing notification if Android rejects the service.
+      }
+    } else if (!ongoing && android != null) {
+      try {
+        await android.stopForegroundService();
+      } catch (_) {
+        // Continue by posting the final status as a regular notification.
+      }
+    }
+
     await notifications.show(
       id: 7301,
-      title: progress.message.toLowerCase().startsWith('downloading') ? 'Downloading Vaulton' : 'Vaulton update',
-      body: percent == null ? progress.message : progress.message + ' (' + percent.toString() + '%)',
-      notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
-        'vaulton_updates', 'Vaulton updates',
-        channelDescription: 'Download and verification progress for Vaulton updates.',
-        importance: Importance.low, priority: Priority.low, onlyAlertOnce: true,
-        ongoing: ongoing, autoCancel: !ongoing, showProgress: true,
-        maxProgress: 100, progress: percent ?? 0, indeterminate: percent == null,
-      )),
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(android: details),
     );
   }
 
