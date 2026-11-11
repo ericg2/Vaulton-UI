@@ -164,8 +164,8 @@ class UpdateService {
       for (final asset in assets) {
         final name = asset['name'] as String? ?? '';
         final url = asset['browser_download_url'] as String?;
-        if (name == packageName) packageUrl = url;
-        if (name == checksumName) checksumUrl = url;
+        if (name == packageName || (Platform.isAndroid && name == 'Vaulton-Android.apk') || (Platform.isWindows && name == 'Vaulton-Windows-Setup.exe')) packageUrl = url;
+        if (name == checksumName || (Platform.isAndroid && name == 'Vaulton-Android.apk.sha256') || (Platform.isWindows && name == 'Vaulton-Windows-Setup.exe.sha256')) checksumUrl = url;
       }
       if (packageUrl == null || checksumUrl == null) {
         throw const FormatException('The latest release is still being prepared or is missing its package/checksum.');
