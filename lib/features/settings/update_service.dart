@@ -396,6 +396,7 @@ class UpdateService {
     }
   }
 
+  // Keep repository-installed builds on the native package-manager update path.
   static Future<bool> _isLinuxPackageManaged() async {
     String? id;
     String? idLike;
