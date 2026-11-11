@@ -130,17 +130,24 @@ class UpdateService {
           .whereType<Map<String, dynamic>>()
           .toList();
 
-      if (Platform.isLinux) {
+      String? linuxPackage;
+      if (Platform.isLinux && await _isLinuxPackageManaged()) {
         if (!quietIfUpToDate && context.mounted) {
           final command = _linuxPackageManagerCommand();
           messenger.showSnackBar(SnackBar(
             content: Text(command == null
-                ? 'Update Vaulton from your Linux package manager or the download page.'
+                ? 'Update Vaulton through your configured Linux package repository.'
                 : 'Update Vaulton with: $command'),
             duration: const Duration(seconds: 10),
           ));
         }
         return;
+      }
+      if (Platform.isLinux) {
+        linuxPackage = _linuxPackageName(latestVersion);
+        if (linuxPackage == null) {
+          throw const FormatException('Automatic Linux updates are not available for this distribution.');
+        }
       }
 
       String? packageName;
@@ -151,9 +158,9 @@ class UpdateService {
       } else if (Platform.isWindows) {
         packageName = 'vaulton-$latestVersion-windows-setup.exe';
         checksumName = '$packageName.sha256';
-      } else {
-        packageName = null;
-        checksumName = null;
+      } else if (Platform.isLinux) {
+        packageName = linuxPackage;
+        checksumName = '$packageName.sha256';
       }
       if (packageName == null) {
         throw const FormatException('Automatic updates are not supported on this platform.');
@@ -164,8 +171,21 @@ class UpdateService {
       for (final asset in assets) {
         final name = asset['name'] as String? ?? '';
         final url = asset['browser_download_url'] as String?;
-        if (name == packageName || (Platform.isAndroid && name == 'Vaulton-Android.apk') || (Platform.isWindows && name == 'Vaulton-Windows-Setup.exe')) packageUrl = url;
-        if (name == checksumName || (Platform.isAndroid && name == 'Vaulton-Android.apk.sha256') || (Platform.isWindows && name == 'Vaulton-Windows-Setup.exe.sha256')) checksumUrl = url;
+        final legacyLinuxPackage = linuxPackage == null
+            ? null
+            : (linuxPackage.endsWith('.deb') ? 'Vaulton-Linux.deb' : 'Vaulton-Linux.rpm');
+        if (name == packageName ||
+            (Platform.isAndroid && name == 'Vaulton-Android.apk') ||
+            (Platform.isWindows && name == 'Vaulton-Windows-Setup.exe') ||
+            (Platform.isLinux && name == legacyLinuxPackage)) {
+          packageUrl = url;
+        }
+        if (name == checksumName ||
+            (Platform.isAndroid && name == 'Vaulton-Android.apk.sha256') ||
+            (Platform.isWindows && name == 'Vaulton-Windows-Setup.exe.sha256') ||
+            (Platform.isLinux && name == '$legacyLinuxPackage.sha256')) {
+          checksumUrl = url;
+        }
       }
       if (packageUrl == null || checksumUrl == null) {
         throw const FormatException('The latest release is still being prepared or is missing its package/checksum.');
@@ -355,6 +375,58 @@ class UpdateService {
         duration: const Duration(seconds: 8),
       ));
     }
+  }
+
+  static Future<bool> _isLinuxPackageManaged() async {
+    String? id;
+    String? idLike;
+    try {
+      final release = File('/etc/os-release');
+      if (!release.existsSync()) return false;
+      for (final line in release.readAsLinesSync()) {
+        if (line.startsWith('ID=')) id = line.substring(3).trim().replaceAll('"', '').toLowerCase();
+        if (line.startsWith('ID_LIKE=')) idLike = line.substring(8).trim().replaceAll('"', '').toLowerCase();
+      }
+      final ids = '$id $idLike';
+      if (ids.contains('debian') || ids.contains('ubuntu') || ids.contains('mint')) {
+        final source = File('/etc/apt/sources.list.d/vaulton.sources');
+        if (!source.existsSync() || !source.readAsStringSync().contains('ericg2.github.io/apt')) return false;
+        final result = await Process.run('dpkg-query', ['-W', r'-f=${Status}', 'vaulton']);
+        return result.exitCode == 0 && result.stdout.toString().trim() == 'install ok installed';
+      }
+      if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
+        final source = File('/etc/yum.repos.d/vaulton.repo');
+        if (!source.existsSync() || !source.readAsStringSync().contains('ericg2.github.io/rpm')) return false;
+        final result = await Process.run('rpm', ['-q', 'vaulton']);
+        return result.exitCode == 0;
+      }
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
+
+  static String? _linuxPackageName(String version) {
+    String? id;
+    String? idLike;
+    try {
+      final release = File('/etc/os-release');
+      if (!release.existsSync()) return null;
+      for (final line in release.readAsLinesSync()) {
+        if (line.startsWith('ID=')) id = line.substring(3).trim().replaceAll('"', '').toLowerCase();
+        if (line.startsWith('ID_LIKE=')) idLike = line.substring(8).trim().replaceAll('"', '').toLowerCase();
+      }
+    } catch (_) {
+      return null;
+    }
+    final ids = '$id $idLike';
+    if (ids.contains('debian') || ids.contains('ubuntu') || ids.contains('mint')) {
+      return 'vaulton-$version-linux-amd64.deb';
+    }
+    if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
+      return 'vaulton-$version-linux-x86_64.rpm';
+    }
+    return null;
   }
 
   /// The Linux package that matches the running distribution.
