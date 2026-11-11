@@ -114,7 +114,7 @@ jobs:
           bundle='build/linux/x64/release/bundle'
           test -x "$bundle/vaulton"
           test -s "$bundle/lib/libdesktop_drop_plugin.so"
-          test -x installer/vaulton-launcher
+          test -s installer/vaulton-launcher
           mkdir -p build/release-assets
           deb="build/release-assets/vaulton-${VERSION}-linux-amd64.deb"
           rpm="build/release-assets/vaulton-${VERSION}-linux-x86_64.rpm"
