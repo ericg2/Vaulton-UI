@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Publish an Android Vaulton release from the repository root.
+# Publish a Vaulton release from the repository root.
+#
+# The script only versions the app, pushes it and creates the GitHub Release.
+# The release workflows then build and attach the Windows, Linux and signed
+# Android packages, so no signing credential is needed on this machine.
+#
 # Authentication is provided by the GitHub CLI (gh auth login); no tokens or
 # signing credentials belong in this script or in source control.
 
@@ -23,10 +28,7 @@ Options:
   -h, --help         Show this help.
 
 Requirements:
-  git, Flutter, GitHub CLI (gh), an authenticated gh session, and a configured
-  Android release signing file at android/key.properties.
-
-The signing file and keystore must remain private and must never be committed.
+  git, Flutter, GitHub CLI (gh) and an authenticated gh session.
 EOF
 }
 
@@ -57,18 +59,6 @@ require_command() {
 }
 for command in git flutter gh; do require_command "$command"; done
 
-[[ -f android/key.properties ]] || {
-  echo "Android signing is not configured. Run ./tool/setup-signing.sh first; see tool/README.md for key locations and backup instructions." >&2
-  exit 1
-}
-git check-ignore -q android/key.properties || {
-  echo "android/key.properties is not ignored by Git. Refusing to continue to protect signing credentials." >&2
-  exit 1
-}
-git ls-files --error-unmatch android/key.properties >/dev/null 2>&1 && {
-  echo "android/key.properties is tracked by Git. Remove it from source control and rotate the signing credentials before publishing." >&2
-  exit 1
-}
 [[ "$(git branch --show-current)" == "main" ]] || {
   echo "Switch to main before publishing." >&2
   exit 1
@@ -106,9 +96,9 @@ if [[ -n "$NOTES_FILE" ]]; then
   NOTES="$(cat "$NOTES_FILE")"
 fi
 
-printf '\nVaulton release preview\n  Version: %s (build %s)\n  Tag:     %s\n  Target:  Android APK\n' "$VERSION" "$NEXT_BUILD" "$TAG"
+printf '\nVaulton release preview\n  Version: %s (build %s)\n  Tag:     %s\n  Assets:  built by the release workflows\n' "$VERSION" "$NEXT_BUILD" "$TAG"
 if [[ "$YES" -ne 1 ]]; then
-  read -r -p "Build, commit, push main, and publish this release? [y/N] " answer
+  read -r -p "Version, push main, and publish this release? [y/N] " answer
   [[ "$answer" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
 fi
 
@@ -116,7 +106,6 @@ PUBSPEC_BACKUP="$(mktemp)"
 SETTINGS_BACKUP="$(mktemp)"
 cp "$PUBSPEC" "$PUBSPEC_BACKUP"
 cp "$SETTINGS" "$SETTINGS_BACKUP"
-STAGE="$(mktemp -d)"
 COMMITTED=0
 cleanup() {
   if [[ "$COMMITTED" -eq 0 ]]; then
@@ -125,7 +114,6 @@ cleanup() {
     git checkout -- pubspec.lock 2>/dev/null || true
   fi
   rm -f "$PUBSPEC_BACKUP" "$SETTINGS_BACKUP"
-  rm -rf "$STAGE"
 }
 trap cleanup EXIT
 
@@ -135,26 +123,12 @@ sed -i -E "s/const kAppVersion = '[^']*';/const kAppVersion = '$VERSION';/" "$SE
 echo "Resolving Flutter dependencies..."
 flutter pub get
 
-echo "Building signed Android release..."
-# AGP 9 bundles Kotlin 2.2.10; Flutter's current KGP version check
-# incorrectly rejects this built-in Kotlin version (Flutter issue #192167).
-# Skip only that dependency-version validation; Gradle still performs the build.
-flutter build apk --release --android-skip-build-dependency-validation
-APK="build/app/outputs/flutter-apk/app-release.apk"
-[[ -s "$APK" ]] || { echo "APK build output not found: $APK" >&2; exit 1; }
-
-cp "$APK" "$STAGE/Vaulton-Android.apk"
-(
-  cd "$STAGE"
-  sha256sum Vaulton-Android.apk > Vaulton-Android.apk.sha256
-)
-
 git add -- "$PUBSPEC" pubspec.lock "$SETTINGS"
 git commit -m "Prepare Vaulton UI release $TAG"
 COMMITTED=1
 git push origin main
 
-RELEASE_ARGS=(release create "$TAG" "$STAGE/Vaulton-Android.apk" "$STAGE/Vaulton-Android.apk.sha256" --title "Vaulton $VERSION" --target main)
+RELEASE_ARGS=(release create "$TAG" --title "Vaulton $VERSION" --target main)
 if [[ -n "$NOTES" ]]; then
   RELEASE_ARGS+=(--notes "$NOTES")
 else
@@ -165,4 +139,4 @@ gh "${RELEASE_ARGS[@]}"
 
 printf '\nPublished Vaulton %s successfully.\n' "$VERSION"
 printf 'Release: https://github.com/ericg2/Vaulton-UI/releases/tag/%s\n' "$TAG"
-printf 'Windows and Linux assets are not built by this Android-only script.\n'
+printf 'The release workflows build and attach the Windows, Linux and Android packages.\n'

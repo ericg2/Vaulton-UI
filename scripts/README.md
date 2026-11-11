@@ -1,7 +1,22 @@
 # Release Publishing
 
-Vaulton releases are published manually. Do not add signing credentials, GitHub
-tokens, or keystores to this repository.
+Vaulton releases are published manually. Do not commit signing credentials,
+GitHub tokens, or keystores to this repository.
+
+## What GitHub Actions builds
+
+Publishing a release starts three workflows. Each one attaches its own
+packages to the release:
+
+| Workflow | Assets |
+| --- | --- |
+| `release-android.yml` | `Vaulton-Android.apk` and its checksum |
+| `release-windows.yml` | `Vaulton-Windows.zip` and `Vaulton-Windows-Setup.exe` |
+| `release-linux.yml` | `Vaulton-Linux.tar.gz`, `Vaulton-Linux.deb` and `Vaulton-Linux.rpm` |
+
+The Android workflow signs the APK with the release key that lives in
+repository secrets (`VAULTON_KEYSTORE_BASE64`, `VAULTON_KEYSTORE_PASSWORD`,
+`VAULTON_KEY_PASSWORD`, `VAULTON_KEY_ALIAS`). It never touches the repository.
 
 ## Linux
 
