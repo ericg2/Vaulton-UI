@@ -97,10 +97,10 @@ jobs:
           set -euo pipefail
           printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/vaulton-release.jks"
           {
-            printf 'storePassword=%s\\n' "$STORE_PASSWORD"
-            printf 'keyPassword=%s\\n' "$KEY_PASSWORD"
-            printf 'keyAlias=%s\\n' "$KEY_ALIAS"
-            printf 'storeFile=%s\\n' "$RUNNER_TEMP/vaulton-release.jks"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storeFile=%s\n' "$RUNNER_TEMP/vaulton-release.jks"
           } > android/key.properties
 
       - name: Build signed Android release
