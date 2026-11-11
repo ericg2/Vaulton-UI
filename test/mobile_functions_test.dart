@@ -219,6 +219,17 @@ final _admin = UserAccount(
   emailNotifications: false,
 );
 
+final _recipient = UserAccount(
+  id: 'u2',
+  userName: 'test',
+  firstName: 'Test',
+  lastName: 'User',
+  scopes: const [],
+  mustChangePassword: false,
+  isLockedOut: false,
+  emailNotifications: false,
+);
+
 Point _point(String id, String name) => Point(
   id: id,
   rootId: 'r1',
@@ -507,7 +518,7 @@ void main() {
     testWidgets('compose walks recipients to the message form', (tester) async {
       await pumpAt(
         tester,
-        await scopedApp(const MessagesPage(), _FuncApi(userList: [_admin])),
+        await scopedApp(const MessagesPage(), _FuncApi(userList: [_recipient])),
       );
 
       await tapSeen(tester, find.text('Compose'));
