@@ -62,7 +62,7 @@ jobs:
           set -euo pipefail
           skip=false
           if [[ "$EVENT" == "push" ]]; then
-            current_version="$(sed -n 's/^version: *\\([0-9.]*\\)+[0-9]*$/\\1/p' pubspec.yaml)"
+            current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
             if [[ "$current_version" != "$VERSION" ]]; then
               skip=true
             else
