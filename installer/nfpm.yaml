@@ -19,6 +19,19 @@ license: Proprietary
 description: |
   Vaulton is a desktop client for the Vaulton API.
   Manage your files, backups and folder syncing on a server you control.
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0 | libgtk-3-0t64
+      - libsecret-1-0
+      - libjsoncpp25 | libjsoncpp26
+      - liblzma5
+  rpm:
+    depends:
+      - gtk3
+      - libsecret
+      - jsoncpp
+      - xz-libs
 contents:
   # The application bundle keeps its own layout: the executable loads its
   # libraries and assets relative to itself.
