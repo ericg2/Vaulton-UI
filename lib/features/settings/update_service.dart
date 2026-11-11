@@ -394,7 +394,13 @@ class UpdateService {
         final result = await Process.run('dpkg-query', ['-W', r'-f=${Status}', 'vaulton']);
         return result.exitCode == 0 && result.stdout.toString().trim() == 'install ok installed';
       }
-      if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
+      if (ids.contains('suse') || ids.contains('opensuse')) {
+        final source = File('/etc/zypp/repos.d/vaulton.repo');
+        if (!source.existsSync() || !source.readAsStringSync().contains('ericg2.github.io/rpm')) return false;
+        final result = await Process.run('rpm', ['-q', 'vaulton']);
+        return result.exitCode == 0;
+      }
+      if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('centos')) {
         final source = File('/etc/yum.repos.d/vaulton.repo');
         if (!source.existsSync() || !source.readAsStringSync().contains('ericg2.github.io/rpm')) return false;
         final result = await Process.run('rpm', ['-q', 'vaulton']);
@@ -423,7 +429,7 @@ class UpdateService {
     if (ids.contains('debian') || ids.contains('ubuntu') || ids.contains('mint')) {
       return 'vaulton-$version-linux-amd64.deb';
     }
-    if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
+    if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('opensuse') || ids.contains('centos')) {
       return 'vaulton-$version-linux-x86_64.rpm';
     }
     return null;
@@ -449,7 +455,10 @@ class UpdateService {
     if (ids.contains('debian') || ids.contains('ubuntu') || ids.contains('mint')) {
       return 'sudo apt update && sudo apt install --only-upgrade vaulton';
     }
-    if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('suse') || ids.contains('centos')) {
+    if (ids.contains('suse') || ids.contains('opensuse')) {
+      return 'sudo zypper refresh && sudo zypper update vaulton';
+    }
+    if (ids.contains('rhel') || ids.contains('fedora') || ids.contains('centos')) {
       return 'sudo dnf upgrade vaulton';
     }
     return null;
