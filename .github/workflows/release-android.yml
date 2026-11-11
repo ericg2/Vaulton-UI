@@ -109,21 +109,6 @@ jobs:
         run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Attach Android package to GitHub Release
-      - name: Remove legacy unversioned Android asset
-        if: always() && steps.release.outputs.tag != '' && steps.version.outputs.value != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          set -euo pipefail
-          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
-          if grep -Fxq "vaulton-$VERSION-android.apk" <<< "$assets"; then
-            for asset in Vaulton-Android.apk Vaulton-Android.apk.sha256; do
-              if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
-            done
-          fi
-
         if: steps.guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -138,3 +123,18 @@ jobs:
           cp "$apk" "build/release-assets/$name"
           (cd build/release-assets && sha256sum "$name" > "$name.sha256")
           gh release upload "$TAG" "build/release-assets/$name" "build/release-assets/$name.sha256" --clobber
+
+      - name: Remove legacy unversioned Android asset
+        if: always() && steps.release.outputs.tag != '' && steps.version.outputs.value != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name')"
+          if grep -Fxq "vaulton-$VERSION-android.apk" <<< "$assets"; then
+            for asset in Vaulton-Android.apk Vaulton-Android.apk.sha256; do
+              if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
+            done
+          fi
