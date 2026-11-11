@@ -65,8 +65,8 @@ jobs:
             if [[ "$current_version" != "$VERSION" ]]; then
               skip=true
             else
-              exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq --arg name "vaulton-$VERSION-android.apk" 'any(.assets[]; .name == $name)')"
-              [[ "$exists" == true ]] && skip=true
+              exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-android.apk" || true)"
+              [[ -n "$exists" ]] && skip=true
             fi
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
