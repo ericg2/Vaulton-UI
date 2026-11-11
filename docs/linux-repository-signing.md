@@ -28,7 +28,7 @@ Vaulton's APT, DNF, and Zypper repositories are hosted on `ericg2.github.io`. Th
 ## Security and recovery
 
 - Keep the private key and its backup offline or in a secure password manager. Never place it in either Git repository.
-- The public key is safe to publish and is the trust anchor installed by `install.sh`.
+- Both public-key exports are safe to publish. APT uses the binary `.gpg` keyring; DNF and Zypper use the armored `.asc` key.
 - Losing the private key means future repository metadata cannot be signed as the same publisher. Existing installations will reject a replacement key until users explicitly trust the replacement.
 - Android APK signing and Windows Authenticode signing are separate systems. This key signs Linux package distribution only.
 - The repository refresh is event-driven after Linux package uploads; it is not triggered by every unrelated UI source edit.
