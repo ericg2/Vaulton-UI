@@ -11,7 +11,7 @@ Releases are version-driven. To publish a new version:
 7. Only after all required packages are present does it publish the release.
 8. It sends a repository-dispatch event to `ericg2/ericg2.github.io`, which rebuilds the APT, DNF, and Zypper repositories from the newly published DEB and RPM packages.
 
-The draft-release stage is intentional: the public latest-release API and in-app update checks do not see an incomplete release while packages are being built.
+The draft-release stage is intentional: the public latest-release API and in-app update checks do not see an incomplete release while packages are being built. If a platform build fails, rerun the workflow with the existing draft tag; it reuses the draft and rebuilds any platform whose complete package/checksum set is missing.
 
 ## Required repository secrets
 
