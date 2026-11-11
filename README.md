@@ -73,3 +73,6 @@ Some features depend on your account permissions and the devices you use.
 - [Report a Problem](https://github.com/ericg2/Vaulton-UI/issues)
 
 See the [changelog](docs/CHANGELOG.md) for recent updates.
+
+
+**Linux repository security:** The initial GitHub Pages APT and DNF repositories are served over HTTPS but are not yet signed. The installer explicitly trusts the APT repository and disables RPM signature checks. For security-sensitive systems, use the GitHub Releases packages and verify their SHA-256 checksums until repository signing is configured.
