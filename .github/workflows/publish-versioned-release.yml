@@ -1,0 +1,48 @@
+name: Publish versioned Vaulton release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pubspec.yaml'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish-vaulton-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out version change
+        uses: actions/checkout@v4
+
+      - name: Resolve version and create release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid app version: $version"; exit 1; }
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; refusing to overwrite it."
+            exit 1
+          fi
+          gh release create "$tag" --title "Vaulton $version" --generate-notes
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch platform release builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          for workflow in release-linux.yml release-windows.yml release-android.yml; do
+            gh workflow run "$workflow" --ref main -f "tag=$TAG"
+          done
