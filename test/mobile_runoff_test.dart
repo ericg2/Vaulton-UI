@@ -325,7 +325,10 @@ void main() {
         prefs: {'lastPointId': 'deleted-point'},
       );
 
-      expect(find.text('Media'), findsOneWidget);
+      final pointSelector = tester.widget<DropdownButton<String>>(
+        find.byType(DropdownButton<String>).first,
+      );
+      expect(pointSelector.value, 'p2');
       expect(find.textContaining('No data folders yet.'), findsNothing);
     });
 
