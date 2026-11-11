@@ -8,6 +8,13 @@ on:
       tag:
         description: Release tag to build, for example v1.3.22
         required: true
+  push:
+    branches: [main]
+    paths:
+      - 'pubspec.yaml'
+      - 'installer/windows.iss'
+      - 'windows/**'
+      - '.github/workflows/release-windows.yml'
 
 permissions:
   contents: write
@@ -22,16 +29,52 @@ jobs:
         env:
           DISPATCH_TAG: ${{ inputs.tag }}
           EVENT_TAG: ${{ github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = if ($env:DISPATCH_TAG) { $env:DISPATCH_TAG } else { $env:EVENT_TAG }
+          if ($env:DISPATCH_TAG) {
+            $tag = $env:DISPATCH_TAG
+          } elseif ($env:EVENT_TAG) {
+            $tag = $env:EVENT_TAG
+          } else {
+            $tag = gh api "repos/$env:GITHUB_REPOSITORY/releases/latest" --jq .tag_name
+          }
           "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Check out release tag
+      - name: Check out release source
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.release.outputs.tag }}
+          ref: ${{ github.event_name == 'release' && steps.release.outputs.tag || github.ref_name }}
+
+      - name: Resolve the release version
+        id: version
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: "echo value=$($env:TAG.TrimStart('v')) >> $env:GITHUB_OUTPUT"
+
+      - name: Skip if the current release already has versioned Windows assets
+        id: guard
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          skip=false
+          if [[ "$EVENT" == "push" ]]; then
+            current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
+            if [[ "$current_version" != "$VERSION" ]]; then
+              skip=true
+            else
+              exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq --arg name "vaulton-$VERSION-windows-setup.exe" 'any(.assets[]; .name == $name)')"
+              [[ "$exists" == true ]] && skip=true
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
       - name: Set up Flutter
+        if: steps.guard.outputs.skip != 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -39,16 +82,20 @@ jobs:
           cache: true
 
       - name: Generate platform runner if needed and resolve dependencies
+        if: steps.guard.outputs.skip != 'true'
         run: dart run scripts/setup.dart
 
       - name: Build Windows release
+        if: steps.guard.outputs.skip != 'true'
         run: flutter build windows --release
 
       - name: Install Inno Setup
+        if: steps.guard.outputs.skip != 'true'
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
       - name: Package versioned Windows assets
+        if: steps.guard.outputs.skip != 'true'
         shell: pwsh
         env:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
@@ -80,13 +127,13 @@ jobs:
           Set-Content -Path "$setup.sha256" -Value "$setupHash  $setupName" -Encoding ascii
 
       - name: Attach Windows packages to GitHub Release
+        if: steps.guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
-          VERSION: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
         shell: bash
         run: |
-          VERSION="${VERSION#v}"
           gh release upload "$TAG" \
             "build/release-assets/vaulton-$VERSION-windows-x64.zip" \
             "build/release-assets/vaulton-$VERSION-windows-x64.zip.sha256" \
