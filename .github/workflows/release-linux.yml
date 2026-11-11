@@ -136,6 +136,20 @@ jobs:
           sha256sum "vaulton-${VERSION}-linux-x64.tar.gz" > "vaulton-${VERSION}-linux-x64.tar.gz.sha256"
 
       - name: Attach Linux packages to GitHub Release
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          gh release upload "$TAG" \
+            "build/release-assets/vaulton-$VERSION-linux-amd64.deb" \
+            "build/release-assets/vaulton-$VERSION-linux-amd64.deb.sha256" \
+            "build/release-assets/vaulton-$VERSION-linux-x86_64.rpm" \
+            "build/release-assets/vaulton-$VERSION-linux-x86_64.rpm.sha256" \
+            "build/release-assets/vaulton-$VERSION-linux-x64.tar.gz" \
+            "build/release-assets/vaulton-$VERSION-linux-x64.tar.gz.sha256" --clobber
+
       - name: Remove legacy unversioned Linux assets
         if: always() && steps.release.outputs.tag != '' && steps.version.outputs.value != ''
         env:
@@ -151,17 +165,3 @@ jobs:
               if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
             done
           fi
-
-        if: steps.guard.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          gh release upload "$TAG" \
-            "build/release-assets/vaulton-$VERSION-linux-amd64.deb" \
-            "build/release-assets/vaulton-$VERSION-linux-amd64.deb.sha256" \
-            "build/release-assets/vaulton-$VERSION-linux-x86_64.rpm" \
-            "build/release-assets/vaulton-$VERSION-linux-x86_64.rpm.sha256" \
-            "build/release-assets/vaulton-$VERSION-linux-x64.tar.gz" \
-            "build/release-assets/vaulton-$VERSION-linux-x64.tar.gz.sha256" --clobber
