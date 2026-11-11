@@ -18,7 +18,7 @@ The draft-release stage is intentional: the public latest-release API and in-app
 - `VAULTON_PAGES_TOKEN` in `ericg2/Vaulton-UI`: fine-grained token restricted to `ericg2/ericg2.github.io`, with Contents: Read and write. It dispatches the Pages repository refresh after the complete release is published.
 - `VAULTON_REPO_SIGNING_KEY_BASE64` in `ericg2/ericg2.github.io`: base64-encoded ASCII-armored GPG private key used to sign APT Release metadata, RPM packages, and RPM repository metadata.
 
-The public key must be committed to `ericg2/ericg2.github.io/keys/vaulton-archive-keyring.gpg`. Use `tool/setup-linux-repository-signing.sh` to generate the key and configure the public key and signing secret with GitHub CLI.
+The public keys must be committed to `ericg2/ericg2.github.io/keys/vaulton-archive-keyring.gpg` (APT) and `ericg2/ericg2.github.io/keys/vaulton-archive-key.asc` (RPM). Use `tool/setup-linux-repository-signing.sh` to generate the key and configure the public key and signing secret with GitHub CLI.
 
 Android release signing remains backed by the existing `VAULTON_KEYSTORE_BASE64`, `VAULTON_KEYSTORE_PASSWORD`, `VAULTON_KEY_PASSWORD`, and `VAULTON_KEY_ALIAS` secrets.
 
