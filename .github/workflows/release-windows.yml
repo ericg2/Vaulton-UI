@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           skip=false
-          if [[ "$EVENT" == "push" && "$FORCE_REBUILD" != "true" ]]; then
+          if [[ "$FORCE_REBUILD" != "true" ]]; then
             current_version="$(awk '/^version:/ { split($2, parts, "+"); print parts[1] }' pubspec.yaml)"
             setup_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-setup.exe" || true)"
             zip_exists="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[].name' | grep -Fx "vaulton-$VERSION-windows-x64.zip" || true)"
