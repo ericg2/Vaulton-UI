@@ -5,6 +5,7 @@ umask 077
 KEY_HOME="${HOME}/.vaulton/repository-signing-gnupg"
 OUT="${HOME}/.vaulton"
 PUBLIC_KEY="$OUT/vaulton-archive-keyring.gpg"
+RPM_PUBLIC_KEY="$OUT/vaulton-archive-key.asc"
 PRIVATE_KEY="$OUT/vaulton-repository-private.asc"
 PRIVATE_KEY_BASE64="$OUT/vaulton-repository-private.asc.base64"
 UID_TEXT="Eric E. Gold <littlelettere@gmail.com>"
@@ -35,15 +36,17 @@ FINGERPRINT="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fp
 }
 
 gpg --batch --export "$FINGERPRINT" > "$PUBLIC_KEY"
+gpg --batch --armor --export "$FINGERPRINT" > "$RPM_PUBLIC_KEY"
 gpg --batch --armor --export-secret-keys "$FINGERPRINT" > "$PRIVATE_KEY"
 base64 -w0 "$PRIVATE_KEY" > "$PRIVATE_KEY_BASE64"
 chmod 600 "$PRIVATE_KEY" "$PRIVATE_KEY_BASE64"
-chmod 644 "$PUBLIC_KEY"
+chmod 644 "$PUBLIC_KEY" "$RPM_PUBLIC_KEY"
 
 echo
 echo "Signing key created."
 echo "Fingerprint: $FINGERPRINT"
-echo "Public key:  $PUBLIC_KEY"
+echo "APT public key: $PUBLIC_KEY"
+echo "RPM public key: $RPM_PUBLIC_KEY"
 echo "Private key: $PRIVATE_KEY"
 echo "Secret input: $PRIVATE_KEY_BASE64"
 echo
@@ -60,7 +63,7 @@ if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   echo "Public key and repository signing secret configured."
 else
   echo "GitHub CLI is not authenticated. Configure these manually:"
-  echo "  1. Upload $PUBLIC_KEY to ericg2/ericg2.github.io as keys/vaulton-archive-keyring.gpg"
+  echo "  1. Upload $PUBLIC_KEY as keys/vaulton-archive-keyring.gpg and $RPM_PUBLIC_KEY as keys/vaulton-archive-key.asc"
   echo "  2. Run: gh secret set VAULTON_REPO_SIGNING_KEY_BASE64 -R ericg2/ericg2.github.io < $PRIVATE_KEY_BASE64"
 fi
 
