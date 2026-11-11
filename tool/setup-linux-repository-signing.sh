@@ -4,7 +4,7 @@ umask 077
 
 KEY_HOME="${HOME}/.vaulton/repository-signing-gnupg"
 OUT="${HOME}/.vaulton"
-UID_TEXT="Eric E. Gold <ericg2@users.noreply.github.com>"
+UID_TEXT="Eric E. Gold <littlelettere@gmail.com>"
 
 command -v gpg >/dev/null 2>&1 || {
   echo "GnuPG is required. On Fedora: sudo dnf install gnupg2" >&2
