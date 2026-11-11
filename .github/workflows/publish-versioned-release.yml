@@ -77,10 +77,17 @@ jobs:
           assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           for asset in \
             "vaulton-$version-linux-amd64.deb" \
+            "vaulton-$version-linux-amd64.deb.sha256" \
             "vaulton-$version-linux-x86_64.rpm" \
+            "vaulton-$version-linux-x86_64.rpm.sha256" \
+            "vaulton-$version-linux-x64.tar.gz" \
+            "vaulton-$version-linux-x64.tar.gz.sha256" \
             "vaulton-$version-windows-setup.exe" \
+            "vaulton-$version-windows-setup.exe.sha256" \
             "vaulton-$version-windows-x64.zip" \
-            "vaulton-$version-android.apk"; do
+            "vaulton-$version-windows-x64.zip.sha256" \
+            "vaulton-$version-android.apk" \
+            "vaulton-$version-android.apk.sha256"; do
             grep -Fxq "$asset" <<< "$assets" || { echo "Missing release asset: $asset"; exit 1; }
           done
 
