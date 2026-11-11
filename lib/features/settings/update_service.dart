@@ -75,10 +75,10 @@ class UpdateService {
     return notifications;
   }();
 
-  static Future<void> _notifyProgress(_UpdateProgress progress, {bool ongoing = true}) async {
+  static Future<void> _notifyProgress(_UpdateProgress progress, {bool ongoing = true, bool force = false}) async {
     if (!Platform.isAndroid) return;
     final now = DateTime.now();
-    if (ongoing && !progress.canInstall && progress.progress != 1 &&
+    if (!force && ongoing && !progress.canInstall && progress.progress != 1 &&
         now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) {
       return;
     }
@@ -339,12 +339,13 @@ class UpdateService {
         ),
       ));
 
-      void setProgress(String message, {double? value, bool ongoing = true, bool canInstall = false}) {
+      void setProgress(String message, {double? value, bool ongoing = true, bool canInstall = false, bool notify = true}) {
         progress.value = _UpdateProgress(message, progress: value, canInstall: canInstall);
-        unawaited(_notifyProgress(progress.value, ongoing: ongoing).catchError((_) {}));
+        if (notify) unawaited(_notifyProgress(progress.value, ongoing: ongoing).catchError((_) {}));
       }
 
-      setProgress('Preparing your update…');
+      setProgress('Preparing your update…', notify: false);
+      await _notifyProgress(progress.value, force: true).catchError((_) {});
 
       try {
         final directory = await getTemporaryDirectory();
