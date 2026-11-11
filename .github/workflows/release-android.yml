@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to build, for example v1.3.21
+        description: Release tag to build, for example v1.3.22
         required: true
 
 permissions:
@@ -27,6 +27,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.release.outputs.tag }}
+
+      - name: Resolve the release version
+        id: version
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: echo "value=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -51,27 +57,26 @@ jobs:
           set -euo pipefail
           printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/vaulton-release.jks"
           {
-            printf 'storePassword=%s\n' "$STORE_PASSWORD"
-            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
-            printf 'keyAlias=%s\n' "$KEY_ALIAS"
-            printf 'storeFile=%s\n' "$RUNNER_TEMP/vaulton-release.jks"
+            printf 'storePassword=%s\\n' "$STORE_PASSWORD"
+            printf 'keyPassword=%s\\n' "$KEY_PASSWORD"
+            printf 'keyAlias=%s\\n' "$KEY_ALIAS"
+            printf 'storeFile=%s\\n' "$RUNNER_TEMP/vaulton-release.jks"
           } > android/key.properties
 
       - name: Build signed Android release
-        # AGP 9 bundles Kotlin 2.2.10; Flutter's current KGP version check
-        # incorrectly rejects this built-in Kotlin version (Flutter issue #192167).
-        # Skip only that dependency-version validation; Gradle still performs the build.
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      - name: Attach the Android package to GitHub Release
+      - name: Attach Android package to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
         run: |
           set -euo pipefail
-          apk='build/app/outputs/flutter-apk/app-release.apk'
+          apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
           mkdir -p build/release-assets
-          cp "$apk" build/release-assets/Vaulton-Android.apk
-          (cd build/release-assets && sha256sum Vaulton-Android.apk > Vaulton-Android.apk.sha256)
-          gh release upload "$TAG" build/release-assets/Vaulton-Android.apk build/release-assets/Vaulton-Android.apk.sha256 --clobber
+          name="vaulton-$VERSION-android.apk"
+          cp "$apk" "build/release-assets/$name"
+          (cd build/release-assets && sha256sum "$name" > "$name.sha256")
+          gh release upload "$TAG" "build/release-assets/$name" "build/release-assets/$name.sha256" --clobber
