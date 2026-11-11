@@ -129,6 +129,19 @@ jobs:
           Set-Content -Path "$setup.sha256" -Value "$setupHash  $setupName" -Encoding ascii
 
       - name: Attach Windows packages to GitHub Release
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+        shell: bash
+        run: |
+          gh release upload "$TAG" \
+            "build/release-assets/vaulton-$VERSION-windows-x64.zip" \
+            "build/release-assets/vaulton-$VERSION-windows-x64.zip.sha256" \
+            "build/release-assets/vaulton-$VERSION-windows-setup.exe" \
+            "build/release-assets/vaulton-$VERSION-windows-setup.exe.sha256" --clobber
+
       - name: Remove legacy unversioned Windows assets
         if: always() && steps.release.outputs.tag != '' && steps.version.outputs.value != ''
         env:
@@ -145,16 +158,3 @@ jobs:
               if grep -Fxq "$asset" <<< "$assets"; then gh release delete-asset "$TAG" "$asset" --yes; fi
             done
           fi
-
-        if: steps.guard.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.value }}
-        shell: bash
-        run: |
-          gh release upload "$TAG" \
-            "build/release-assets/vaulton-$VERSION-windows-x64.zip" \
-            "build/release-assets/vaulton-$VERSION-windows-x64.zip.sha256" \
-            "build/release-assets/vaulton-$VERSION-windows-setup.exe" \
-            "build/release-assets/vaulton-$VERSION-windows-setup.exe.sha256" --clobber
