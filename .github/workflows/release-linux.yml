@@ -15,7 +15,6 @@ on:
       - 'installer/nfpm.yaml'
       - 'linux/**'
       - 'lib/**'
-      - '.github/workflows/release-linux.yml'
 
 permissions:
   contents: write
