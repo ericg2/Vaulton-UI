@@ -21,7 +21,7 @@ jobs:
       - name: Check out version change
         uses: actions/checkout@v4
 
-      - name: Resolve version and create release
+      - name: Create a draft release
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -34,15 +34,61 @@ jobs:
             echo "Release $tag already exists; refusing to overwrite it."
             exit 1
           fi
-          gh release create "$tag" --title "Vaulton $version" --generate-notes
+          gh release create "$tag" --draft --title "Vaulton $version" --generate-notes
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch platform release builds
+      - name: Build and verify every platform package
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
           for workflow in release-linux.yml release-windows.yml release-android.yml; do
+            previous_run="$(gh run list --workflow "$workflow" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
             gh workflow run "$workflow" --ref main -f "tag=$TAG"
+            run_id=""
+            for attempt in $(seq 1 30); do
+              candidate="$(gh run list --workflow "$workflow" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
+              if [[ "$candidate" != "0" && "$candidate" != "$previous_run" ]]; then
+                run_id="$candidate"
+                break
+              fi
+              sleep 2
+            done
+            [[ -n "$run_id" ]] || { echo "Could not find the dispatched run for $workflow"; exit 1; }
+            gh run watch "$run_id" --exit-status
           done
+
+          version="${TAG#v}"
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          for asset in \
+            "vaulton-$version-linux-amd64.deb" \
+            "vaulton-$version-linux-x86_64.rpm" \
+            "vaulton-$version-windows-setup.exe" \
+            "vaulton-$version-windows-x64.zip" \
+            "vaulton-$version-android.apk"; do
+            grep -Fxq "$asset" <<< "$assets" || { echo "Missing release asset: $asset"; exit 1; }
+          done
+
+      - name: Publish the complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false
+
+      - name: Refresh GitHub Pages Linux repositories
+        env:
+          PAGES_TOKEN: ${{ secrets.VAULTON_PAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$PAGES_TOKEN" ]]; then
+            echo "::warning::VAULTON_PAGES_TOKEN is missing; the release is published, but Linux repositories were not refreshed."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $PAGES_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/ericg2/ericg2.github.io/dispatches \
+            -d '{"event_type":"vaulton-release-assets-ready"}'
