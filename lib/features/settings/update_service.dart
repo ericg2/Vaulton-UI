@@ -78,7 +78,8 @@ class UpdateService {
   static Future<void> _notifyProgress(_UpdateProgress progress, {bool ongoing = true}) async {
     if (!Platform.isAndroid) return;
     final now = DateTime.now();
-    if (ongoing && now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) return;
+    if (ongoing && !progress.canInstall && progress.progress != 1 &&
+        now.difference(_lastNotificationAt) < const Duration(milliseconds: 650)) return;
     _lastNotificationAt = now;
     final notifications = await _notifier();
     final percent = progress.progress == null ? null : (progress.progress! * 100).round();
