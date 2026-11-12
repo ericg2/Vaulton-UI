@@ -36,7 +36,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    outputs:
+      version_only: ${{ steps.changes.outputs.version_only }}
+    steps:
+      - name: Check out source history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect a version-only release bump
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.before || '' }}
+        run: |
+          set -euo pipefail
+          version_only=false
+          if [[ "$EVENT_NAME" == "push" && -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            mapfile -t changed_files < <(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")
+            if [[ "${#changed_files[@]}" -eq 1 && "${changed_files[0]}" == "pubspec.yaml" ]]; then
+              previous_spec="$(git show "$BASE_SHA:pubspec.yaml" | sed '/^version:[[:space:]]*/d')"
+              current_spec="$(sed '/^version:[[:space:]]*/d' pubspec.yaml)"
+              if [[ "$previous_spec" == "$current_spec" ]]; then
+                version_only=true
+              fi
+            fi
+          fi
+          echo "version_only=$version_only" >> "$GITHUB_OUTPUT"
+          echo "Version-only release bump: $version_only"
+
   validate:
+    needs: classify
+    if: needs.classify.outputs.version_only != 'true'
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
