@@ -126,8 +126,8 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "$PAGES_TOKEN" ]]; then
-            echo "::warning::VAULTON_PAGES_TOKEN is missing; the release is published, but Linux repositories were not refreshed."
-            exit 0
+            echo "::error::VAULTON_PAGES_TOKEN is missing; the release is published, but Linux repositories were not refreshed."
+            exit 1
           fi
           curl --fail-with-body --silent --show-error \
             -X POST \
