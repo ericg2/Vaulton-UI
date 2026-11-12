@@ -80,6 +80,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Restore the Android signing key
         if: steps.guard.outputs.skip != 'true'
