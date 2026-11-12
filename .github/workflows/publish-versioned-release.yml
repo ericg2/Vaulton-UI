@@ -80,7 +80,11 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
-          for workflow in release-linux.yml release-windows.yml release-android.yml; do
+          workflows=(release-linux.yml release-windows.yml release-android.yml)
+          run_ids=()
+
+          # Dispatch every platform first so their builds run concurrently.
+          for workflow in "${workflows[@]}"; do
             previous_run="$(gh run list --workflow "$workflow" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
             gh workflow run "$workflow" --ref main -f "tag=$TAG"
             run_id=""
@@ -93,6 +97,12 @@ jobs:
               sleep 2
             done
             [[ -n "$run_id" ]] || { echo "Could not find the dispatched run for $workflow"; exit 1; }
+            echo "Dispatched $workflow as run $run_id"
+            run_ids+=("$run_id")
+          done
+
+          # All builds are now running; wait for each and fail the release if any fails.
+          for run_id in "${run_ids[@]}"; do
             gh run watch "$run_id" --exit-status
           done
 
