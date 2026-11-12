@@ -73,10 +73,9 @@ else
 fi
 
 echo
-echo "Optional: VAULTON_PAGES_TOKEN in ericg2/Vaulton-UI enables immediate website refreshes."
-echo "Without it, the Pages workflow checks for new releases automatically every 15 minutes."
-echo "To enable immediate refreshes, create a fine-grained token restricted to ericg2.github.io"
-echo "with Contents: Read and write, then run:"
+echo "Automatic Linux repository refresh requires VAULTON_PAGES_TOKEN in ericg2/Vaulton-UI."
+echo "Create a fine-grained token restricted to ericg2.github.io with Contents: Read and write,"
+echo "then run:"
 echo "  gh secret set VAULTON_PAGES_TOKEN -R ericg2/Vaulton-UI"
 echo
 echo "Back up both key files securely. Losing the private key prevents signing"
