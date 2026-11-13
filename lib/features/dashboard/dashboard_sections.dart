@@ -178,10 +178,10 @@ class DashboardSetup extends ConsumerWidget {
             const SizedBox(height: 12),
             _SetupStep(
               title: 'Create a Location',
-              subtitle: canManageRoots ? '' : 'Ask an administrator to add a location.',
+              subtitle: canManageRoots ? '' : 'Connect a cloud account or ask an administrator to allocate local storage.',
               complete: hasLocations,
               actionLabel: 'Set Up',
-              onPressed: canManageRoots && !hasLocations ? () => onNavigate('Locations') : null,
+              onPressed: !hasLocations ? () => onNavigate('Locations') : null,
             ),
             _SetupStep(
               title: 'Create a Data Folder',
