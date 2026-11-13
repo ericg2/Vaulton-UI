@@ -92,7 +92,7 @@ class Point {
 
 class Root {
   Root({required this.id, required this.name, required this.userName, this.source, required this.maxBytes,
-      required this.allocatedBytes, required this.freeBytes, required this.isDataAllowed, required this.isRepoAllowed, required this.isOwner, required this.isLocal});
+      required this.allocatedBytes, required this.freeBytes, required this.isDataAllowed, required this.isRepoAllowed, required this.isOwner, this.isLocal = false});
   final String id, name, userName;
   final Json? source;
   final int maxBytes, allocatedBytes, freeBytes;
