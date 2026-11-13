@@ -575,9 +575,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     return src;
   }
 
-  Future<void> _create() async {
+  Future<void> _create({required bool canManageLocal}) async {
     final name = TextEditingController();
-    var scheme = 'fs';
+    final cloudSchemes = typeLabels.keys.where((s) => s != 'fs').toList()..sort();
+    var scheme = canManageLocal ? 'fs' : cloudSchemes.first;
     var allowData = true;
     var allowRepo = true;
     final details = await showModalBottomSheet<Map<String, dynamic>>(
@@ -588,9 +589,8 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       constraints: const BoxConstraints(maxWidth: 640),
       builder: (sheetContext) => StatefulBuilder(
         builder: (ctx, setSheetState) {
-          final schemes = typeLabels.keys.where((s) => s != 'fs').toList()
-            ..sort();
-          schemes.insert(0, 'fs');
+          final schemes = [...cloudSchemes];
+          if (canManageLocal) schemes.insert(0, 'fs');
           final cs = Theme.of(ctx).colorScheme;
           final tt = Theme.of(ctx).textTheme;
           return Padding(
@@ -1042,11 +1042,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       (_, _) => _key.currentState?.silentRefresh(force: true),
     );
     final u = ref.watch(userProvider)!;
-    final canCreate = u.has(Scopes.rootsManage);
+    final canManageLocal = u.has(Scopes.rootsManage);
+    const canCreate = true;
     return Scaffold(
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
-              onPressed: _create,
+              onPressed: () => _create(canManageLocal: canManageLocal),
               icon: const Icon(Icons.add),
               label: const Text('New Location'),
             )
@@ -1054,9 +1055,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       body: CursorList<Root>(
         key: _key,
         empty: 'No locations yet.',
-        emptyHint: canCreate
-            ? 'Add a location to connect a disk, network share, or cloud account.'
-            : 'Ask an administrator to share a location with you.',
+        emptyHint: 'Connect your own cloud account or ask an administrator to allocate local storage.',
         emptyIcon: Icons.storage_outlined,
         autoRefresh: const Duration(seconds: 30),
         fetch: (c) => _v.roots(cursor: c),
@@ -1098,7 +1097,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                 case 'edit':
                                   _edit(r);
                                 case 'share':
-                                  _shares(r);
+                                  if (r.isLocal) _shares(r);
                                 case 'del':
                                   _delete(r);
                               }
