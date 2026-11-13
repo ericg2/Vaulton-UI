@@ -187,8 +187,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       ('maxConcurrentJobsPerUser', 'Maximum Concurrent Jobs Per User (0 = Unlimited)', 2),
       ('maxConcurrentTransfers', 'Maximum Concurrent File Transfers Across Server (0 = Unlimited)', 8),
       ('maxConcurrentTransfersPerUser', 'Maximum Concurrent File Transfers Per User (0 = Unlimited)', 2),
-      ('maxTransferBytesPerSecond', 'Maximum Transfer Bandwidth Across Server (Bytes/Sec, 0 = Unlimited)', 0),
-      ('maxTransferBytesPerSecondPerUser', 'Maximum Transfer Bandwidth Per User (Bytes/Sec, 0 = Unlimited)', 0),
+      ('maxTransferBytesPerSecond', 'Maximum Bandwidth Per Transfer Path Across Server (Bytes/Sec, 0 = Unlimited)', 0),
+      ('maxTransferBytesPerSecondPerUser', 'Maximum Bandwidth Per User, Per Transfer Path (Bytes/Sec, 0 = Unlimited)', 0),
       ('maxMessageRecipients', 'Message Recipients', 25),
       ('maxBroadcastRecipients', 'Broadcast Recipients', 5000),
       ('jobRetentionDays', 'Job Retention (Days, 0 = Forever)', 90),
@@ -200,7 +200,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       for (final field in fields)
         FieldSpec(field.$1, field.$2, initial: '${_limits[field.$1] ?? field.$3}'),
     ], ok: 'Save Limits',
-      intro: 'Control queue limits, job concurrency, simultaneous file transfers, streaming and VFS copy/move bandwidth, retention, and in-memory event history. Use 0 for unlimited limits or to keep records indefinitely.');
+      intro: 'Control queue limits, job concurrency, simultaneous file transfers, streaming and VFS copy/move bandwidth, retention, and in-memory event history. Bandwidth limits apply separately to API streams and Rust VFS copy/move. Use 0 for unlimited limits or to keep records indefinitely.');
     if (f == null || !mounted) return;
     final values = <String, int>{};
     for (final field in fields) {
@@ -284,7 +284,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
           'bandwidth',
           'Maximum Transfer Bandwidth (Bytes/Sec)',
           initial: bandwidthOverride == null ? '' : '$bandwidthOverride',
-          hint: '0 = Unlimited. Blank uses the server default. Applies to streams and VFS copy/move. 1048576 = 1 MiB/s.',
+          hint: '0 = Unlimited. Blank uses the server default. Applies separately to API streams and VFS copy/move. 1048576 = 1 MiB/s.',
           number: true,
         ),
       ],
