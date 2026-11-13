@@ -20,7 +20,7 @@ The authorization URL expires after ten minutes. If the API restarts during the 
 Open **Settings → Server Resources → Resource Usage** to view:
 
 - Running and queued jobs for the signed-in account.
-- Active streaming uploads/downloads and the account's effective transfer concurrency limit.
+- Active API file transfers (streaming uploads/downloads and background copy/move operations) and the account's effective transfer concurrency limit.
 - The account's effective concurrent-job limit and pending-job quota.
 - Current global running/unfinished job counts and active transfer counts with their server-wide limits.
 - The reason work is queued when the API can identify a user limit, global capacity limit, or another repository/job constraint.
@@ -31,9 +31,9 @@ Users cannot view another account's job counts or provider connection details.
 
 Open **Administration → Configuration → Resource Governance**.
 
-- **View Usage** displays per-user running/queued job counts and active streaming transfers.
+- **View Usage** displays per-user running/queued job counts and active API file transfers.
 - **User Overrides** selects a user and sets per-user concurrent-job, pending-job, and concurrent-file-transfer limits. Leave a value blank to inherit the server default; enter 0 for unlimited.
-- **Operational Limits** configures global unfinished-job capacity, per-user pending-job defaults, global concurrent jobs, default per-user concurrency, and global/per-user streaming-transfer concurrency.
+- **Operational Limits** configures global unfinished-job capacity, per-user pending-job defaults, global concurrent jobs, default per-user concurrency, and global/per-user API file-transfer concurrency.
 
 These are cooperative job/transfer admission limits. They are not hard CPU or memory quotas and do not yet provide per-user bytes-per-second bandwidth shaping or provider-specific request-rate controls.
 
