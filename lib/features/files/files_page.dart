@@ -568,12 +568,58 @@ class _FilesPageState extends ConsumerState<FilesPage> {
   }) async {
     final pt = _point!;
     String? err;
+    var cancelled = false;
+    var timedOut = false;
     var i = 0;
+    final progress = ValueNotifier<(String, int, int)>((nodes.first.name, 0, 0));
+    final cancelRequested = ValueNotifier<bool>(false);
+    final dialog = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
+        title: Text(copy ? 'Copying Files' : 'Moving Files'),
+        content: SizedBox(
+          width: 420,
+          child: ValueListenableBuilder<(String, int, int)>(
+            valueListenable: progress,
+            builder: (ctx, value, _) {
+              final name = value.$1;
+              final done = value.$2;
+              final total = value.$3;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(value: total > 0 ? (done / total).clamp(0, 1) : null),
+                  const SizedBox(height: 8),
+                  Text(total > 0 ? '$done / $total bytes' : 'Preparing transfer…'),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [
+          ValueListenableBuilder<bool>(
+            valueListenable: cancelRequested,
+            builder: (ctx, requested, _) => TextButton(
+              onPressed: requested ? null : () => cancelRequested.value = true,
+              child: Text(requested ? 'Cancelling…' : 'Cancel'),
+            ),
+          ),
+        ],
+      ),
+    );
+
     for (final n in nodes) {
-      i++;
-      if (nodes.length > 1 && mounted) {
-        toast(context, '${copy ? 'Copying' : 'Moving'} $i / ${nodes.length}…');
+      if (cancelRequested.value) {
+        cancelled = true;
+        break;
       }
+      i++;
+      progress.value = (n.name, 0, 0);
       try {
         final id = await _v.transfer(
           pt.id,
@@ -582,20 +628,45 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           joinPath(dstDir, rename ?? n.name),
           copy: copy,
         );
-        final r = await _v.awaitTransfer(id);
-        if (r != null && r != 'timeout') err = r;
+        final result = await _v.awaitTransfer(
+          id,
+          shouldCancel: () => cancelRequested.value,
+          onProgress: (done, total) => progress.value = (n.name, done, total),
+        );
+        if (result == 'cancelled') {
+          cancelled = true;
+          break;
+        }
+        if (result == 'timeout') {
+          timedOut = true;
+          break;
+        }
+        if (result != null) {
+          err = result;
+          break;
+        }
       } catch (e) {
         err = ApiException.from(e).message;
+        break;
       }
-      if (err != null) break;
     }
-    ref
-        .read(epochProvider.notifier)
-        .bump(); // usage may have changed (dashboard, storage)
+
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+      setState(_sel.clear);
+      _refresh();
+    }
+    await dialog;
+    progress.dispose();
+    cancelRequested.dispose();
+
+    ref.read(epochProvider.notifier).bump();
     if (!mounted) return;
-    setState(_sel.clear);
-    _refresh();
-    if (err != null) {
+    if (cancelled) {
+      toast(context, 'Transfer cancelled.');
+    } else if (timedOut) {
+      toast(context, 'Transfer is still running in the background.');
+    } else if (err != null) {
       toast(context, err, error: true);
     } else {
       toast(context, rename != null ? 'Renamed' : (copy ? 'Copied' : 'Moved'));
