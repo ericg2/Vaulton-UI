@@ -1150,17 +1150,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                                   _delete(r);
                               }
                             },
-                            items: const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                value: 'share',
-                                child: Text('Share'),
-                              ),
-                              PopupMenuDivider(),
-                              PopupMenuItem(
-                                value: 'del',
-                                child: Text('Delete'),
-                              ),
+                            items: [
+                              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              if (r.isLocal)
+                                const PopupMenuItem(value: 'share', child: Text('Share')),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem(value: 'del', child: Text('Delete')),
                             ],
                           ),
                       ],
