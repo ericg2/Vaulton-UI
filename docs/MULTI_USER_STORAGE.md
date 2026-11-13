@@ -32,7 +32,7 @@ Open **Administration → Configuration → Resource Governance**.
 
 - **View Usage** displays per-user running and queued job counts with each account's effective concurrency limit.
 - **User Overrides** selects a user and sets per-user concurrent-job and pending-job limits. Leave either value blank to inherit the server default; enter 0 for unlimited.
-- **Operational Limits** configures global unfinished-job capacity, global concurrent jobs, and default per-user concurrency.
+- **Operational Limits** configures global unfinished-job capacity, the per-user pending-job default, global concurrent jobs, and default per-user concurrency.
 
 These are job-admission limits. They are not hard CPU or memory quotas and do not yet provide per-user bandwidth shaping or provider-specific request-rate controls.
 
