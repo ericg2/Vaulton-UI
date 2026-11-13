@@ -101,6 +101,9 @@ class Root {
   final int maxBytes, allocatedBytes, freeBytes;
   final bool isDataAllowed, isRepoAllowed, isOwner, isLocal;
   bool get isPrivateCloud => isOwner && !isLocal;
+  bool get cloudNeedsAttention =>
+      cloudTokenRefreshError != null ||
+      (cloudTokenExpiresAt != null && !cloudTokenExpiresAt!.isAfter(DateTime.now()));
   factory Root.fromJson(Json j) => Root(
         id: '${j['id']}',
         name: '${j['name']}',
