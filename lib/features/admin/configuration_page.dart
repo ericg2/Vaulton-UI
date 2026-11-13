@@ -206,6 +206,109 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     toast(context, 'Operational limits saved.');
   }
 
+  Future<void> _editUserConcurrency() async {
+    final users = <UserAccount>[];
+    String? cursor;
+    do {
+      final page = await guarded(
+        context,
+        () => _v.users(cursor: cursor, limit: 200),
+      );
+      if (page == null) return;
+      users.addAll(page.items);
+      cursor = page.nextCursor;
+    } while (cursor != null);
+    if (!mounted) return;
+    if (users.isEmpty) return toast(context, 'There are no user accounts to configure.');
+
+    final selection = await formDialog(
+      context,
+      'Choose a User',
+      [
+        FieldSpec(
+          'userName',
+          'User',
+          kind: 'choice',
+          initial: users.first.userName,
+          options: users.map((user) => user.userName).toList(),
+        ),
+      ],
+      ok: 'Continue',
+      intro: 'Choose the account whose concurrent job limit you want to override.',
+    );
+    if (selection == null || !mounted) return;
+    final userName = selection['userName'] ?? '';
+    final current = await guarded(context, () => _v.userConcurrencyLimit(userName));
+    if (current == null || !mounted) return;
+    final override = current['override'];
+    final f = await formDialog(
+      context,
+      'Concurrent Jobs · $userName',
+      [
+        FieldSpec(
+          'limit',
+          'Maximum Concurrent Jobs',
+          initial: override == null ? '' : '$override',
+          hint: '0 = Unlimited. Leave blank to use the server default.',
+        ),
+      ],
+      ok: 'Save Limit',
+      intro: 'The current effective limit is ${current['effectiveLimit']}. Changes apply to future job starts.',
+    );
+    if (f == null || !mounted) return;
+    final raw = (f['limit'] ?? '').trim();
+    if (raw.isEmpty) {
+      await guarded(context, () => _v.clearUserConcurrencyLimit(userName));
+    } else {
+      final value = int.tryParse(raw);
+      if (value == null || value < 0 || value > 1000) {
+        toast(context, 'Enter a number from 0 to 1000.', error: true);
+        return;
+      }
+      await guarded(context, () => _v.saveUserConcurrencyLimit(userName, value));
+    }
+    if (mounted) toast(context, 'Resource limit updated.');
+  }
+
+  Future<void> _viewResourceUsage() async {
+    final rows = await guarded(context, _v.adminResourceUsage);
+    if (rows == null || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resource Usage'),
+        content: SizedBox(
+          width: 520,
+          child: rows.isEmpty
+              ? const Text('No user accounts found.')
+              : ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final row in rows)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('${row['userName']}'),
+                        subtitle: Text('${row['runningJobs']} running · ${row['queuedJobs']} queued'),
+                        trailing: Text(
+                          row['maxConcurrentJobs'] == 0
+                              ? 'Unlimited'
+                              : 'Limit ${row['maxConcurrentJobs']}',
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _editNotifications() async {
     final f = await formDialog(context, 'Webhook Notifications', [
       FieldSpec('url', 'Webhook URL', initial: '${_notifications['webhookUrl'] ?? ''}',
@@ -734,6 +837,36 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Align(alignment: Alignment.centerRight, child: FilledButton.tonalIcon(
                   onPressed: _editLimits, icon: const Icon(Icons.settings_outlined), label: const Text('Configure'))),
+              ),
+            ]),
+          ),
+          Card(
+            child: Column(children: [
+              ListTile(
+                leading: const Icon(Icons.speed_outlined),
+                title: const Text('Resource Governance'),
+                subtitle: Text('${_limits['maxConcurrentJobs'] ?? 8} global jobs · ${_limits['maxConcurrentJobsPerUser'] ?? 2} jobs/user by default'),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _viewResourceUsage,
+                        icon: const Icon(Icons.analytics_outlined),
+                        label: const Text('View Usage'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: _editUserConcurrency,
+                        icon: const Icon(Icons.tune),
+                        label: const Text('User Overrides'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ]),
           ),
