@@ -1097,6 +1097,17 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     _key.currentState?.silentRefresh(force: true);
   }
 
+  Future<void> _reconnect(Root root) async {
+    final provider = toStr(root.source?['scheme']) ?? '';
+    if (!const ['gdrive', 'onedrive', 'dropbox'].contains(provider)) return;
+    final authorization = await guarded(
+      context,
+      () => _v.beginCloudReconnect(provider, root.id),
+    );
+    if (authorization == null || !mounted) return;
+    await _finishCloudOAuth(provider, authorization, 'Cloud connection restored.');
+  }
+
   /// Tapping a location shows what it is, who can use it, and what you can do with it.
   void _openRoot(Root root) {
     showModalBottomSheet<void>(
@@ -1117,6 +1128,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           onShare: () => then(() => _shares(root)),
           onEdit: () => then(() => _edit(root)),
           onDelete: () => then(() => _delete(root)),
+          onReconnect: () => then(() => _reconnect(root)),
         );
       },
     );
@@ -2864,10 +2876,11 @@ class _RootSheet extends StatefulWidget {
     required this.onShare,
     required this.onEdit,
     required this.onDelete,
+    required this.onReconnect,
   });
   final Root root;
   final Vaulton vaulton;
-  final VoidCallback onShare, onEdit, onDelete;
+  final VoidCallback onShare, onEdit, onDelete, onReconnect;
   @override
   State<_RootSheet> createState() => _RootSheetState();
 }
@@ -2974,6 +2987,19 @@ class _RootSheetState extends State<_RootSheet> {
           const SizedBox(height: 8),
           if (scheme.isNotEmpty)
             _row(Icons.cable_outlined, 'Connection Type', scheme),
+          if (r.isOwner && r.cloudTokenRefreshError != null) ...[
+            const Divider(height: 28),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.warning_amber_rounded, color: cs.error),
+              title: const Text('Cloud Connection Needs Attention'),
+              subtitle: Text(r.cloudTokenRefreshError!),
+              trailing: TextButton(
+                onPressed: widget.onReconnect,
+                child: const Text('Reconnect'),
+              ),
+            ),
+          ],
           _row(
             Icons.inventory_2_outlined,
             'Can Hold',
