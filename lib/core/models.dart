@@ -97,6 +97,8 @@ class Root {
   final Json? source;
   final int maxBytes, allocatedBytes, freeBytes;
   final bool isDataAllowed, isRepoAllowed, isOwner;
+  bool get isLocal => source?['scheme'] == 'fs';
+  bool get isPrivateCloud => source != null && !isLocal;
   factory Root.fromJson(Json j) => Root(
         id: '${j['id']}',
         name: '${j['name']}',
