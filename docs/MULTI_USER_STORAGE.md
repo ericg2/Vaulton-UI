@@ -1,6 +1,6 @@
 # Multi-user storage and resource governance UI
 
-This document describes the current UI behavior for private cloud connections and server resource policies. The backend architecture and security boundaries are documented in the Vaulton repository's `docs/MULTI_USER_STORAGE.md`.
+This document describes the current UI behavior for private cloud connections and server resource policies. The backend architecture and security boundaries are documented in the Vaulton repository's `docs/MULTI_USER_STORAGE.md`. The end-to-end validation checklist is in the backend repository's `docs/MULTI_USER_TEST_PLAN.md`.
 
 ## Storage locations
 
