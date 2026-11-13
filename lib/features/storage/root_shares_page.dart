@@ -222,7 +222,8 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => r.dispose());
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool force = false}) async {
+    if (!force && !_dirty) return;
     if (_rows.any((r) => r.overInvalid || r.overLimit(_shareCapacity))) {
       return toast(context, 'Fix the highlighted limits first', error: true);
     }
@@ -332,6 +333,14 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                   spacing: 6,
                   runSpacing: 4,
                   children: [for (final name in _legacyShareNames) Chip(label: Text(name))],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _saving ? null : () => _save(force: true),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Remove Inactive Shares'),
+                  ),
                 ),
               ]),
             ),
