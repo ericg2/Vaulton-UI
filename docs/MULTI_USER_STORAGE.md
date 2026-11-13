@@ -11,6 +11,7 @@ Open **Storage → Locations** and select **Add Location**.
 - Local filesystem locations and custom remote endpoints remain administrator-provisioned.
 - A cloud connection is private to its owner. Cloud roots never show Share or Manage Sharing actions.
 - Editing a cloud connection changes its Vaulton metadata only; provider credentials are write-only and are not re-submitted from the UI.
+- Vaulton refreshes access tokens automatically. If refresh fails or the token expires, the location details show a warning and a **Reconnect** action. Reconnect updates the existing root and preserves its points, quotas, and provider files.
 - Removing a cloud connection removes its Vaulton registration. It does not delete provider-side files. Provider token revocation is best-effort where supported.
 
 The authorization URL expires after ten minutes. If the API restarts during the flow, start the connection again.
@@ -40,9 +41,9 @@ These are cooperative job/transfer admission limits. They are not hard CPU or me
 ## Known UI limitations
 
 - The user manually copies the one-time callback code into the initiating Vaulton session. A native deep-link handoff would improve this experience.
-- The UI does not yet provide a provider connection health/reauthorization state for expired or revoked consent.
+- The UI exposes refresh failures and expired-token state with an in-place reconnect action. Provider-specific consent and refresh behavior still needs live integration testing.
 - Microsoft token revocation must be completed from the provider account's app-consent settings.
-- Resource usage shows active stream counts, not per-transfer throughput or measured CPU/memory.
+- Resource usage shows active operation counts, not per-transfer throughput or measured CPU/memory.
 
 
 ## API request protection
