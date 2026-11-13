@@ -631,6 +631,7 @@ void main() {
       expect(find.text('Inactive Legacy Shares'), findsOneWidget);
       expect(find.text('bob'), findsOneWidget);
       expect(find.text('Shared With (1)'), findsNothing);
+      expect(find.text('Remove Inactive Shares'), findsOneWidget);
     });
 
     testWidgets('root shares page fits with no shares yet', (tester) async {
