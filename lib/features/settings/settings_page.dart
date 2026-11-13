@@ -16,6 +16,17 @@ import '../transfers/transfer_manager.dart';
 /// Keep in sync with `version:` in pubspec.yaml.
 const kAppVersion = '1.3.21';
 
+Widget _usageLine(String label, String value) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 5),
+  child: Row(
+    children: [
+      Expanded(child: Text(label)),
+      const SizedBox(width: 16),
+      Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+    ],
+  ),
+);
+
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -26,6 +37,41 @@ class SettingsPage extends ConsumerWidget {
     final u = ref.watch(userProvider);
     final v = ref.read(vaultonProvider);
     final session = ref.read(sessionProvider);
+    Future<void> showResourceUsage() async {
+      final usage = await guarded(context, () => v.resourceUsage());
+      if (usage == null || !context.mounted) return;
+      final running = toInt(usage['runningJobs']);
+      final queued = toInt(usage['queuedJobs']);
+      final concurrent = toInt(usage['maxConcurrentJobs']);
+      final pending = toInt(usage['maxPendingJobs']);
+      String limit(int value) => value == 0 ? 'Unlimited' : '$value';
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Server Resource Usage'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _usageLine('Running Jobs', '$running'),
+              _usageLine('Queued Jobs', '$queued'),
+              _usageLine('Concurrent Job Limit', limit(concurrent)),
+              _usageLine('Pending Job Limit', '$pending'),
+              if (queued > 0 && concurrent > 0 && running >= concurrent) ...[
+                const SizedBox(height: 12),
+                const Text('Your jobs are waiting because you have reached your concurrent job limit. They will start when capacity becomes available.'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -109,6 +155,18 @@ class SettingsPage extends ConsumerWidget {
                   selected: {s.themeMode},
                   onSelectionChanged: (v) => c.setTheme(v.first),
                 ),
+              ),
+            ],
+          ),
+          Section(
+            'Server Resources',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.speed_outlined),
+                title: const Text('Resource Usage'),
+                subtitle: const Text('View your running jobs, queue, and server limits.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: showResourceUsage,
               ),
             ],
           ),
