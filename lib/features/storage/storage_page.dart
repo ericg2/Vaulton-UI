@@ -806,7 +806,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       if (url.isEmpty) return toast(context, 'The provider authorization link was not returned.', error: true);
       await Clipboard.setData(ClipboardData(text: url));
       if (!mounted) return;
-      await showDialog<void>(
+      final state = toStr(authorization['state']) ?? '';
+      if (state.isEmpty) return toast(context, 'The authorization state was not returned.', error: true);
+      final codeController = TextEditingController();
+      final code = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text('Authorize ${_sourceLabel(selectedScheme)}'),
@@ -816,9 +819,21 @@ class _RootsTabState extends ConsumerState<RootsTab> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('The authorization link has been copied. Open it in your browser, sign in with your provider, and approve Vaulton. Then return here and refresh Locations. This link expires in 10 minutes.'),
+                const Text('The authorization link has been copied. Open it in your browser, sign in with your provider, and approve Vaulton. The browser will show a one-time code. Return here and paste that code to finish. Only complete this request in the Vaulton account that started it. The link expires in 10 minutes.'),
                 const SizedBox(height: 12),
                 SelectableText(url),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  autofocus: false,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'One-time Authorization Code',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -827,13 +842,30 @@ class _RootsTabState extends ConsumerState<RootsTab> {
               onPressed: () => Clipboard.setData(ClipboardData(text: url)),
               child: const Text('Copy Link'),
             ),
-            FilledButton(
+            TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Done'),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = codeController.text.trim();
+                if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+              },
+              child: const Text('Complete Connection'),
             ),
           ],
         ),
       );
+      codeController.dispose();
+      if (code == null || !mounted) return;
+      final completed = await guarded(
+        context,
+        () => _v.completeCloudOAuth(selectedScheme, state, code),
+      );
+      if (completed != null) {
+        _key.currentState?.refresh();
+        if (mounted) toast(context, 'Location created.');
+      }
       return;
     }
 
