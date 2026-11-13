@@ -288,12 +288,13 @@ class Vaulton {
 
   /// Polls a move/copy until finished. Returns an error string or null on success.
   /// Returns 'timeout' if it did not finish within [timeout] (the job continues server-side).
-  Future<String?> awaitTransfer(String jobId, {Duration timeout = const Duration(minutes: 3), void Function(int done, int total)? onProgress, bool Function()? shouldCancel}) async {
-    final end = DateTime.now().add(timeout);
+  /// Pass null for [timeout] to keep polling until completion or cancellation.
+  Future<String?> awaitTransfer(String jobId, {Duration? timeout = const Duration(minutes: 3), void Function(int done, int total)? onProgress, bool Function()? shouldCancel}) async {
+    final end = timeout == null ? null : DateTime.now().add(timeout);
     final okRe = RegExp(r'(succe|complet|done|finish)', caseSensitive: false);
     final badRe = RegExp(r'(fail|error|cancel)', caseSensitive: false);
     var cancelSent = false;
-    while (DateTime.now().isBefore(end)) {
+    while (end == null || DateTime.now().isBefore(end)) {
       try {
         if (!cancelSent && shouldCancel?.call() == true) {
           await cancelTransfer(jobId);
