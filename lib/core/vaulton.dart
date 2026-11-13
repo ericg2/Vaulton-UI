@@ -148,6 +148,9 @@ class Vaulton {
       Paged.from(await _req('GET', '/roots', q: _pg(cursor, limit, null, {'search': search})), Root.fromJson);
   Future<Root> root(String id) async => Root.fromJson(toJson(await _req('GET', '/roots/$id')));
   Future<Root> createRoot(Json body) async => Root.fromJson(toJson(await _req('POST', '/roots', body: body)));
+  Future<Json> beginCloudOAuth(String provider, Json body) async =>
+      toJson(await _req('POST', '/roots/oauth/${_e(provider)}/authorize', body: body));
+  Future<Json> resourceUsage() async => toJson(await _req('GET', '/resources/usage'));
   Future<Root> patchRoot(String id, Json body) async => Root.fromJson(toJson(await _req('PATCH', '/roots/$id', body: body)));
   Future<void> deleteRoot(String id) => _req('DELETE', '/roots/$id');
   Future<Json> browseLocal(String? path) async => toJson(await _req('GET', '/roots/local/browse', q: {'path': path}));
