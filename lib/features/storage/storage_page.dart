@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data_folder_encryption.dart';
@@ -742,14 +743,15 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     if (details == null || !mounted) return;
 
     final selectedScheme = details['scheme'] as String;
-    final src = await _sourceForm(selectedScheme, null);
-    if (src == null || !mounted) return;
+    final requiresOAuth = const ['gdrive', 'onedrive', 'dropbox'].contains(selectedScheme);
+    final src = requiresOAuth ? null : await _sourceForm(selectedScheme, null);
+    if (!requiresOAuth && (src == null || !mounted)) return;
 
     Json? detected;
     if (selectedScheme == 'fs') {
       detected = await guarded(
         context,
-        () => _v.browseLocal(src['root'] as String?),
+        () => _v.browseLocal(src!['root'] as String?),
       );
       if (detected == null || !mounted) return;
     }
@@ -785,11 +787,57 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     }
     if (maxBytes == null || maxBytes <= 0 || !mounted) return;
 
+    if (requiresOAuth) {
+      final authorization = await guarded(
+        context,
+        () => _v.beginCloudOAuth(selectedScheme, {
+          'name': details['name'],
+          'maxBytes': maxBytes,
+          'isDataAllowed': details['data'],
+          'isRepoAllowed': details['repo'],
+        }),
+      );
+      if (authorization == null || !mounted) return;
+      final url = toStr(authorization['authorizationUrl']) ?? '';
+      if (url.isEmpty) return toast(context, 'The provider authorization link was not returned.', error: true);
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Authorize ${_sourceLabel(selectedScheme)}'),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('The authorization link has been copied. Open it in your browser, sign in with your provider, and approve Vaulton. Then return here and refresh Locations. This link expires in 10 minutes.'),
+                const SizedBox(height: 12),
+                SelectableText(url),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Clipboard.setData(ClipboardData(text: url)),
+              child: const Text('Copy Link'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final created = await guarded(
       context,
       () => _v.createRoot({
         'name': details['name'],
-        if (src != null) 'source': src,
+        'source': src,
         'maxBytes': maxBytes,
         'isDataAllowed': details['data'],
         'isRepoAllowed': details['repo'],
