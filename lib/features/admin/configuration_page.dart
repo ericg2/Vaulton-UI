@@ -200,7 +200,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       for (final field in fields)
         FieldSpec(field.$1, field.$2, initial: '${_limits[field.$1] ?? field.$3}'),
     ], ok: 'Save Limits',
-      intro: 'Control queue limits, global and per-user job concurrency, simultaneous file transfers, retention, and in-memory event history. Use 0 for unlimited concurrency or to keep records indefinitely.');
+      intro: 'Control queue limits, job concurrency, simultaneous file transfers, API streaming bandwidth, retention, and in-memory event history. Use 0 for unlimited limits or to keep records indefinitely.');
     if (f == null || !mounted) return;
     final values = <String, int>{};
     for (final field in fields) {
@@ -245,7 +245,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         ),
       ],
       ok: 'Continue',
-      intro: 'Choose the account whose job queue, job concurrency, and file-transfer limits you want to override.',
+      intro: 'Choose the account whose job queue, job concurrency, file-transfer concurrency, and streaming bandwidth you want to override.',
     );
     if (selection == null || !mounted) return;
     final userName = selection['userName'] ?? '';
