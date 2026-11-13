@@ -251,6 +251,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
           'Maximum Concurrent Jobs',
           initial: override == null ? '' : '$override',
           hint: '0 = Unlimited. Leave blank to use the server default.',
+          number: true,
         ),
       ],
       ok: 'Save Limit',
