@@ -7,7 +7,7 @@ This document describes the current UI behavior for private cloud connections an
 Open **Storage → Locations** and select **Add Location**.
 
 - Regular users can connect Google Drive, OneDrive, or Dropbox through the provider authorization flow.
-- The app copies the short-lived authorization URL. Open it in a browser, sign in with the provider, approve Vaulton, then return to the app and refresh Locations.
+- The app copies the short-lived authorization URL. Open it in a browser, sign in with the provider, and approve Vaulton. The callback displays a one-time code; copy it, return to the same Vaulton account that initiated the request, paste it into the dialog, and choose **Complete Connection**.
 - Local filesystem locations and custom remote endpoints remain administrator-provisioned.
 - A cloud connection is private to its owner. Cloud roots never show Share or Manage Sharing actions.
 - Editing a cloud connection changes its Vaulton metadata only; provider credentials are write-only and are not re-submitted from the UI.
@@ -38,7 +38,7 @@ These are job-admission limits. They are not hard CPU or memory quotas and do no
 
 ## Known UI limitations
 
-- OAuth callback completion is confirmed in the browser; the user returns to Vaulton and refreshes Locations manually.
+- The user manually copies the one-time callback code into the initiating Vaulton session. A native deep-link handoff would improve this experience.
 - The UI does not yet provide a provider connection health/reauthorization state for expired or revoked consent.
 - Microsoft token revocation must be completed from the provider account's app-consent settings.
 - Resource usage currently covers job counts and queue/capacity reasons, not per-transfer throughput or measured CPU/memory.
