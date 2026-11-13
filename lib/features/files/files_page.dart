@@ -570,7 +570,6 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final pt = _point!;
     String? err;
     var cancelled = false;
-    var timedOut = false;
     final progress = ValueNotifier<(String, int, int)>((nodes.first.name, 0, 0));
     final cancelRequested = ValueNotifier<bool>(false);
     final dialog = showDialog<void>(
@@ -579,40 +578,40 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       builder: (_) => PopScope(
         canPop: false,
         child: AlertDialog(
-        insetPadding: const EdgeInsets.all(16),
-        title: Text(copy ? 'Copying Files' : 'Moving Files'),
-        content: SizedBox(
-          width: 420,
-          child: ValueListenableBuilder<(String, int, int)>(
-            valueListenable: progress,
-            builder: (ctx, value, _) {
-              final name = value.$1;
-              final done = value.$2;
-              final total = value.$3;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 12),
-                  LinearProgressIndicator(value: total > 0 ? (done / total).clamp(0.0, 1.0).toDouble() : null),
-                  const SizedBox(height: 8),
-                  Text(total > 0 ? '$done / $total bytes' : 'Preparing transfer…'),
-                ],
-              );
-            },
-          ),
-        ),
-        actions: [
-          ValueListenableBuilder<bool>(
-            valueListenable: cancelRequested,
-            builder: (ctx, requested, _) => TextButton(
-              onPressed: requested ? null : () => cancelRequested.value = true,
-              child: Text(requested ? 'Cancelling…' : 'Cancel'),
+          insetPadding: const EdgeInsets.all(16),
+          title: Text(copy ? 'Copying Files' : 'Moving Files'),
+          content: SizedBox(
+            width: 420,
+            child: ValueListenableBuilder<(String, int, int)>(
+              valueListenable: progress,
+              builder: (ctx, value, _) {
+                final name = value.$1;
+                final done = value.$2;
+                final total = value.$3;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 12),
+                    LinearProgressIndicator(value: total > 0 ? (done / total).clamp(0.0, 1.0).toDouble() : null),
+                    const SizedBox(height: 8),
+                    Text(total > 0 ? '$done / $total bytes' : 'Preparing transfer…'),
+                  ],
+                );
+              },
             ),
           ),
-        ],
-      ),
+          actions: [
+            ValueListenableBuilder<bool>(
+              valueListenable: cancelRequested,
+              builder: (ctx, requested, _) => TextButton(
+                onPressed: requested ? null : () => cancelRequested.value = true,
+                child: Text(requested ? 'Cancelling…' : 'Cancel'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -640,10 +639,6 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           cancelled = true;
           break;
         }
-        if (result == 'timeout') {
-          timedOut = true;
-          break;
-        }
         if (result != null) {
           err = result;
           break;
@@ -667,8 +662,6 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     ref.read(epochProvider.notifier).bump();
     if (cancelled) {
       toast(context, 'Transfer cancelled.');
-    } else if (timedOut) {
-      toast(context, 'Transfer is still running in the background.');
     } else if (err != null) {
       toast(context, err, error: true);
     } else {
