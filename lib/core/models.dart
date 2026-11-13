@@ -112,7 +112,7 @@ class Root {
         isDataAllowed: toBool(j['isDataAllowed']),
         isRepoAllowed: toBool(j['isRepoAllowed']),
         isOwner: toBool(j['isOwner']),
-        isLocal: toBool(j['isLocal']),
+        isLocal: j.containsKey('isLocal') ? toBool(j['isLocal']) : null,
       );
 }
 
