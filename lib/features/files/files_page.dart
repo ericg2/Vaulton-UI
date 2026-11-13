@@ -632,6 +632,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         );
         final result = await _v.awaitTransfer(
           id,
+          timeout: null,
           shouldCancel: () => cancelRequested.value,
           onProgress: (done, total) => progress.value = (n.name, done, total),
         );
