@@ -855,7 +855,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               ListTile(
                 leading: const Icon(Icons.speed_outlined),
                 title: const Text('Resource Governance'),
-                subtitle: Text('${_limits['maxPendingJobs'] ?? 1000} unfinished jobs · ${_limits['maxConcurrentJobs'] ?? 8} active globally · ${_limits['maxConcurrentJobsPerUser'] ?? 2} per user'),
+                subtitle: Text('${_limits['maxPendingJobs'] ?? 1000} unfinished jobs · ${_limits['maxPendingJobsPerUser'] ?? 200} per user · ${_limits['maxConcurrentJobs'] ?? 8} active globally · ${_limits['maxConcurrentJobsPerUser'] ?? 2} per user'),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
