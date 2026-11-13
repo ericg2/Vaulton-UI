@@ -578,7 +578,11 @@ class _RootsTabState extends ConsumerState<RootsTab> {
 
   Future<void> _create({required bool canManageLocal}) async {
     final name = TextEditingController();
-    final cloudSchemes = typeLabels.keys.where((s) => s != 'fs').toList()..sort();
+    final cloudSchemes = typeLabels.keys
+        .where((s) => s != 'fs' &&
+            (canManageLocal || const ['gdrive', 'onedrive', 'dropbox'].contains(s)))
+        .toList()
+      ..sort();
     var scheme = canManageLocal ? 'fs' : cloudSchemes.first;
     var allowData = true;
     var allowRepo = true;
