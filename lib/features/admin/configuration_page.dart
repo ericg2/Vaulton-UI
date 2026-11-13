@@ -235,7 +235,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         ),
       ],
       ok: 'Continue',
-      intro: 'Choose the account whose concurrent job limit you want to override.',
+      intro: 'Choose the account whose job queue and concurrency limits you want to override.',
     );
     if (selection == null || !mounted) return;
     final userName = selection['userName'] ?? '';
