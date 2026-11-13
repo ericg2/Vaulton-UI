@@ -258,7 +258,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: FilledButton(
-                  onPressed: _saving || !_dirty ? null : _save,
+                  onPressed: _saving || !_dirty ? null : () => _save(),
                   child: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
                 ),
               ),
