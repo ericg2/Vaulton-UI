@@ -150,6 +150,8 @@ class Vaulton {
   Future<Root> createRoot(Json body) async => Root.fromJson(toJson(await _req('POST', '/roots', body: body)));
   Future<Json> beginCloudOAuth(String provider, Json body) async =>
       toJson(await _req('POST', '/roots/oauth/${_e(provider)}/authorize', body: body));
+  Future<Json> completeCloudOAuth(String provider, String state, String code) async =>
+      toJson(await _req('POST', '/roots/oauth/${_e(provider)}/complete', body: {'state': state, 'code': code}));
   Future<Json> resourceUsage() async => toJson(await _req('GET', '/resources/usage'));
   Future<Root> patchRoot(String id, Json body) async => Root.fromJson(toJson(await _req('PATCH', '/roots/$id', body: body)));
   Future<void> deleteRoot(String id) => _req('DELETE', '/roots/$id');
