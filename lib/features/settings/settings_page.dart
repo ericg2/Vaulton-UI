@@ -42,7 +42,6 @@ class SettingsPage extends ConsumerWidget {
       if (usage == null || !context.mounted) return;
       final running = toInt(usage['runningJobs']);
       final queued = toInt(usage['queuedJobs']);
-      final concurrent = toInt(usage['maxConcurrentJobs']);
       final pending = toInt(usage['maxPendingJobs']);
       final globalRunning = toInt(usage['globalRunningJobs']);
       final globalLimit = toInt(usage['globalConcurrentLimit']);
