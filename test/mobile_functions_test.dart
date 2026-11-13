@@ -172,7 +172,7 @@ class _FuncApi extends Vaulton {
   }) async => Paged(nodes, null, false);
 
   @override
-  Future<List<Json>> shares(String id) async => [];
+  Future<List<Json>> shares(String id) async => shareList;
 
   @override
   Future<int> unreadCount() async => 0;
@@ -598,6 +598,34 @@ void main() {
   });
 
   group('sharing functions', () {
+    testWidgets('legacy shares are shown as inactive and are not re-granted', (tester) async {
+      await pumpAt(
+        tester,
+        await scopedApp(
+          RootSharesPage(
+            root: Root(
+              id: 'r1',
+              name: 'Local Disk',
+              userName: 'admin',
+              maxBytes: 100,
+              allocatedBytes: 10,
+              freeBytes: 90,
+              isDataAllowed: true,
+              isRepoAllowed: true,
+              isOwner: true,
+            ),
+          ),
+          _FuncApi(shareList: [
+            {'userName': 'bob', 'maxBytes': 50, 'isActive': false},
+          ]),
+        ),
+      );
+
+      expect(find.text('Inactive Legacy Shares'), findsOneWidget);
+      expect(find.text('bob'), findsOneWidget);
+      expect(find.text('Shared With (1)'), findsNothing);
+    });
+
     testWidgets('root shares page fits with no shares yet', (tester) async {
       await pumpAt(
         tester,
