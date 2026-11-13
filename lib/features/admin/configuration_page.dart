@@ -154,7 +154,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       FieldSpec('apiRequests', 'General API Requests Per Account', initial: '${_rateLimits['apiRequests'] ?? 1200}'),
       FieldSpec('apiWindow', 'General API Window (Seconds)', initial: '${_rateLimits['apiWindowSeconds'] ?? 60}'),
     ], ok: 'Save Rate Limits',
-      intro: 'Authentication is limited per client IP, messages per signed-in user, and general API requests per account (or IP before sign-in). The general limit protects storage and file endpoints. Changes apply immediately.');
+      intro: 'Authentication is limited per client IP, messages per signed-in user, and general API requests per account (or IP before sign-in). The general limit protects storage and file endpoints, but it limits request frequency rather than bytes transferred. Changes apply immediately.');
     if (f == null || !mounted) return;
     final auth = int.tryParse(f['authRequests'] ?? '');
     final authWindow = int.tryParse(f['authWindow'] ?? '');
