@@ -570,6 +570,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     final pt = _point!;
     String? err;
     var cancelled = false;
+    var i = 0;
     final progress = ValueNotifier<(String, int, int)>((nodes.first.name, 0, 0));
     final cancelRequested = ValueNotifier<bool>(false);
     final dialog = showDialog<void>(
@@ -620,7 +621,9 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         cancelled = true;
         break;
       }
-      progress.value = (n.name, 0, 0);
+      i++;
+      final currentName = '$i of ${nodes.length}: ${n.name}';
+      progress.value = (currentName, 0, 0);
       try {
         final id = await _v.transfer(
           pt.id,
@@ -633,7 +636,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           id,
           timeout: null,
           shouldCancel: () => cancelRequested.value,
-          onProgress: (done, total) => progress.value = (n.name, done, total),
+          onProgress: (done, total) => progress.value = (currentName, done, total),
         );
         if (result == 'cancelled') {
           cancelled = true;
