@@ -207,7 +207,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     toast(context, 'Operational limits saved.');
   }
 
-  Future<void> _editUserConcurrency() async {
+  Future<void> _editUserLimits() async {
     final users = <UserAccount>[];
     String? cursor;
     do {
@@ -239,37 +239,47 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     );
     if (selection == null || !mounted) return;
     final userName = selection['userName'] ?? '';
-    final current = await guarded(context, () => _v.userConcurrencyLimit(userName));
+    final current = await guarded(context, () => _v.userResourceLimits(userName));
     if (current == null || !mounted) return;
-    final override = current['override'];
+    final concurrencyOverride = current['concurrencyOverride'];
+    final pendingOverride = current['pendingOverride'];
     final f = await formDialog(
       context,
-      'Concurrent Jobs · $userName',
+      'Resource Limits · $userName',
       [
         FieldSpec(
-          'limit',
+          'concurrency',
           'Maximum Concurrent Jobs',
-          initial: override == null ? '' : '$override',
-          hint: '0 = Unlimited. Leave blank to use the server default.',
+          initial: concurrencyOverride == null ? '' : '$concurrencyOverride',
+          hint: '0 = Unlimited. Blank uses the server default.',
+          number: true,
+        ),
+        FieldSpec(
+          'pending',
+          'Maximum Unfinished Jobs',
+          initial: pendingOverride == null ? '' : '$pendingOverride',
+          hint: '0 = Unlimited. Blank uses the server default.',
           number: true,
         ),
       ],
-      ok: 'Save Limit',
-      intro: 'The current effective limit is ${current['effectiveLimit']}. Changes apply to future job starts.',
+      ok: 'Save Limits',
+      intro: 'Effective defaults: ${current['effectiveConcurrencyLimit']} concurrent jobs and ${current['effectivePendingLimit']} unfinished jobs. Blank fields inherit the defaults.',
     );
     if (f == null || !mounted) return;
-    final raw = (f['limit'] ?? '').trim();
-    if (raw.isEmpty) {
-      await guarded(context, () => _v.clearUserConcurrencyLimit(userName));
-    } else {
-      final value = int.tryParse(raw);
-      if (value == null || value < 0 || value > 1000) {
-        toast(context, 'Enter a number from 0 to 1000.', error: true);
-        return;
-      }
-      await guarded(context, () => _v.saveUserConcurrencyLimit(userName, value));
+    final concurrencyRaw = (f['concurrency'] ?? '').trim();
+    final pendingRaw = (f['pending'] ?? '').trim();
+    final concurrency = concurrencyRaw.isEmpty ? null : int.tryParse(concurrencyRaw);
+    final pending = pendingRaw.isEmpty ? null : int.tryParse(pendingRaw);
+    if ((concurrencyRaw.isNotEmpty && (concurrency == null || concurrency < 0 || concurrency > 1000)) ||
+        (pendingRaw.isNotEmpty && (pending == null || pending < 0 || pending > 100000))) {
+      toast(context, 'Enter a valid concurrency limit (0–1000) and pending-job limit (0–100000).', error: true);
+      return;
     }
-    if (mounted) toast(context, 'Resource limit updated.');
+    await guarded(
+      context,
+      () => _v.saveUserResourceLimits(userName, concurrency, pending),
+    );
+    if (mounted) toast(context, 'Resource limits updated.');
   }
 
   Future<void> _viewResourceUsage() async {
@@ -862,7 +872,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                         label: const Text('View Usage'),
                       ),
                       FilledButton.tonalIcon(
-                        onPressed: _editUserConcurrency,
+                        onPressed: _editUserLimits,
                         icon: const Icon(Icons.tune),
                         label: const Text('User Overrides'),
                       ),
