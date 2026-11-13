@@ -284,6 +284,7 @@ class Vaulton {
   }
 
   Future<Json> transferStatus(String jobId) async => toJson(await _req('GET', '/files/transfers/${_e(jobId)}'));
+  Future<void> cancelTransfer(String jobId) => _req('POST', '/files/transfers/${_e(jobId)}/cancel');
 
   /// Polls a move/copy until finished. Returns an error string or null on success.
   /// Returns 'timeout' if it did not finish within [timeout] (the job continues server-side).
