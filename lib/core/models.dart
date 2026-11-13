@@ -92,13 +92,12 @@ class Point {
 
 class Root {
   Root({required this.id, required this.name, required this.userName, this.source, required this.maxBytes,
-      required this.allocatedBytes, required this.freeBytes, required this.isDataAllowed, required this.isRepoAllowed, required this.isOwner});
+      required this.allocatedBytes, required this.freeBytes, required this.isDataAllowed, required this.isRepoAllowed, required this.isOwner, required this.isLocal});
   final String id, name, userName;
   final Json? source;
   final int maxBytes, allocatedBytes, freeBytes;
-  final bool isDataAllowed, isRepoAllowed, isOwner;
-  bool get isLocal => source?['scheme'] == 'fs';
-  bool get isPrivateCloud => source != null && !isLocal;
+  final bool isDataAllowed, isRepoAllowed, isOwner, isLocal;
+  bool get isPrivateCloud => isOwner && !isLocal;
   factory Root.fromJson(Json j) => Root(
         id: '${j['id']}',
         name: '${j['name']}',
@@ -112,6 +111,7 @@ class Root {
         isDataAllowed: toBool(j['isDataAllowed']),
         isRepoAllowed: toBool(j['isRepoAllowed']),
         isOwner: toBool(j['isOwner']),
+        isLocal: toBool(j['isLocal']),
       );
 }
 
