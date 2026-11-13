@@ -187,6 +187,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       ('maxConcurrentJobsPerUser', 'Maximum Concurrent Jobs Per User (0 = Unlimited)', 2),
       ('maxConcurrentTransfers', 'Maximum Concurrent File Transfers Across Server (0 = Unlimited)', 8),
       ('maxConcurrentTransfersPerUser', 'Maximum Concurrent File Transfers Per User (0 = Unlimited)', 2),
+      ('maxTransferBytesPerSecond', 'Maximum API Transfer Bandwidth Across Server (Bytes/Sec, 0 = Unlimited)', 0),
+      ('maxTransferBytesPerSecondPerUser', 'Maximum API Transfer Bandwidth Per User (Bytes/Sec, 0 = Unlimited)', 0),
       ('maxMessageRecipients', 'Message Recipients', 25),
       ('maxBroadcastRecipients', 'Broadcast Recipients', 5000),
       ('jobRetentionDays', 'Job Retention (Days, 0 = Forever)', 90),
@@ -252,6 +254,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     final concurrencyOverride = current['concurrencyOverride'];
     final pendingOverride = current['pendingOverride'];
     final transferOverride = current['transferOverride'];
+    final bandwidthOverride = current['bandwidthOverride'];
     final f = await formDialog(
       context,
       'Resource Limits · $userName',
@@ -277,26 +280,36 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
           hint: '0 = Unlimited. Blank uses the server default.',
           number: true,
         ),
+        FieldSpec(
+          'bandwidth',
+          'Maximum API Transfer Bandwidth (Bytes/Sec)',
+          initial: bandwidthOverride == null ? '' : '$bandwidthOverride',
+          hint: '0 = Unlimited. Blank uses the server default. 1048576 = 1 MiB/s.',
+          number: true,
+        ),
       ],
       ok: 'Save Limits',
-      intro: 'Effective defaults: ${current['effectiveConcurrencyLimit']} concurrent jobs, ${current['effectivePendingLimit']} unfinished jobs, and ${current['effectiveTransferLimit']} concurrent file transfers. Blank fields inherit the defaults.',
+      intro: 'Effective defaults: ${current['effectiveConcurrencyLimit']} concurrent jobs, ${current['effectivePendingLimit']} unfinished jobs, ${current['effectiveTransferLimit']} concurrent file transfers, and ${current['effectiveBandwidthLimit']} bytes/sec. Blank fields inherit the defaults.',
     );
     if (f == null || !mounted) return;
     final concurrencyRaw = (f['concurrency'] ?? '').trim();
     final pendingRaw = (f['pending'] ?? '').trim();
     final transferRaw = (f['transfers'] ?? '').trim();
+    final bandwidthRaw = (f['bandwidth'] ?? '').trim();
     final concurrency = concurrencyRaw.isEmpty ? null : int.tryParse(concurrencyRaw);
     final pending = pendingRaw.isEmpty ? null : int.tryParse(pendingRaw);
     final transfers = transferRaw.isEmpty ? null : int.tryParse(transferRaw);
+    final bandwidth = bandwidthRaw.isEmpty ? null : int.tryParse(bandwidthRaw);
     if ((concurrencyRaw.isNotEmpty && (concurrency == null || concurrency < 0 || concurrency > 1000)) ||
         (pendingRaw.isNotEmpty && (pending == null || pending < 0 || pending > 100000)) ||
-        (transferRaw.isNotEmpty && (transfers == null || transfers < 0 || transfers > 1000))) {
-      toast(context, 'Enter valid job concurrency (0–1000), pending-job (0–100000), and transfer concurrency (0–1000) limits.', error: true);
+        (transferRaw.isNotEmpty && (transfers == null || transfers < 0 || transfers > 1000)) ||
+        (bandwidthRaw.isNotEmpty && (bandwidth == null || bandwidth < 0 || bandwidth > 1000000000000))) {
+      toast(context, 'Enter valid job, transfer-concurrency, and bandwidth limits.', error: true);
       return;
     }
     await guarded(
       context,
-      () => _v.saveUserResourceLimits(userName, concurrency, pending, transfers),
+      () => _v.saveUserResourceLimits(userName, concurrency, pending, transfers, bandwidth),
     );
     if (mounted) toast(context, 'Resource limits updated.');
   }
