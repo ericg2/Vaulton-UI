@@ -176,6 +176,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       ('maxSchedulesPerUser', 'Schedules Per User', 50),
       ('minScheduleIntervalMinutes', 'Minimum Schedule Interval (Minutes)', 5),
       ('maxPendingJobsPerUser', 'Pending Jobs Per User', 200),
+      ('maxPendingJobs', 'Maximum Unfinished Jobs Across Server (0 = Unlimited)', 1000),
       ('maxConcurrentJobs', 'Maximum Concurrent Server Jobs (0 = Unlimited)', 8),
       ('maxConcurrentJobsPerUser', 'Maximum Concurrent Jobs Per User (0 = Unlimited)', 2),
       ('maxMessageRecipients', 'Message Recipients', 25),
