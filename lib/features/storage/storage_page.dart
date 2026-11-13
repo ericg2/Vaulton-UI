@@ -789,7 +789,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       context,
       () => _v.createRoot({
         'name': details['name'],
-        'source': src,
+        if (src != null) 'source': src,
         'maxBytes': maxBytes,
         'isDataAllowed': details['data'],
         'isRepoAllowed': details['repo'],
@@ -937,13 +937,13 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     if (!kSourceSchemas.containsKey(scheme)) {
       return toast(context, 'Unknown connection type.', error: true);
     }
-    final src = await _sourceForm(scheme, root.source);
-    if (src == null || !mounted) return;
+    final src = scheme == 'fs' ? await _sourceForm(scheme, root.source) : null;
+    if (scheme == 'fs' && (src == null || !mounted)) return;
     Json? detected;
     if (scheme == 'fs') {
       detected = await guarded(
         context,
-        () => _v.browseLocal(src['root'] as String?),
+        () => _v.browseLocal(src!['root'] as String?),
       );
       if (detected == null || !mounted) return;
     }
