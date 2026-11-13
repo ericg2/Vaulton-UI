@@ -397,10 +397,11 @@ class Vaulton {
   Future<Json> operationalLimits() async => toJson(await _req('GET', '/admin/settings/limits'));
   Future<Json> userResourceLimits(String userName) async =>
       toJson(await _req('GET', '/admin/settings/limits/users/${_e(userName)}'));
-  Future<Json> saveUserResourceLimits(String userName, int? concurrency, int? pending) async =>
+  Future<Json> saveUserResourceLimits(String userName, int? concurrency, int? pending, int? transfers) async =>
       toJson(await _req('PUT', '/admin/settings/limits/users/${_e(userName)}', body: {
         'maxConcurrentJobsPerUser': concurrency,
         'maxPendingJobsPerUser': pending,
+        'maxConcurrentTransfersPerUser': transfers,
       }));
   Future<void> clearUserResourceLimits(String userName) =>
       _req('DELETE', '/admin/settings/limits/users/${_e(userName)}');
