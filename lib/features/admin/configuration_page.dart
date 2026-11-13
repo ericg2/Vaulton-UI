@@ -320,6 +320,13 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     final totalRunning = rows.fold<int>(0, (sum, row) => sum + (row['runningJobs'] as num? ?? 0).toInt());
     final totalQueued = rows.fold<int>(0, (sum, row) => sum + (row['queuedJobs'] as num? ?? 0).toInt());
     final totalTransfers = rows.fold<int>(0, (sum, row) => sum + (row['activeTransfers'] as num? ?? 0).toInt());
+    String rate(dynamic value) {
+      final bytes = (value as num? ?? 0).toInt();
+      if (bytes == 0) return 'Unlimited';
+      if (bytes >= 1048576) return '${(bytes / 1048576).toStringAsFixed(1)} MiB/s';
+      if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(1)} KiB/s';
+      return '$bytes B/s';
+    }
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -337,7 +344,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                       title: const Text('Server Total'),
                       subtitle: Text('$totalRunning running · $totalQueued queued · $totalTransfers active transfers'),
                       trailing: Text(
-                        '${(_limits['maxConcurrentJobs'] ?? 8) == 0 ? '∞' : (_limits['maxConcurrentJobs'] ?? 8)} concurrent\n${(_limits['maxPendingJobs'] ?? 1000) == 0 ? '∞' : (_limits['maxPendingJobs'] ?? 1000)} pending\n${(_limits['maxConcurrentTransfers'] ?? 8) == 0 ? '∞' : (_limits['maxConcurrentTransfers'] ?? 8)} transfers',
+                        '${(_limits['maxConcurrentJobs'] ?? 8) == 0 ? '∞' : (_limits['maxConcurrentJobs'] ?? 8)} concurrent\n${(_limits['maxPendingJobs'] ?? 1000) == 0 ? '∞' : (_limits['maxPendingJobs'] ?? 1000)} pending\n${(_limits['maxConcurrentTransfers'] ?? 8) == 0 ? '∞' : (_limits['maxConcurrentTransfers'] ?? 8)} transfers\n${rate(_limits['maxTransferBytesPerSecond'])} bandwidth',
                         textAlign: TextAlign.end,
                       ),
                     ),
@@ -349,7 +356,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                         title: Text('${row['userName']}'),
                         subtitle: Text('${row['runningJobs']} running · ${row['queuedJobs']} queued · ${row['activeTransfers']} active transfers'),
                         trailing: Text(
-                          '${row['maxConcurrentJobs'] == 0 ? '∞' : row['maxConcurrentJobs']} concurrent\n${row['maxPendingJobs'] == 0 ? '∞' : row['maxPendingJobs']} pending\n${row['maxConcurrentTransfers'] == 0 ? '∞' : row['maxConcurrentTransfers']} transfers',
+                          '${row['maxConcurrentJobs'] == 0 ? '∞' : row['maxConcurrentJobs']} concurrent\n${row['maxPendingJobs'] == 0 ? '∞' : row['maxPendingJobs']} pending\n${row['maxConcurrentTransfers'] == 0 ? '∞' : row['maxConcurrentTransfers']} transfers\n${rate(row['maxTransferBytesPerSecond'])} bandwidth',
                         ),
                       ),
                   ],
