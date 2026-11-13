@@ -52,8 +52,16 @@ class SettingsPage extends ConsumerWidget {
       final transferLimit = toInt(usage['maxConcurrentTransfers']);
       final globalTransfers = toInt(usage['globalActiveTransfers']);
       final globalTransferLimit = toInt(usage['globalTransferLimit']);
+      final bandwidth = toInt(usage['maxTransferBytesPerSecond']);
+      final globalBandwidth = toInt(usage['globalTransferBytesPerSecond']);
       final queueReason = toStr(usage['queueReason']);
       String limit(int value) => value == 0 ? 'Unlimited' : '$value';
+      String rate(int value) {
+        if (value == 0) return 'Unlimited';
+        if (value >= 1048576) return '${(value / 1048576).toStringAsFixed(1)} MiB/s';
+        if (value >= 1024) return '${(value / 1024).toStringAsFixed(1)} KiB/s';
+        return '$value B/s';
+      }
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -67,12 +75,14 @@ class SettingsPage extends ConsumerWidget {
               _usageLine('Concurrent Job Limit', limit(concurrent)),
               _usageLine('Pending Job Limit', limit(pending)),
               _usageLine('Active File Transfers', '$activeTransfers / ${limit(transferLimit)}'),
+              _usageLine('Your Transfer Bandwidth', rate(bandwidth)),
               const Divider(height: 20),
               _usageLine('Server Running Jobs', '$globalRunning'),
               _usageLine('Server Concurrent Limit', limit(globalLimit)),
               _usageLine('Server Unfinished Jobs', '$globalPending'),
               _usageLine('Server Queue Limit', limit(globalPendingLimit)),
               _usageLine('Server Active Transfers', '$globalTransfers / ${limit(globalTransferLimit)}'),
+              _usageLine('Server Transfer Bandwidth', rate(globalBandwidth)),
               if (queueReason != null && queueReason.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(queueReason),
