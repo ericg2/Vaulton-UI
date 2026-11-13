@@ -92,10 +92,12 @@ class Point {
 
 class Root {
   Root({required this.id, required this.name, required this.userName, this.source, required this.maxBytes,
-      required this.allocatedBytes, required this.freeBytes, required this.isDataAllowed, required this.isRepoAllowed, required this.isOwner, bool? isLocal})
+      required this.allocatedBytes, required this.freeBytes, required this.isDataAllowed, required this.isRepoAllowed, required this.isOwner, this.cloudTokenExpiresAt, this.cloudTokenRefreshError, bool? isLocal})
       : isLocal = isLocal ?? (source?['scheme'] == 'fs');
   final String id, name, userName;
   final Json? source;
+  final DateTime? cloudTokenExpiresAt;
+  final String? cloudTokenRefreshError;
   final int maxBytes, allocatedBytes, freeBytes;
   final bool isDataAllowed, isRepoAllowed, isOwner, isLocal;
   bool get isPrivateCloud => isOwner && !isLocal;
@@ -112,6 +114,8 @@ class Root {
         isDataAllowed: toBool(j['isDataAllowed']),
         isRepoAllowed: toBool(j['isRepoAllowed']),
         isOwner: toBool(j['isOwner']),
+        cloudTokenExpiresAt: DateTime.tryParse('${j['cloudTokenExpiresAt'] ?? ''}'),
+        cloudTokenRefreshError: toStr(j['cloudTokenRefreshError']),
         isLocal: j.containsKey('isLocal') ? toBool(j['isLocal']) : null,
       );
 }
