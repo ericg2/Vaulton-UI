@@ -303,9 +303,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                         title: Text('${row['userName']}'),
                         subtitle: Text('${row['runningJobs']} running · ${row['queuedJobs']} queued'),
                         trailing: Text(
-                          row['maxConcurrentJobs'] == 0
-                              ? 'Unlimited'
-                              : 'Limit ${row['maxConcurrentJobs']}',
+                          '${row['maxConcurrentJobs'] == 0 ? '∞' : row['maxConcurrentJobs']} / ${row['maxPendingJobs'] == 0 ? '∞' : row['maxPendingJobs']}',
                         ),
                       ),
                   ],
