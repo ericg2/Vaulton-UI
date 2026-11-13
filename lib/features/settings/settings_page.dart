@@ -48,6 +48,10 @@ class SettingsPage extends ConsumerWidget {
       final globalLimit = toInt(usage['globalConcurrentLimit']);
       final globalPending = toInt(usage['globalPendingJobs']);
       final globalPendingLimit = toInt(usage['globalPendingLimit']);
+      final activeTransfers = toInt(usage['activeTransfers']);
+      final transferLimit = toInt(usage['maxConcurrentTransfers']);
+      final globalTransfers = toInt(usage['globalActiveTransfers']);
+      final globalTransferLimit = toInt(usage['globalTransferLimit']);
       final queueReason = toStr(usage['queueReason']);
       String limit(int value) => value == 0 ? 'Unlimited' : '$value';
       await showDialog<void>(
@@ -62,11 +66,13 @@ class SettingsPage extends ConsumerWidget {
               _usageLine('Queued Jobs', '$queued'),
               _usageLine('Concurrent Job Limit', limit(concurrent)),
               _usageLine('Pending Job Limit', limit(pending)),
+              _usageLine('Active File Transfers', '$activeTransfers / ${limit(transferLimit)}'),
               const Divider(height: 20),
               _usageLine('Server Running Jobs', '$globalRunning'),
               _usageLine('Server Concurrent Limit', limit(globalLimit)),
               _usageLine('Server Unfinished Jobs', '$globalPending'),
               _usageLine('Server Queue Limit', limit(globalPendingLimit)),
+              _usageLine('Server Active Transfers', '$globalTransfers / ${limit(globalTransferLimit)}'),
               if (queueReason != null && queueReason.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(queueReason),
