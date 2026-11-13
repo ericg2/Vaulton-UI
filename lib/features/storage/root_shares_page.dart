@@ -342,7 +342,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                         : () async {
                             final confirmed = await confirm(
                               context,
-                              'Remove inactive shares?',
+                              'Remove Inactive Shares?',
                               'This removes the old unverified grants while keeping the active shares listed above.',
                               ok: 'Remove',
                               danger: true,
