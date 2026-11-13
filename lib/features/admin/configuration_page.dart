@@ -187,6 +187,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       ('maxConcurrentJobsPerUser', 'Maximum Concurrent Jobs Per User (0 = Unlimited)', 2),
       ('maxConcurrentTransfers', 'Maximum Concurrent File Transfers Across Server (0 = Unlimited)', 8),
       ('maxConcurrentTransfersPerUser', 'Maximum Concurrent File Transfers Per User (0 = Unlimited)', 2),
+      ('maxConcurrentTransfers', 'Maximum Concurrent File Transfers Across Server (0 = Unlimited)', 8),
+      ('maxConcurrentTransfersPerUser', 'Maximum Concurrent File Transfers Per User (0 = Unlimited)', 2),
       ('maxMessageRecipients', 'Message Recipients', 25),
       ('maxBroadcastRecipients', 'Broadcast Recipients', 5000),
       ('jobRetentionDays', 'Job Retention (Days, 0 = Forever)', 90),
