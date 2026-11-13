@@ -285,6 +285,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
   Future<void> _viewResourceUsage() async {
     final rows = await guarded(context, _v.adminResourceUsage);
     if (rows == null || !mounted) return;
+    final totalRunning = rows.fold<int>(0, (sum, row) => sum + (row['runningJobs'] as num? ?? 0).toInt());
+    final totalQueued = rows.fold<int>(0, (sum, row) => sum + (row['queuedJobs'] as num? ?? 0).toInt());
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -296,6 +298,17 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
               : ListView(
                   shrinkWrap: true,
                   children: [
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Server Total'),
+                      subtitle: Text('$totalRunning running · $totalQueued queued'),
+                      trailing: Text(
+                        '${_limits['maxConcurrentJobs'] ?? 8} concurrent\n${_limits['maxPendingJobs'] ?? 1000} pending',
+                        textAlign: TextAlign.end,
+                      ),
+                    ),
+                    const Divider(height: 12),
                     for (final row in rows)
                       ListTile(
                         dense: true,
