@@ -58,7 +58,7 @@ Get the latest version from [Vaulton Releases](https://github.com/ericg2/Vaulton
 - **File Management:** Browse, upload, download, move, copy, and organize files.
 - **Backups:** Schedule backups and restore files when needed.
 - **Folder Sync:** Keep selected folders in sync.
-- **Storage:** Connect storage and manage shared space.
+- **Storage:** Connect private cloud accounts and manage administrator-allocated local storage.
 - **Transfers:** Track uploads and downloads.
 - **Account Security:** Manage sign-in security and access tokens.
 - **Server Management:** Manage users and check server status, when permitted.
@@ -70,6 +70,7 @@ Some features depend on your account permissions and the devices you use.
 
 - [User Guide](https://github.com/ericg2/Vaulton/blob/main/docs/USER_GUIDE.md)
 - [Administrator Guide](https://github.com/ericg2/Vaulton/blob/main/docs/ADMIN_GUIDE.md)
+- [Multi-user Storage UI](docs/MULTI_USER_STORAGE.md)
 - [Troubleshooting](https://github.com/ericg2/Vaulton/blob/main/docs/TROUBLESHOOTING.md)
 - [Report a Problem](https://github.com/ericg2/Vaulton-UI/issues)
 
