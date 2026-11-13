@@ -32,6 +32,7 @@ class _FuncApi extends Vaulton {
     this.jobList = const [],
 
     this.userList = const [],
+    this.shareList = const [],
     this.snapshotList = const [],
     this.failJob = false,
   }) : super(ApiClient(SessionStore()));
@@ -41,6 +42,7 @@ class _FuncApi extends Vaulton {
   final List<RepoJob> jobList;
 
   final List<UserAccount> userList;
+  final List<Json> shareList;
   final List<Snapshot> snapshotList;
   final bool failJob;
 
