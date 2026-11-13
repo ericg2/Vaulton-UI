@@ -33,17 +33,18 @@ Users cannot view another account's job counts or provider connection details.
 Open **Administration → Configuration → Resource Governance**.
 
 - **View Usage** displays per-user running/queued job counts and active API file transfers.
-- **User Overrides** selects a user and sets per-user concurrent-job, pending-job, and concurrent-file-transfer limits. Leave a value blank to inherit the server default; enter 0 for unlimited.
-- **Operational Limits** configures global unfinished-job capacity, per-user pending-job defaults, global concurrent jobs, default per-user concurrency, and global/per-user API file-transfer concurrency.
+- **User Overrides** selects a user and sets per-user concurrent-job, pending-job, concurrent-file-transfer, and bytes-per-second limits. Leave a value blank to inherit the server default; enter 0 for unlimited.
+- **Operational Limits** configures global unfinished-job capacity, per-user pending-job defaults, global concurrent jobs, default per-user concurrency, global/per-user file-transfer concurrency, and global/per-user transfer bandwidth.
+- Bandwidth policies apply to API streaming uploads/downloads and Rust VFS background copy/move operations. The UI also shows the effective per-user and global bandwidth limits under Settings → Server Resources → Resource Usage.
 
-These are cooperative job/transfer admission limits. They are not hard CPU or memory quotas and do not yet provide per-user bytes-per-second bandwidth shaping or provider-specific request-rate controls.
+These are cooperative application-level limits, not OS-enforced CPU or memory quotas. API streaming and Rust VFS transfers use separate pacing schedulers, so simultaneous activity across both paths is not governed by one combined aggregate bucket. Backup/restore/check jobs and ordinary OpenDAL provider operations are not yet byte-rate shaped or protected by provider-account-specific request budgets.
 
 ## Known UI limitations
 
 - The user manually copies the one-time callback code into the initiating Vaulton session. A native deep-link handoff would improve this experience.
 - The UI exposes refresh failures and expired-token state with an in-place reconnect action. Provider-specific consent and refresh behavior still needs live integration testing.
 - Microsoft token revocation must be completed from the provider account's app-consent settings.
-- Resource usage shows active operation counts, not per-transfer throughput or measured CPU/memory.
+- Resource usage shows active operation counts and configured bandwidth limits, not per-transfer throughput or measured CPU/memory.
 
 
 ## API request protection
