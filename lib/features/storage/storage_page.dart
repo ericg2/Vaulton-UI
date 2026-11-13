@@ -2888,10 +2888,28 @@ class _RootSheet extends StatefulWidget {
 class _RootSheetState extends State<_RootSheet> {
   List<Json>? _shares;
   bool _failed = false;
+  String? _refreshError;
+  DateTime? _tokenExpiresAt;
+
+  bool get _cloudNeedsAttention =>
+      _refreshError != null ||
+      (_tokenExpiresAt != null && !_tokenExpiresAt!.isAfter(DateTime.now()));
 
   @override
   void initState() {
     super.initState();
+    _refreshError = widget.root.cloudTokenRefreshError;
+    _tokenExpiresAt = widget.root.cloudTokenExpiresAt;
+    if (widget.root.isPrivateCloud) {
+      widget.vaulton.root(widget.root.id).then((fresh) {
+        if (mounted) {
+          setState(() {
+            _refreshError = fresh.cloudTokenRefreshError;
+            _tokenExpiresAt = fresh.cloudTokenExpiresAt;
+          });
+        }
+      }).catchError((_) {});
+    }
     if (widget.root.isOwner && widget.root.isLocal) {
       widget.vaulton
           .shares(widget.root.id)
@@ -2987,13 +3005,13 @@ class _RootSheetState extends State<_RootSheet> {
           const SizedBox(height: 8),
           if (scheme.isNotEmpty)
             _row(Icons.cable_outlined, 'Connection Type', scheme),
-          if (r.isOwner && r.cloudNeedsAttention) ...[
+          if (r.isOwner && _cloudNeedsAttention) ...[
             const Divider(height: 28),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.warning_amber_rounded, color: cs.error),
               title: const Text('Cloud Connection Needs Attention'),
-              subtitle: Text(r.cloudTokenRefreshError ??
+              subtitle: Text(_refreshError ??
                   'The access token has expired. Reconnect this location to restore access.'),
               trailing: TextButton(
                 onPressed: widget.onReconnect,
