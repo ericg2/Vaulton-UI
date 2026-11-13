@@ -33,6 +33,7 @@ class _FuncApi extends Vaulton {
 
     this.userList = const [],
     this.shareList = const [],
+    this.legacyShareList = const [],
     this.snapshotList = const [],
     this.failJob = false,
   }) : super(ApiClient(SessionStore()));
@@ -43,6 +44,7 @@ class _FuncApi extends Vaulton {
 
   final List<UserAccount> userList;
   final List<Json> shareList;
+  final List<Json> legacyShareList;
   final List<Snapshot> snapshotList;
   final bool failJob;
 
@@ -175,6 +177,9 @@ class _FuncApi extends Vaulton {
 
   @override
   Future<List<Json>> shares(String id) async => shareList;
+
+  @override
+  Future<List<Json>> legacyShares(String id) async => legacyShareList;
 
   @override
   Future<int> unreadCount() async => 0;
@@ -617,8 +622,8 @@ void main() {
               isOwner: true,
             ),
           ),
-          _FuncApi(shareList: [
-            {'userName': 'bob', 'maxBytes': 50, 'isActive': false},
+          _FuncApi(legacyShareList: [
+            {'userName': 'bob', 'maxBytes': 50},
           ]),
         ),
       );
