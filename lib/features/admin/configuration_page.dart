@@ -151,20 +151,26 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       FieldSpec('authWindow', 'Authentication Window (Seconds)', initial: '${_rateLimits['authWindowSeconds'] ?? 60}'),
       FieldSpec('messageRequests', 'Message Requests', initial: '${_rateLimits['messageRequests'] ?? 30}'),
       FieldSpec('messageWindow', 'Message Window (Seconds)', initial: '${_rateLimits['messageWindowSeconds'] ?? 60}'),
+      FieldSpec('apiRequests', 'General API Requests Per Account', initial: '${_rateLimits['apiRequests'] ?? 1200}'),
+      FieldSpec('apiWindow', 'General API Window (Seconds)', initial: '${_rateLimits['apiWindowSeconds'] ?? 60}'),
     ], ok: 'Save Rate Limits',
-      intro: 'Authentication is limited per client IP. Messages are limited per signed-in user. Changes apply immediately.');
+      intro: 'Authentication is limited per client IP, messages per signed-in user, and general API requests per account (or IP before sign-in). The general limit protects storage and file endpoints. Changes apply immediately.');
     if (f == null || !mounted) return;
     final auth = int.tryParse(f['authRequests'] ?? '');
     final authWindow = int.tryParse(f['authWindow'] ?? '');
     final messages = int.tryParse(f['messageRequests'] ?? '');
     final messageWindow = int.tryParse(f['messageWindow'] ?? '');
-    if (auth == null || authWindow == null || messages == null || messageWindow == null) {
+    final api = int.tryParse(f['apiRequests'] ?? '');
+    final apiWindow = int.tryParse(f['apiWindow'] ?? '');
+    if (auth == null || authWindow == null || messages == null || messageWindow == null ||
+        api == null || apiWindow == null) {
       toast(context, 'Enter valid rate-limit values.', error: true);
       return;
     }
     final saved = await guarded(context, () => _v.saveRateLimitSettings({
       'authRequests': auth, 'authWindowSeconds': authWindow,
       'messageRequests': messages, 'messageWindowSeconds': messageWindow,
+      'apiRequests': api, 'apiWindowSeconds': apiWindow,
     }));
     if (saved == null || !mounted) return;
     setState(() => _rateLimits = saved);
