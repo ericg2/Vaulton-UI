@@ -120,21 +120,22 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
       _error = null;
     });
     try {
-      final results = await Future.wait([_v.shares(_root.id), _loadDirectory(), _loadPointAllocation()]);
+      final results = await Future.wait([
+        _v.shares(_root.id),
+        _v.legacyShares(_root.id),
+        _loadDirectory(),
+        _loadPointAllocation(),
+      ]);
       final shares = results[0] as List<Json>;
-      final activeShares = shares.where((share) => share['isActive'] != false).toList();
-      final legacyShareNames = shares
-          .where((share) => share['isActive'] == false)
-          .map((share) => '${share['userName']}')
-          .toList()
-        ..sort();
-      final dir = results[1] as List<ShareUser>;
-      final pointAllocated = results[2] as int;
+      final legacyShares = results[1] as List<Json>;
+      final legacyShareNames = legacyShares.map((share) => '${share['userName']}').toList()..sort();
+      final dir = results[2] as List<ShareUser>;
+      final pointAllocated = results[3] as int;
       if (!mounted) return;
       setState(() {
         _rows
           ..clear()
-          ..addAll([for (final s in activeShares) _ShareRow('${s['userName']}', toInt(s['maxBytes']))]);
+          ..addAll([for (final s in shares) _ShareRow('${s['userName']}', toInt(s['maxBytes']))]);
         _legacyShareNames = legacyShareNames;
         _directory = dir;
         _pointAllocated = pointAllocated;
