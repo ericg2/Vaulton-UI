@@ -20,8 +20,9 @@ The authorization URL expires after ten minutes. If the API restarts during the 
 Open **Settings → Server Resources → Resource Usage** to view:
 
 - Running and queued jobs for the signed-in account.
+- Active streaming uploads/downloads and the account's effective transfer concurrency limit.
 - The account's effective concurrent-job limit and pending-job quota.
-- Current global running and unfinished job counts and their server-wide limits.
+- Current global running/unfinished job counts and active transfer counts with their server-wide limits.
 - The reason work is queued when the API can identify a user limit, global capacity limit, or another repository/job constraint.
 
 Users cannot view another account's job counts or provider connection details.
@@ -30,18 +31,18 @@ Users cannot view another account's job counts or provider connection details.
 
 Open **Administration → Configuration → Resource Governance**.
 
-- **View Usage** displays per-user running and queued job counts with each account's effective concurrency limit.
-- **User Overrides** selects a user and sets per-user concurrent-job and pending-job limits. Leave either value blank to inherit the server default; enter 0 for unlimited.
-- **Operational Limits** configures global unfinished-job capacity, the per-user pending-job default, global concurrent jobs, and default per-user concurrency.
+- **View Usage** displays per-user running/queued job counts and active streaming transfers.
+- **User Overrides** selects a user and sets per-user concurrent-job, pending-job, and concurrent-file-transfer limits. Leave a value blank to inherit the server default; enter 0 for unlimited.
+- **Operational Limits** configures global unfinished-job capacity, per-user pending-job defaults, global concurrent jobs, default per-user concurrency, and global/per-user streaming-transfer concurrency.
 
-These are job-admission limits. They are not hard CPU or memory quotas and do not yet provide per-user bandwidth shaping or provider-specific request-rate controls.
+These are cooperative job/transfer admission limits. They are not hard CPU or memory quotas and do not yet provide per-user bytes-per-second bandwidth shaping or provider-specific request-rate controls.
 
 ## Known UI limitations
 
 - The user manually copies the one-time callback code into the initiating Vaulton session. A native deep-link handoff would improve this experience.
 - The UI does not yet provide a provider connection health/reauthorization state for expired or revoked consent.
 - Microsoft token revocation must be completed from the provider account's app-consent settings.
-- Resource usage currently covers job counts and queue/capacity reasons, not per-transfer throughput or measured CPU/memory.
+- Resource usage shows active stream counts, not per-transfer throughput or measured CPU/memory.
 
 
 ## API request protection
