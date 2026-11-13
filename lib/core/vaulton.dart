@@ -313,7 +313,9 @@ class Vaulton {
         }
         if (okRe.hasMatch(st) || (total > 0 && done >= total)) return null;
       } on ApiException catch (e) {
-        if (e.isNotFound && shouldCancel?.call() != true) return null;
+        if (e.isNotFound && shouldCancel?.call() != true) {
+          return 'Transfer status is no longer available. Refresh the folder to verify the result.';
+        }
         rethrow;
       }
       await Future.delayed(const Duration(milliseconds: 800));
