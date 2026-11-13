@@ -1018,7 +1018,9 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         ),
       ],
       ok: 'Save Location',
-      intro: 'Update the connection and location settings.',
+      intro: scheme == 'fs'
+          ? 'Update the local location and allocation settings.'
+          : 'Update the location settings. Provider credentials are protected and cannot be viewed or changed here.',
     );
     if (r == null || !mounted) return;
     final maxBytes = await _capacityDialog(
