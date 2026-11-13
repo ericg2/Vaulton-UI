@@ -308,6 +308,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (rows == null || !mounted) return;
     final totalRunning = rows.fold<int>(0, (sum, row) => sum + (row['runningJobs'] as num? ?? 0).toInt());
     final totalQueued = rows.fold<int>(0, (sum, row) => sum + (row['queuedJobs'] as num? ?? 0).toInt());
+    final totalTransfers = rows.fold<int>(0, (sum, row) => sum + (row['activeTransfers'] as num? ?? 0).toInt());
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -323,7 +324,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Server Total'),
-                      subtitle: Text('$totalRunning running · $totalQueued queued'),
+                      subtitle: Text('$totalRunning running · $totalQueued queued · $totalTransfers active transfers'),
                       trailing: Text(
                         '${(_limits['maxConcurrentJobs'] ?? 8) == 0 ? '∞' : (_limits['maxConcurrentJobs'] ?? 8)} concurrent\n${(_limits['maxPendingJobs'] ?? 1000) == 0 ? '∞' : (_limits['maxPendingJobs'] ?? 1000)} pending',
                         textAlign: TextAlign.end,
@@ -335,9 +336,9 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         title: Text('${row['userName']}'),
-                        subtitle: Text('${row['runningJobs']} running · ${row['queuedJobs']} queued'),
+                        subtitle: Text('${row['runningJobs']} running · ${row['queuedJobs']} queued · ${row['activeTransfers']} active transfers'),
                         trailing: Text(
-                          '${row['maxConcurrentJobs'] == 0 ? '∞' : row['maxConcurrentJobs']} concurrent\n${row['maxPendingJobs'] == 0 ? '∞' : row['maxPendingJobs']} pending',
+                          '${row['maxConcurrentJobs'] == 0 ? '∞' : row['maxConcurrentJobs']} concurrent\n${row['maxPendingJobs'] == 0 ? '∞' : row['maxPendingJobs']} pending\n${row['maxConcurrentTransfers'] == 0 ? '∞' : row['maxConcurrentTransfers']} transfers',
                         ),
                       ),
                   ],
