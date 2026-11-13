@@ -42,6 +42,7 @@ class SettingsPage extends ConsumerWidget {
       if (usage == null || !context.mounted) return;
       final running = toInt(usage['runningJobs']);
       final queued = toInt(usage['queuedJobs']);
+      final concurrent = toInt(usage['maxConcurrentJobs']);
       final pending = toInt(usage['maxPendingJobs']);
       final globalRunning = toInt(usage['globalRunningJobs']);
       final globalLimit = toInt(usage['globalConcurrentLimit']);
@@ -61,9 +62,14 @@ class SettingsPage extends ConsumerWidget {
               _usageLine('Queued Jobs', '$queued'),
               _usageLine('Concurrent Job Limit', limit(concurrent)),
               _usageLine('Pending Job Limit', limit(pending)),
-              if (queued > 0 && concurrent > 0 && running >= concurrent) ...[
+              const Divider(height: 20),
+              _usageLine('Server Running Jobs', '$globalRunning'),
+              _usageLine('Server Concurrent Limit', limit(globalLimit)),
+              _usageLine('Server Unfinished Jobs', '$globalPending'),
+              _usageLine('Server Queue Limit', limit(globalPendingLimit)),
+              if (queueReason != null && queueReason.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                const Text('Your jobs are waiting because you have reached your concurrent job limit. They will start when capacity becomes available.'),
+                Text(queueReason),
               ],
             ],
           ),
