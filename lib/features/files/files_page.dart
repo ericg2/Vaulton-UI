@@ -579,7 +579,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         canPop: false,
         child: AlertDialog(
           insetPadding: const EdgeInsets.all(16),
-          title: Text(copy ? 'Copying Files' : 'Moving Files'),
+          title: Text(rename != null ? 'Renaming File' : (copy ? 'Copying Files' : 'Moving Files')),
           content: SizedBox(
             width: 420,
             child: ValueListenableBuilder<(String, int, int)>(
