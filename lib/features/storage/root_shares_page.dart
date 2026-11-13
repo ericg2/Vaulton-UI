@@ -78,6 +78,7 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
   static const _pageSize = 100;
 
   final _rows = <_ShareRow>[];
+  List<String> _legacyShareNames = [];
   TextEditingController? _fieldCtl; // controller of the dropdown's text field
   List<ShareUser>? _directory;
   bool _loading = true, _saving = false;
@@ -121,13 +122,20 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
     try {
       final results = await Future.wait([_v.shares(_root.id), _loadDirectory(), _loadPointAllocation()]);
       final shares = results[0] as List<Json>;
+      final activeShares = shares.where((share) => share['isActive'] != false).toList();
+      final legacyShareNames = shares
+          .where((share) => share['isActive'] == false)
+          .map((share) => '${share['userName']}')
+          .toList()
+        ..sort();
       final dir = results[1] as List<ShareUser>;
       final pointAllocated = results[2] as int;
       if (!mounted) return;
       setState(() {
         _rows
           ..clear()
-          ..addAll([for (final s in shares) _ShareRow('${s['userName']}', toInt(s['maxBytes']))]);
+          ..addAll([for (final s in activeShares) _ShareRow('${s['userName']}', toInt(s['maxBytes']))]);
+        _legacyShareNames = legacyShareNames;
         _directory = dir;
         _pointAllocated = pointAllocated;
         _initial = _snapshot();
@@ -303,6 +311,30 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
             ]),
           ),
         ),
+        if (_legacyShareNames.isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.warning_amber_rounded, color: cs.tertiary),
+                  const SizedBox(width: 8),
+                  Text('Inactive Legacy Shares', style: theme.textTheme.titleSmall),
+                ]),
+                const SizedBox(height: 8),
+                Text(
+                  'These old grants are disabled because the original recipient account cannot be verified. Select each intended person again below to grant access.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [for (final name in _legacyShareNames) Chip(label: Text(name))],
+                ),
+              ]),
+            ),
+          ),
         Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 4), child: _picker(avail)),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
