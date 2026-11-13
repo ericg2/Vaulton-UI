@@ -185,6 +185,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       ('maxPendingJobs', 'Maximum Unfinished Jobs Across Server (0 = Unlimited)', 1000),
       ('maxConcurrentJobs', 'Maximum Concurrent Server Jobs (0 = Unlimited)', 8),
       ('maxConcurrentJobsPerUser', 'Maximum Concurrent Jobs Per User (0 = Unlimited)', 2),
+      ('maxConcurrentTransfers', 'Maximum Concurrent File Transfers Across Server (0 = Unlimited)', 8),
+      ('maxConcurrentTransfersPerUser', 'Maximum Concurrent File Transfers Per User (0 = Unlimited)', 2),
       ('maxMessageRecipients', 'Message Recipients', 25),
       ('maxBroadcastRecipients', 'Broadcast Recipients', 5000),
       ('jobRetentionDays', 'Job Retention (Days, 0 = Forever)', 90),
@@ -196,7 +198,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       for (final field in fields)
         FieldSpec(field.$1, field.$2, initial: '${_limits[field.$1] ?? field.$3}'),
     ], ok: 'Save Limits',
-      intro: 'Control queue limits, global and per-user job concurrency, retention, and in-memory event history. Use 0 for unlimited concurrency or to keep records indefinitely.');
+      intro: 'Control queue limits, global and per-user job concurrency, simultaneous file transfers, retention, and in-memory event history. Use 0 for unlimited concurrency or to keep records indefinitely.');
     if (f == null || !mounted) return;
     final values = <String, int>{};
     for (final field in fields) {
@@ -241,7 +243,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
         ),
       ],
       ok: 'Continue',
-      intro: 'Choose the account whose job queue and concurrency limits you want to override.',
+      intro: 'Choose the account whose job queue, job concurrency, and file-transfer limits you want to override.',
     );
     if (selection == null || !mounted) return;
     final userName = selection['userName'] ?? '';
@@ -249,6 +251,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
     if (current == null || !mounted) return;
     final concurrencyOverride = current['concurrencyOverride'];
     final pendingOverride = current['pendingOverride'];
+    final transferOverride = current['transferOverride'];
     final f = await formDialog(
       context,
       'Resource Limits · $userName',
@@ -267,23 +270,33 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
           hint: '0 = Unlimited. Blank uses the server default.',
           number: true,
         ),
+        FieldSpec(
+          'transfers',
+          'Maximum Concurrent File Transfers',
+          initial: transferOverride == null ? '' : '$transferOverride',
+          hint: '0 = Unlimited. Blank uses the server default.',
+          number: true,
+        ),
       ],
       ok: 'Save Limits',
-      intro: 'Effective defaults: ${current['effectiveConcurrencyLimit']} concurrent jobs and ${current['effectivePendingLimit']} unfinished jobs. Blank fields inherit the defaults.',
+      intro: 'Effective defaults: ${current['effectiveConcurrencyLimit']} concurrent jobs, ${current['effectivePendingLimit']} unfinished jobs, and ${current['effectiveTransferLimit']} concurrent file transfers. Blank fields inherit the defaults.',
     );
     if (f == null || !mounted) return;
     final concurrencyRaw = (f['concurrency'] ?? '').trim();
     final pendingRaw = (f['pending'] ?? '').trim();
+    final transferRaw = (f['transfers'] ?? '').trim();
     final concurrency = concurrencyRaw.isEmpty ? null : int.tryParse(concurrencyRaw);
     final pending = pendingRaw.isEmpty ? null : int.tryParse(pendingRaw);
+    final transfers = transferRaw.isEmpty ? null : int.tryParse(transferRaw);
     if ((concurrencyRaw.isNotEmpty && (concurrency == null || concurrency < 0 || concurrency > 1000)) ||
-        (pendingRaw.isNotEmpty && (pending == null || pending < 0 || pending > 100000))) {
-      toast(context, 'Enter a valid concurrency limit (0–1000) and pending-job limit (0–100000).', error: true);
+        (pendingRaw.isNotEmpty && (pending == null || pending < 0 || pending > 100000)) ||
+        (transferRaw.isNotEmpty && (transfers == null || transfers < 0 || transfers > 1000))) {
+      toast(context, 'Enter valid job concurrency (0–1000), pending-job (0–100000), and transfer concurrency (0–1000) limits.', error: true);
       return;
     }
     await guarded(
       context,
-      () => _v.saveUserResourceLimits(userName, concurrency, pending),
+      () => _v.saveUserResourceLimits(userName, concurrency, pending, transfers),
     );
     if (mounted) toast(context, 'Resource limits updated.');
   }
