@@ -20,6 +20,7 @@ void main() {
 
     expect(root.cloudTokenExpiresAt, DateTime.utc(2026, 11, 13, 12));
     expect(root.cloudTokenRefreshError, 'Reconnect this cloud location.');
+    expect(root.cloudNeedsAttention, isTrue);
   });
 
   test('cloud roots are private and local roots remain shareable', () {
