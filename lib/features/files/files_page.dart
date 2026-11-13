@@ -573,6 +573,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     var i = 0;
     final progress = ValueNotifier<(String, int, int)>((nodes.first.name, 0, 0));
     final cancelRequested = ValueNotifier<bool>(false);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    var dialogClosed = false;
     final dialog = showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -614,7 +616,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() => dialogClosed = true);
 
     for (final n in nodes) {
       if (cancelRequested.value) {
@@ -652,8 +654,10 @@ class _FilesPageState extends ConsumerState<FilesPage> {
       }
     }
 
+    if (!dialogClosed && navigator.mounted && navigator.canPop()) {
+      navigator.pop();
+    }
     if (mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
       setState(_sel.clear);
       _refresh();
     }
