@@ -337,7 +337,18 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: _saving ? null : () => _save(force: true),
+                    onPressed: _saving
+                        ? null
+                        : () async {
+                            final confirmed = await confirm(
+                              context,
+                              'Remove inactive shares?',
+                              'This removes the old unverified grants while keeping the active shares listed above.',
+                              ok: 'Remove',
+                              danger: true,
+                            );
+                            if (confirmed && mounted) await _save(force: true);
+                          },
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('Remove Inactive Shares'),
                   ),
