@@ -288,19 +288,28 @@ class Vaulton {
 
   /// Polls a move/copy until finished. Returns an error string or null on success.
   /// Returns 'timeout' if it did not finish within [timeout] (the job continues server-side).
-  Future<String?> awaitTransfer(String jobId, {Duration timeout = const Duration(minutes: 3), void Function(int done, int total)? onProgress}) async {
+  Future<String?> awaitTransfer(String jobId, {Duration timeout = const Duration(minutes: 3), void Function(int done, int total)? onProgress, bool Function()? shouldCancel}) async {
     final end = DateTime.now().add(timeout);
     final okRe = RegExp(r'(succe|complet|done|finish)', caseSensitive: false);
     final badRe = RegExp(r'(fail|error|cancel)', caseSensitive: false);
+    var cancelSent = false;
     while (DateTime.now().isBefore(end)) {
       try {
+        if (!cancelSent && shouldCancel?.call() == true) {
+          await cancelTransfer(jobId);
+          cancelSent = true;
+        }
         final s = await transferStatus(jobId);
         final err = toStr(s['error']);
-        if (err != null && err.isNotEmpty) return err;
+        if (err != null && err.isNotEmpty) {
+          return cancelSent && err.toLowerCase().contains('cancel') ? 'cancelled' : err;
+        }
         final st = '${s['state']}';
         final done = toInt(s['doneBytes']), total = toInt(s['totalBytes']);
         onProgress?.call(done, total);
-        if (badRe.hasMatch(st)) return 'Transfer $st';
+        if (badRe.hasMatch(st)) {
+          return cancelSent && st.toLowerCase().contains('cancel') ? 'cancelled' : 'Transfer $st';
+        }
         if (okRe.hasMatch(st) || (total > 0 && done >= total)) return null;
       } on ApiException catch (e) {
         if (e.isNotFound) return null;
