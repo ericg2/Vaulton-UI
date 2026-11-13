@@ -566,17 +566,19 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     required bool copy,
     String? rename,
   }) async {
+    if (nodes.isEmpty) return;
     final pt = _point!;
     String? err;
     var cancelled = false;
     var timedOut = false;
-    var i = 0;
     final progress = ValueNotifier<(String, int, int)>((nodes.first.name, 0, 0));
     final cancelRequested = ValueNotifier<bool>(false);
     final dialog = showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
         insetPadding: const EdgeInsets.all(16),
         title: Text(copy ? 'Copying Files' : 'Moving Files'),
         content: SizedBox(
@@ -593,7 +595,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
                 children: [
                   Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 12),
-                  LinearProgressIndicator(value: total > 0 ? (done / total).clamp(0, 1) : null),
+                  LinearProgressIndicator(value: total > 0 ? (done / total).clamp(0.0, 1.0).toDouble() : null),
                   const SizedBox(height: 8),
                   Text(total > 0 ? '$done / $total bytes' : 'Preparing transfer…'),
                 ],
@@ -611,6 +613,7 @@ class _FilesPageState extends ConsumerState<FilesPage> {
           ),
         ],
       ),
+      ),
     );
 
     for (final n in nodes) {
@@ -618,7 +621,6 @@ class _FilesPageState extends ConsumerState<FilesPage> {
         cancelled = true;
         break;
       }
-      i++;
       progress.value = (n.name, 0, 0);
       try {
         final id = await _v.transfer(
@@ -660,8 +662,8 @@ class _FilesPageState extends ConsumerState<FilesPage> {
     progress.dispose();
     cancelRequested.dispose();
 
-    ref.read(epochProvider.notifier).bump();
     if (!mounted) return;
+    ref.read(epochProvider.notifier).bump();
     if (cancelled) {
       toast(context, 'Transfer cancelled.');
     } else if (timedOut) {
