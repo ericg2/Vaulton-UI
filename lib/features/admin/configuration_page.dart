@@ -176,6 +176,8 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       ('maxSchedulesPerUser', 'Schedules Per User', 50),
       ('minScheduleIntervalMinutes', 'Minimum Schedule Interval (Minutes)', 5),
       ('maxPendingJobsPerUser', 'Pending Jobs Per User', 200),
+      ('maxConcurrentJobs', 'Maximum Concurrent Server Jobs (0 = Unlimited)', 8),
+      ('maxConcurrentJobsPerUser', 'Maximum Concurrent Jobs Per User (0 = Unlimited)', 2),
       ('maxMessageRecipients', 'Message Recipients', 25),
       ('maxBroadcastRecipients', 'Broadcast Recipients', 5000),
       ('jobRetentionDays', 'Job Retention (Days, 0 = Forever)', 90),
@@ -187,7 +189,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       for (final field in fields)
         FieldSpec(field.$1, field.$2, initial: '${_limits[field.$1] ?? field.$3}'),
     ], ok: 'Save Limits',
-      intro: 'Control per-user quotas, retention, and in-memory event history. Use 0 to keep records indefinitely.');
+      intro: 'Control queue limits, global and per-user job concurrency, retention, and in-memory event history. Use 0 for unlimited concurrency or to keep records indefinitely.');
     if (f == null || !mounted) return;
     final values = <String, int>{};
     for (final field in fields) {
