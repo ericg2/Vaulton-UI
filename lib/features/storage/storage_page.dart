@@ -2987,13 +2987,14 @@ class _RootSheetState extends State<_RootSheet> {
           const SizedBox(height: 8),
           if (scheme.isNotEmpty)
             _row(Icons.cable_outlined, 'Connection Type', scheme),
-          if (r.isOwner && r.cloudTokenRefreshError != null) ...[
+          if (r.isOwner && r.cloudNeedsAttention) ...[
             const Divider(height: 28),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.warning_amber_rounded, color: cs.error),
               title: const Text('Cloud Connection Needs Attention'),
-              subtitle: Text(r.cloudTokenRefreshError!),
+              subtitle: Text(r.cloudTokenRefreshError ??
+                  'The access token has expired. Reconnect this location to restore access.'),
               trailing: TextButton(
                 onPressed: widget.onReconnect,
                 child: const Text('Reconnect'),
