@@ -200,7 +200,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
       for (final field in fields)
         FieldSpec(field.$1, field.$2, initial: '${_limits[field.$1] ?? field.$3}'),
     ], ok: 'Save Limits',
-      intro: 'Control queue limits, job concurrency, simultaneous file transfers, streaming and VFS copy/move bandwidth, retention, and in-memory event history. Bandwidth limits apply separately to API streams and Rust VFS copy/move. Use 0 for unlimited limits or to keep records indefinitely.');
+      intro: 'Control queue limits, job concurrency, simultaneous file transfers, streaming and VFS copy/move bandwidth, retention, and in-memory event history. Bandwidth limits apply separately to API streams and Rust VFS copy/move. Rust VFS concurrency also has environment-configured safety ceilings. Use 0 for unlimited limits or to keep records indefinitely.');
     if (f == null || !mounted) return;
     final values = <String, int>{};
     for (final field in fields) {
