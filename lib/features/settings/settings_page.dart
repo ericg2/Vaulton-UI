@@ -45,6 +45,8 @@ class SettingsPage extends ConsumerWidget {
       final pending = toInt(usage['maxPendingJobs']);
       final globalRunning = toInt(usage['globalRunningJobs']);
       final globalLimit = toInt(usage['globalConcurrentLimit']);
+      final globalPending = toInt(usage['globalPendingJobs']);
+      final globalPendingLimit = toInt(usage['globalPendingLimit']);
       final queueReason = toStr(usage['queueReason']);
       String limit(int value) => value == 0 ? 'Unlimited' : '$value';
       await showDialog<void>(
