@@ -161,6 +161,8 @@ class Vaulton {
   Future<Json> createLocalDirectory(String path, String name) async =>
       toJson(await _req('POST', '/roots/local/directories', body: {'path': path, 'name': name}));
   Future<List<Json>> shares(String id) async => (await _req('GET', '/roots/$id/shares') as List).map(toJson).toList();
+  Future<List<Json>> legacyShares(String id) async =>
+      (await _req('GET', '/roots/$id/shares/legacy') as List).map(toJson).toList();
   Future<List<Json>> setShares(String id, List<Json> s) async => (await _req('PUT', '/roots/$id/shares', body: s) as List).map(toJson).toList();
 
   // -------------------------------------------------------- data / repos
