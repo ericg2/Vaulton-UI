@@ -42,3 +42,8 @@ These are job-admission limits. They are not hard CPU or memory quotas and do no
 - The UI does not yet provide a provider connection health/reauthorization state for expired or revoked consent.
 - Microsoft token revocation must be completed from the provider account's app-consent settings.
 - Resource usage currently covers job counts and queue/capacity reasons, not per-transfer throughput or measured CPU/memory.
+
+
+## API request protection
+
+The administrator can configure a general API request budget per authenticated Identity account (and per client IP before sign-in) under Administration → Configuration → API Rate Limits. The default is 1,200 requests per 60 seconds. Authentication and message-specific limits remain separate. This is an HTTP request-rate guard, not a bandwidth shaper or a CPU/memory quota; a single long-running transfer still counts as one request.
