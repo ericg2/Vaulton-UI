@@ -304,7 +304,7 @@ class _ConfigurationTabState extends ConsumerState<ConfigurationTab> {
                       title: const Text('Server Total'),
                       subtitle: Text('$totalRunning running · $totalQueued queued'),
                       trailing: Text(
-                        '${_limits['maxConcurrentJobs'] ?? 8} concurrent\n${_limits['maxPendingJobs'] ?? 1000} pending',
+                        '${(_limits['maxConcurrentJobs'] ?? 8) == 0 ? '∞' : (_limits['maxConcurrentJobs'] ?? 8)} concurrent\n${(_limits['maxPendingJobs'] ?? 1000) == 0 ? '∞' : (_limits['maxPendingJobs'] ?? 1000)} pending',
                         textAlign: TextAlign.end,
                       ),
                     ),
