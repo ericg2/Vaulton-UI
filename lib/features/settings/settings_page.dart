@@ -60,7 +60,7 @@ class SettingsPage extends ConsumerWidget {
               _usageLine('Running Jobs', '$running'),
               _usageLine('Queued Jobs', '$queued'),
               _usageLine('Concurrent Job Limit', limit(concurrent)),
-              _usageLine('Pending Job Limit', '$pending'),
+              _usageLine('Pending Job Limit', limit(pending)),
               if (queued > 0 && concurrent > 0 && running >= concurrent) ...[
                 const SizedBox(height: 12),
                 const Text('Your jobs are waiting because you have reached your concurrent job limit. They will start when capacity becomes available.'),
