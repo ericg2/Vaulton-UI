@@ -819,7 +819,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('The authorization link has been copied. Open it in your browser, sign in with your provider, and approve Vaulton. The browser will show a one-time code. Return here and paste that code to finish. Only complete this request in the Vaulton account that started it. The link expires in 10 minutes.'),
+                const Text('The authorization link has been copied. Open it in your browser, sign in with your provider, and approve Vaulton. The browser will show a one-time code. Return here and paste that code to finish. Do not share the code. Only complete this request in the Vaulton account that started it. The link expires in 10 minutes.'),
                 const SizedBox(height: 12),
                 SelectableText(url),
                 const SizedBox(height: 16),
