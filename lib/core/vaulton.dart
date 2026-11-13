@@ -380,6 +380,14 @@ class Vaulton {
   Future<Json> rateLimitSettings() async => toJson(await _req('GET', '/admin/settings/rate-limits'));
   Future<Json> saveRateLimitSettings(Json body) async => toJson(await _req('PUT', '/admin/settings/rate-limits', body: body));
   Future<Json> operationalLimits() async => toJson(await _req('GET', '/admin/settings/limits'));
+  Future<Json> userConcurrencyLimit(String userName) async =>
+      toJson(await _req('GET', '/admin/settings/limits/users/${_e(userName)}'));
+  Future<Json> saveUserConcurrencyLimit(String userName, int limit) async =>
+      toJson(await _req('PUT', '/admin/settings/limits/users/${_e(userName)}', body: {'maxConcurrentJobsPerUser': limit}));
+  Future<void> clearUserConcurrencyLimit(String userName) =>
+      _req('DELETE', '/admin/settings/limits/users/${_e(userName)}');
+  Future<List<Json>> adminResourceUsage() async =>
+      (await _req('GET', '/admin/resources/usage') as List).map(toJson).toList();
   Future<Json> saveOperationalLimits(Json body) async => toJson(await _req('PUT', '/admin/settings/limits', body: body));
 
   Future<Json> wolSettings() async => toJson(await _req('GET', '/admin/settings/wol'));
