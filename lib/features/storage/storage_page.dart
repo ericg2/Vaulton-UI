@@ -812,6 +812,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       final code = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
+          scrollable: true,
           title: Text('Authorize ${_sourceLabel(selectedScheme)}'),
           content: SizedBox(
             width: 520,
