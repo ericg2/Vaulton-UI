@@ -2784,7 +2784,7 @@ class _RootSheetState extends State<_RootSheet> {
   @override
   void initState() {
     super.initState();
-    if (widget.root.isOwner) {
+    if (widget.root.isOwner && widget.root.isLocal) {
       widget.vaulton
           .shares(widget.root.id)
           .then((v) {
@@ -2887,7 +2887,12 @@ class _RootSheetState extends State<_RootSheet> {
           const Divider(height: 28),
           Text('Who Can Use It', style: t.titleSmall),
           const SizedBox(height: 8),
-          if (!r.isOwner)
+          if (r.isPrivateCloud)
+            Text(
+              'This cloud connection is private. Only you can use it, and it cannot be shared.',
+              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            )
+          else if (!r.isOwner)
             Text(
               'Only the owner can manage access.',
               style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
@@ -2927,20 +2932,22 @@ class _RootSheetState extends State<_RootSheet> {
                 ),
               ),
           if (r.isOwner) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: widget.onShare,
-                icon: const Icon(Icons.group_add_outlined),
-                label: Text(
-                  _shares != null && _shares!.isNotEmpty
-                      ? 'Manage Sharing'
-                      : 'Share This Location',
+            if (r.isLocal) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: widget.onShare,
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: Text(
+                    _shares != null && _shares!.isNotEmpty
+                        ? 'Manage Sharing'
+                        : 'Share This Location',
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 8),
+            ],
             Wrap(
               spacing: 8,
               runSpacing: 8,
