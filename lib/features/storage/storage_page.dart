@@ -949,7 +949,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Expanded(child: Text('Space Set Aside')),
+                      const Expanded(child: Text('Space Allocated')),
                       Text(
                         fmtBytes(
                           override
@@ -997,7 +997,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'This may set aside more space than the drive currently has free.',
+                        'This may allocate more space than the drive currently has free.',
                         style: TextStyle(
                           color: Theme.of(ctx).colorScheme.error,
                         ),
@@ -1247,7 +1247,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Text(
-                          '${fmtBytes(allocated)} set aside · ${fmtBytes(r.freeBytes)} available of ${fmtBytes(r.maxBytes)}',
+                          '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} available of ${fmtBytes(r.maxBytes)}',
                           style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                             color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                           ),
@@ -2988,7 +2988,7 @@ class _RootSheetState extends State<_RootSheet> {
             UsageBar(used: allocated, max: r.maxBytes),
             const SizedBox(height: 6),
             Text(
-              '${fmtBytes(allocated)} set aside · ${fmtBytes(r.freeBytes)} available of ${fmtBytes(r.maxBytes)}',
+              '${fmtBytes(allocated)} allocated · ${fmtBytes(r.freeBytes)} available of ${fmtBytes(r.maxBytes)}',
               style: t.bodySmall,
             ),
           ] else ...[
