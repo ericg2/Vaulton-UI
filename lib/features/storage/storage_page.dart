@@ -1138,7 +1138,7 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     if (!await confirm(
       context,
       'Delete Location “${root.name}”?',
-      'Not allowed while it still holds data folders or backup vaults. Files in the underlying storage are kept.',
+      'Delete all Data Folders and Backup Vaults in this Location first. Once none remain, you can delete the Location. The underlying storage folder and unrelated files will be kept.',
       ok: 'Delete',
       danger: true,
     )) {
