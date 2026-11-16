@@ -32,7 +32,6 @@ class _FuncApi extends Vaulton {
     this.jobList = const [],
 
     this.userList = const [],
-    this.shareList = const [],
     this.legacyShareList = const [],
     this.snapshotList = const [],
     this.failJob = false,
@@ -43,7 +42,6 @@ class _FuncApi extends Vaulton {
   final List<RepoJob> jobList;
 
   final List<UserAccount> userList;
-  final List<Json> shareList;
   final List<Json> legacyShareList;
   final List<Snapshot> snapshotList;
   final bool failJob;
