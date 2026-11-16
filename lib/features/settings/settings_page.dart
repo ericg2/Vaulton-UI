@@ -15,7 +15,7 @@ import '../../platform/desktop_window.dart';
 import '../transfers/transfer_manager.dart';
 
 /// Keep in sync with `version:` in pubspec.yaml.
-const kAppVersion = '1.3.26';
+const kAppVersion = '1.3.27';
 
 Widget _usageLine(String label, String value) => Padding(
   padding: const EdgeInsets.symmetric(vertical: 5),
