@@ -235,8 +235,8 @@ class TransferNotification {
     final verb = _task.kind == TKind.upload ? 'Uploading' : 'Downloading';
     await _n!.show(
       id: _transferNotificationId(_task.id),
-      title: percent == null ? verb + ' ' + _task.name : verb + ' ' + _task.name + ' · ' + percent.toString() + '%',
-      body: percent == null ? 'File transfer in progress' : _formatTransferBytes(done) + ' of ' + _formatTransferBytes(total),
+      title: percent == null ? '$verb ${_task.name}' : '$verb ${_task.name} · $percent%',
+      body: percent == null ? 'File transfer in progress' : '${_formatTransferBytes(done)} of ${_formatTransferBytes(total)}',
       notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
         _kTransferChannel, 'File transfers', importance: Importance.low, priority: Priority.low,
         onlyAlertOnce: true, ongoing: ongoing, autoCancel: !ongoing, showProgress: true,
@@ -252,7 +252,7 @@ String _formatTransferBytes(int bytes) {
   var value = bytes / 1024;
   var unit = 0;
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
-  return value.toStringAsFixed(value < 10 ? 1 : 0) + ' ' + units[unit];
+  return '${value.toStringAsFixed(value < 10 ? 1 : 0)} ${units[unit]}';
 }
 
 const _kUpdateDownload = 'vaulton.update.download';
@@ -374,7 +374,7 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
       if (completed + failed > 0) {
         await notifications.show(
           id: 7303, title: 'File transfers finished',
-          body: completed.toString() + ' completed, ' + failed.toString() + ' failed',
+          body: '$completed completed, $failed failed',
           notificationDetails: const NotificationDetails(android: AndroidNotificationDetails(
             _kTransferChannel, 'File transfers', importance: Importance.defaultImportance,
             priority: Priority.defaultPriority, ongoing: false, autoCancel: true,
@@ -391,8 +391,8 @@ Future<bool> _drain(ApiClient api, SharedPreferences prefs) async {
     final body = finishedMessage ?? (task == null
         ? 'Preparing remaining files…'
         : percent == null
-            ? verb + ' ' + task.name
-            : verb + ' ' + task.name + ' · ' + percent.toString() + '%');
+            ? '$verb ${task.name}'
+            : '$verb ${task.name} · $percent%');
     await notifications.show(
       id: 7303,
       title: 'File transfers',
