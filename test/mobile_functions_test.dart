@@ -176,7 +176,7 @@ class _FuncApi extends Vaulton {
   }) async => Paged(nodes, null, false);
 
   @override
-  Future<List<Json>> shares(String id) async => shareList;
+  Future<List<Json>> shares(String id) async => const [];
 
   @override
   Future<List<Json>> legacyShares(String id) async => legacyShareList;
