@@ -321,7 +321,14 @@ class _RootSharesPageState extends ConsumerState<RootSharesPage> {
                 Row(children: [
                   Icon(Icons.warning_amber_rounded, color: cs.tertiary),
                   const SizedBox(width: 8),
-                  Text('Inactive Legacy Shares', style: theme.textTheme.titleSmall),
+                  Expanded(
+                    child: Text(
+                      'Inactive Legacy Shares',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                  ),
                 ]),
                 const SizedBox(height: 8),
                 Text(
