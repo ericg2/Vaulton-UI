@@ -1156,15 +1156,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     );
     final u = ref.watch(userProvider)!;
     final canManageLocal = u.has(Scopes.rootsManage);
-    const canCreate = true;
     return Scaffold(
-      floatingActionButton: canCreate
-          ? FloatingActionButton.extended(
-              onPressed: () => _create(canManageLocal: canManageLocal),
-              icon: const Icon(Icons.add),
-              label: const Text('New Location'),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _create(canManageLocal: canManageLocal),
+        icon: const Icon(Icons.add),
+        label: const Text('New Location'),
+      ),
       body: CursorList<Root>(
         key: _key,
         empty: 'No locations yet.',
