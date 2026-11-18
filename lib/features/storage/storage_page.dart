@@ -763,11 +763,12 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     final available = toInt(detected?['availableBytes']);
     int? maxBytes;
     if (selectedScheme == 'fs' && available > 0) {
-      maxBytes = await _capacityDialog(
+      final selection = await _capacityDialog(
         currentBytes: available,
         detected: detected,
         isLocal: true,
       );
+      maxBytes = selection?.bytes;
     } else {
       final capacity = await formDialog(
         context,
@@ -900,10 +901,11 @@ class _RootsTabState extends ConsumerState<RootsTab> {
     return true;
   }
 
-  Future<int?> _capacityDialog({
+  Future<({int bytes, bool force})?> _capacityDialog({
     required int currentBytes,
     Json? detected,
     required bool isLocal,
+    bool allowForce = false,
   }) async {
     final available = toInt(detected?['availableBytes']);
     final total = toInt(detected?['capacityBytes']);
@@ -926,10 +928,16 @@ class _RootsTabState extends ConsumerState<RootsTab> {
         intro: 'Remote storage capacity is a manual allocation limit. Vaulton cannot reliably detect the provider’s total capacity.',
       );
       if (result == null) return null;
-      return int.tryParse(result['capacity'] ?? '');
+      final parsed = int.tryParse(result['capacity'] ?? '');
+      if (parsed == null) return null;
+      return (bytes: parsed, force: false);
     }
     var override = currentBytes > available;
-    var value = currentBytes.clamp(1, available).toDouble();
+    var force = false;
+    // Keep the current allocation as the starting point; free disk space is only a
+    // ceiling for new allocations, so existing points and shares are not resized.
+    final sliderMax = available > currentBytes ? available : currentBytes;
+    var value = currentBytes.clamp(1, sliderMax).toDouble();
     final custom = TextEditingController(text: bytesToGb(currentBytes));
     final result = await showDialog<int>(
       context: context,
@@ -953,19 +961,16 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                       Text(
                         fmtBytes(
                           override
-                              ? (int.tryParse(custom.text) ?? 0) *
-                                    1024 *
-                                    1024 *
-                                    1024
+                              ? (capacityToBytes(custom.text, 'GiB') ?? 0)
                               : value.round(),
-                        ),
+                        )
                       ),
                     ],
                   ),
                   Slider(
                     value: value,
                     min: 1,
-                    max: available
+                    max: sliderMax
                         .toDouble()
                         .clamp(2, double.maxFinite)
                         .toDouble(),
@@ -1003,6 +1008,16 @@ class _RootsTabState extends ConsumerState<RootsTab> {
                         ),
                       ),
                     ),
+                  if (allowForce)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Allow Reducing Allocated Shares'),
+                      subtitle: const Text(
+                        'Trims share limits that back allocated space. Stored data is never removed.',
+                      ),
+                      value: force,
+                      onChanged: (v) => setDialogState(() => force = v),
+                    ),
                 ],
               ),
             ),
@@ -1015,11 +1030,10 @@ class _RootsTabState extends ConsumerState<RootsTab> {
             FilledButton(
               onPressed: () {
                 final bytes = override
-                    ? ((double.tryParse(custom.text) ?? 0) * 1024 * 1024 * 1024)
-                          .round()
+                    ? (capacityToBytes(custom.text, 'GiB') ?? 0)
                     : value.round();
                 if (bytes <= 0) return;
-                Navigator.pop(dialogContext, bytes);
+                Navigator.pop(dialogContext, (bytes: bytes, force: force));
               },
               child: const Text('Save'),
             ),
@@ -1028,7 +1042,8 @@ class _RootsTabState extends ConsumerState<RootsTab> {
       ),
     );
     custom.dispose();
-    return result;
+    if (result == null) return null;
+    return (bytes: result, force: force);
   }
 
   Future<void> _edit(Root root) async {
@@ -1070,22 +1085,29 @@ class _RootsTabState extends ConsumerState<RootsTab> {
           : 'Update the location settings. Provider credentials are protected and cannot be viewed or changed here.',
     );
     if (r == null || !mounted) return;
-    final maxBytes = await _capacityDialog(
+    final selection = await _capacityDialog(
       currentBytes: root.maxBytes,
       detected: detected,
       isLocal: scheme == 'fs',
+      allowForce: true,
     );
-    if (maxBytes == null || maxBytes <= 0 || !mounted) return;
-    await guarded(
+    if (selection == null || selection.bytes <= 0 || !mounted) return;
+    final response = await guarded(
       context,
-      () => _v.patchRoot(root.id, {
+      () => _v.patchRootRaw(root.id, {
         'name': r['name'],
         'source': src,
-        'maxBytes': maxBytes,
+        'maxBytes': selection.bytes,
+        'force': selection.force,
         'isDataAllowed': r['data'] == 'true',
         'isRepoAllowed': r['repo'] == 'true',
       }),
     );
+    if (!mounted || response == null) return;
+    final warnings = [
+      for (final warning in response['warnings'] ?? const []) '$warning',
+    ];
+    if (warnings.isNotEmpty) toast(context, warnings.join('\n'));
     _key.currentState?.refresh();
   }
 

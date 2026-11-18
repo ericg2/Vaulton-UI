@@ -155,7 +155,10 @@ class Vaulton {
   Future<Json> completeCloudOAuth(String provider, String state, String code) async =>
       toJson(await _req('POST', '/roots/oauth/${_e(provider)}/complete', body: {'state': state, 'code': code}));
   Future<Json> resourceUsage() async => toJson(await _req('GET', '/resources/usage'));
-  Future<Root> patchRoot(String id, Json body) async => Root.fromJson(toJson(await _req('PATCH', '/roots/$id', body: body)));
+  /// Patches a root and keeps the response's warnings (for example, automatic share adjustments).
+  Future<Json> patchRootRaw(String id, Json body) async =>
+      toJson(await _req('PATCH', '/roots/$id', body: body));
+  Future<Root> patchRoot(String id, Json body) async => Root.fromJson(await patchRootRaw(id, body));
   Future<void> deleteRoot(String id) => _req('DELETE', '/roots/$id');
   Future<Json> browseLocal(String? path) async => toJson(await _req('GET', '/roots/local/browse', q: {'path': path}));
   Future<Json> createLocalDirectory(String path, String name) async =>
