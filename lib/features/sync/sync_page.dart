@@ -476,7 +476,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       children: [
                         Expanded(
                           child: _PathRow(
-                            label: 'Source ${i + 1}',
+                            label: i == 0 ? 'Source' : 'Source ${i + 1}',
                             value: sources[i].location,
                             onBrowse: () async {
                               final picked = await pickSyncSource();
