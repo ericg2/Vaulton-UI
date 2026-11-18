@@ -153,11 +153,8 @@ Future<SyncPlan> buildSyncPlan(
 
 Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPreferences prefs,
     {void Function(SyncRunStatus)? onProgress, CancelToken? cancel, Future<String?> Function(bool)? gate}) async {
-  final source = openSyncSource(SyncSourceInfo(
-    kind: profile.sourceKind, location: profile.sourceLocation, label: profile.sourceLabel,
-  ));
   final status = SyncRunStatus(
-    running: true, phase: 'Scanning Source', startedAt: DateTime.now().millisecondsSinceEpoch,
+    running: true, phase: 'Scanning Sources', startedAt: DateTime.now().millisecondsSinceEpoch,
   );
   await status.save(prefs, profile.id);
   onProgress?.call(status);
@@ -166,25 +163,45 @@ Future<SyncPlan> _buildSyncPlan(ApiClient api, SyncProfile profile, SharedPrefer
   var scanned = 0;
   var scannedDirectories = 0;
   var progressSave = Future<void>.value();
-  final local = await source.scan(
-    cancel: cancel,
-    onDirectory: (relative) {
-      scannedDirectories++;
-      status.current = relative.isEmpty ? profile.sourceLabel : relative;
-      if (scannedDirectories == 1 || scannedDirectories % 8 == 0) {
-        onProgress?.call(status);
-      }
-    },
-    onEntry: (entry) {
-      scanned++;
-      status.scannedSource = scanned;
-      status.current = entry.relative;
-      if (scanned == 1 || scanned % 8 == 0) {
-        onProgress?.call(status);
-        progressSave = progressSave.then((_) async { await status.save(prefs, profile.id); });
-      }
-    },
-  );
+  final local = <SyncSourceEntry>[];
+  for (final spec in profile.sources) {
+    final source = openSyncSource(SyncSourceInfo(
+      kind: spec.kind, location: spec.location, label: spec.label,
+    ));
+    // A single source keeps its historical flat layout. Several sources each get
+    // their own subfolder so identical names never overwrite one another.
+    final prefix = profile.sources.length > 1 ? spec.destinationPrefix : '';
+    final found = await source.scan(
+      cancel: cancel,
+      onDirectory: (relative) {
+        scannedDirectories++;
+        status.current = prefix.isEmpty ? relative : '$prefix/$relative';
+        if (scannedDirectories == 1 || scannedDirectories % 8 == 0) {
+          onProgress?.call(status);
+        }
+      },
+      onEntry: (entry) {
+        scanned++;
+        status.scannedSource = scanned;
+        status.current = prefix.isEmpty ? entry.relative : '$prefix/${entry.relative}';
+        if (scanned == 1 || scanned % 8 == 0) {
+          onProgress?.call(status);
+          progressSave = progressSave.then((_) async { await status.save(prefs, profile.id); });
+        }
+      },
+    );
+    // Each input keeps its own subfolder so identical names in two sources
+    // never overwrite each other in the destination.
+    local.addAll(found.map((entry) => SyncSourceEntry(
+      relative: prefix.isEmpty
+          ? entry.relative
+          : '$prefix/${entry.relative}'.replaceAll(RegExp(r'/+'), '/'),
+      size: entry.size,
+      modified: entry.modified,
+      isDir: entry.isDir,
+      location: entry.location,
+    )));
+  }
   await progressSave;
   _throwIfCancelled(cancel);
   status.scannedSource = local.length;
@@ -412,9 +429,17 @@ Future<void> applySyncPlan(
 
 Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, SharedPreferences prefs,
     {void Function(SyncRunStatus)? onProgress, CancelToken? cancel}) async {
-  final source = openSyncSource(SyncSourceInfo(
-    kind: profile.sourceKind, location: profile.sourceLocation, label: profile.sourceLabel,
-  ));
+  final sources = [
+    for (final spec in profile.sources)
+      (root: normalizeSyncPath(spec.location), source: openSyncSource(SyncSourceInfo(
+        kind: spec.kind, location: spec.location, label: spec.label,
+      ))),
+  ];
+  SyncSource sourceOf(SyncSourceEntry file) {
+    final path = normalizeSyncPath(file.location);
+    return sources.firstWhere((entry) =>
+        path == entry.root || path.startsWith('${entry.root}/')).source;
+  }
   final v = Vaulton(api);
   final status = SyncRunStatus(
     running: true,
@@ -499,7 +524,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
           // expected: reopen the file and retry instead of failing the run.
           for (var attempt = 0;; attempt++) {
             _throwIfCancelled(cancel);
-            final stream = await source.openRead(src);
+            final stream = await sourceOf(src).openRead(src);
             final base = sentSoFar;
             try {
               await transfer.uploadStream(
@@ -564,7 +589,7 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
     ..running = false
     ..phase = 'Complete'
     ..current = null
-    ..message = 'Destination now matches the source.'
+    ..message = 'Destination now matches the sources.'
     ..finishedAt = DateTime.now().millisecondsSinceEpoch;
   await status.save(prefs, profile.id);
   onProgress?.call(status);

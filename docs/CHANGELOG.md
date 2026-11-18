@@ -9,6 +9,8 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 - Resizing a location no longer requires manually shrinking shares whose limits exceed the new capacity. Idle share quota is reduced automatically and the adjustment is reported to the administrator.
 - The capacity dialog now starts from the location's current allocation instead of silently clamping to the drive's free space.
 - Folder Sync retries transient "upload already active" conflicts instead of stopping the whole run, and pending change counts are no longer shown alongside a stale "no changes" message.
+- A sync can now combine several input folders into one destination. Each input gets its own subfolder, so files with the same name never overwrite each other.
+- Two syncs can no longer write to the same or a nested destination folder, which prevents mirror mode from deleting another sync's files.
 - Backup summaries use short, grouped rows with readable counts, byte units, dates and duration rather than raw field names.
 
 ### Changed

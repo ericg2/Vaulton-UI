@@ -371,7 +371,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   String _signature(List<SyncProfile> profiles, Map<String, SyncRunStatus> status) {
     final b = StringBuffer();
     for (final p in profiles) {
-      b.write('${p.id}|${p.name}|${p.enabled}|${p.lastRun}|${p.nextRun}|${p.deleteExtras}|${p.intervalMinutes}|${p.cron}|${p.timeZone}|${p.remoteDir}|${p.sourceLocation}|');
+      b.write('${p.id}|${p.name}|${p.enabled}|${p.lastRun}|${p.nextRun}|${p.deleteExtras}|${p.intervalMinutes}|${p.cron}|${p.timeZone}|${p.remoteDir}|${[for (final s in p.sources) s.location].join(',')}|');
       final s = status[p.id];
       b.write('${s?.phase}|${s?.message}|${s?.error}|${s?.running}|${s?.current}|${s?.bytesDone}|${s?.bytesTotal}|${s?.completed}|${s?.failed}|${s?.totalFiles}|');
       b.write(';');
@@ -384,10 +384,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     if (id == null) return;
     final profile = profiles.where((p) => p.id == id).firstOrNull;
     if (profile == null || !mounted) return;
+    final first = profile.sources.first;
     final source = SyncSourceInfo(
-      kind: profile.sourceKind,
-      location: profile.sourceLocation,
-      label: profile.sourceLabel,
+      kind: first.kind,
+      location: first.location,
+      label: first.label,
     );
     final updated = await _configure(profile, source);
     if (updated == null || !mounted) return;
@@ -420,10 +421,17 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     SyncProfile? existing,
     SyncSourceInfo initialSource,
   ) async {
-    var source = initialSource;
-    var name = existing?.name ?? source.label;
+    var sources = <SyncSourceSpec>[
+      if (existing != null)
+        for (final item in existing.sources)
+          SyncSourceSpec(kind: item.kind, location: item.location, label: item.label),
+    ];
+    if (sources.isEmpty) {
+      sources.add(SyncSourceSpec(kind: initialSource.kind, location: initialSource.location, label: initialSource.label));
+    }
+    var name = existing?.name ?? sources.first.label;
     var pointId = existing?.pointId ?? _points.firstWhere(canUseDataFolderNow).id;
-    var remoteDir = existing?.remoteDir ?? '/${source.label}';
+    var remoteDir = existing?.remoteDir ?? '/${sources.first.label}';
     final deviceTz = await deviceTimeZone();
     if (!mounted) return null;
     final cron = existing?.cron ?? '0 2 * * *';
@@ -460,13 +468,60 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   onChanged: (v) => name = v,
                 ),
                 const SizedBox(height: 10),
-                _PathRow(
-                  label: 'Source',
-                  value: source.location,
-                  onBrowse: () async {
-                    final picked = await pickSyncSource();
-                    if (picked != null) set(() => source = picked);
-                  },
+                for (var i = 0; i < sources.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _PathRow(
+                            label: 'Source ${i + 1}',
+                            value: sources[i].location,
+                            onBrowse: () async {
+                              final picked = await pickSyncSource();
+                              if (picked != null) {
+                                set(() => sources[i] = SyncSourceSpec(
+                                  kind: picked.kind,
+                                  location: picked.location,
+                                  label: picked.label,
+                                ));
+                              }
+                            },
+                          ),
+                        ),
+                        if (sources.length > 1)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 18),
+                            child: IconButton(
+                              tooltip: 'Remove Source',
+                              icon: const Icon(Icons.remove_circle_outline),
+                              onPressed: () => set(() => sources.removeAt(i)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final picked = await pickSyncSource();
+                      if (picked != null && ctx.mounted) {
+                        set(() => sources.add(SyncSourceSpec(
+                          kind: picked.kind,
+                          location: picked.location,
+                          label: picked.label,
+                        )));
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Source Folder'),
+                  ),
+                ),
+                Text(
+                  'Each source is copied into its own subfolder in the destination.',
+                  style: Theme.of(ctx).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 14),
                 _PathRow(
@@ -572,6 +627,64 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   );
                   if (!proceed) return;
                 }
+                if (existing != null && existing.lastRun > 0) {
+                  final before = existing.sources
+                      .map((s) => normalizeSyncPath(s.location))
+                      .toSet();
+                  final after = sources
+                      .map((s) => normalizeSyncPath(s.location))
+                      .toSet();
+                  if (before != after &&
+                      normalizeSyncPath(existing.remoteDir) ==
+                          normalizeSyncPath(remoteDir)) {
+                    final proceed = await confirm(
+                      ctx,
+                      'Use a New Destination?',
+                      'Changing the source folders places files under new names. With mirror enabled, the old copies in this destination would be removed. Choose a different destination folder, or continue to keep this one.',
+                      ok: 'Keep This Destination',
+                      danger: true,
+                    );
+                    if (!proceed) return;
+                  }
+                }
+                final candidate = SyncProfile(
+                  id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+                  name: name.trim().isEmpty ? sources.first.label : name.trim(),
+                  sourceKind: sources.first.kind,
+                  sourceLocation: sources.first.location,
+                  sourceLabel: sources.first.label,
+                  sources: sources,
+                  pointId: pointId,
+                  remoteDir: remoteDir.trim().isEmpty ? '/' : remoteDir.trim(),
+                  enabled: enabled,
+                  deleteExtras: deleteExtras,
+                  intervalMinutes: existing?.intervalMinutes ?? 60,
+                  cron: cronCtl.text.trim(),
+                  timeZone: timeZone,
+                  skipIfRunning: skipIfRunning,
+                  wifiOnly: wifiOnly,
+                  chargingOnly: chargingOnly,
+                  wakeServer: wakeServer,
+                  lastRun: existing?.lastRun ?? 0,
+                );
+                final conflict = validateSyncProfile(candidate, _profiles);
+                if (conflict != null) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(conflict)));
+                  }
+                  return;
+                }
+                if (existing != null) {
+                  final before = existing.sources
+                      .map((s) => normalizeSyncPath(s.location))
+                      .toSet();
+                  final after = sources
+                      .map((s) => normalizeSyncPath(s.location))
+                      .toSet();
+                  if (before != after) {
+                    await deleteSyncManifest(ref.read(prefsProvider), existing.id);
+                  }
+                }
                 final scheduleCron = cronCtl.text.trim();
                 try {
                   final occurrences = await ref
@@ -580,33 +693,9 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                   if (occurrences.isEmpty) {
                     throw StateError('No upcoming run could be calculated.');
                   }
-                  Navigator.pop(
-                    ctx,
-                    SyncProfile(
-                      id:
-                          existing?.id ??
-                          DateTime.now().microsecondsSinceEpoch.toString(),
-                      name: name.trim().isEmpty ? source.label : name.trim(),
-                      sourceKind: source.kind,
-                      sourceLocation: source.location,
-                      sourceLabel: source.label,
-                      pointId: pointId,
-                      remoteDir: remoteDir.trim().isEmpty
-                          ? '/'
-                          : remoteDir.trim(),
-                      enabled: enabled,
-                      deleteExtras: deleteExtras,
-                      intervalMinutes: existing?.intervalMinutes ?? 60,
-                      cron: scheduleCron,
-                      timeZone: timeZone,
-                      skipIfRunning: skipIfRunning,
-                      wifiOnly: wifiOnly,
-                      chargingOnly: chargingOnly,
-                      wakeServer: wakeServer,
-                      lastRun: existing?.lastRun ?? 0,
-                      nextRun: occurrences.first.millisecondsSinceEpoch,
-                    ),
-                  );
+                  candidate.cron = scheduleCron;
+                  candidate.nextRun = occurrences.first.millisecondsSinceEpoch;
+                  Navigator.pop(ctx, candidate);
                 } catch (e) {
                   if (ctx.mounted) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
@@ -827,7 +916,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
               shrinkWrap: true,
               children: [
                 Text(
-                  '${p.sourceLabel} → ${_pointName(p.pointId)}${p.remoteDir}',
+                  '${[for (final s in p.sources) s.label].join(', ')} → ${_pointName(p.pointId)}${p.remoteDir}',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(ctx).textTheme.titleMedium,
@@ -1007,17 +1096,24 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   }
 
   Future<void> _reviewSourceCleanup(SyncProfile p) async {
-    final source = openSyncSource(
-      SyncSourceInfo(
-        kind: p.sourceKind,
-        location: p.sourceLocation,
-        label: p.sourceLabel,
-      ),
-    );
+    final sources = [
+      for (final spec in p.sources)
+        (root: spec.location, source: openSyncSource(SyncSourceInfo(
+          kind: spec.kind, location: spec.location, label: spec.label,
+        ))),
+    ];
+    SyncSource sourceOf(SyncSourceEntry file) => sources.firstWhere((entry) {
+      final root = entry.root.replaceAll('\\', '/');
+      final path = file.location.replaceAll('\\', '/');
+      return path == root || path.startsWith('$root/');
+    }).source;
     var files = List<SyncSourceEntry>.from(_safeCleanup[p.id] ?? const []);
     if (files.isEmpty) {
       try {
-        files = (await source.scan()).where((x) => !x.isDir).toList();
+        files = <SyncSourceEntry>[];
+        for (final entry in sources) {
+          files.addAll((await entry.source.scan()).where((x) => !x.isDir));
+        }
       } catch (_) {}
     }
     if (!mounted || files.isEmpty) {
@@ -1095,7 +1191,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         (x) => selected.contains(x.location),
                       )) {
                         try {
-                          await source.delete(f);
+                          await sourceOf(f).delete(f);
                           removed++;
                         } catch (_) {}
                       }
@@ -1435,7 +1531,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Text(
-                        '${p.sourceLabel} → ${point?.name ?? 'Data Folder'}${p.remoteDir}',
+                        '${[for (final s in p.sources) s.label].join(', ')} → ${point?.name ?? 'Data Folder'}${p.remoteDir}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall
@@ -1649,10 +1745,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                       onPressed: kIsWeb
                           ? null
                           : () async {
+                              final first = p.sources.first;
                               final source = SyncSourceInfo(
-                                kind: p.sourceKind,
-                                location: p.sourceLocation,
-                                label: p.sourceLabel,
+                                kind: first.kind,
+                                location: first.location,
+                                label: first.label,
                               );
                               final updated = await _configure(p, source);
                               if (updated == null) return;
