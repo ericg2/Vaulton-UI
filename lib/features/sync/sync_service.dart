@@ -493,24 +493,38 @@ Future<void> _applySyncPlan(ApiClient api, SyncProfile profile, SyncPlan plan, S
           status.current = x.path;
           final remote = joinPath(profile.remoteDir, x.path);
           if (x.kind == SyncChangeKind.replace) await v.deleteEntry(profile.pointId, remote);
-          final stream = await source.openRead(src);
           var sentSoFar = 0;
-          await transfer.uploadStream(
-            pointId: profile.pointId,
-            remotePath: remote,
-            stream: stream,
-            size: src.size,
-            overwrite: true,
-            onProgress: (sent, _) {
-              // Retries can report a lower count; keep each file monotonic.
-              if (sent > sentSoFar) {
-                status.bytesDone += sent - sentSoFar;
-                sentSoFar = sent;
-              }
-              onProgress?.call(status);
-            },
-            cancel: cancel,
-          );
+          // The server allows one API upload per point at a time. With several
+          // sync workers uploading to the same point, occasional 429s are
+          // expected: reopen the file and retry instead of failing the run.
+          for (var attempt = 0;; attempt++) {
+            _throwIfCancelled(cancel);
+            final stream = await source.openRead(src);
+            final base = sentSoFar;
+            try {
+              await transfer.uploadStream(
+                pointId: profile.pointId,
+                remotePath: remote,
+                stream: stream,
+                size: src.size,
+                overwrite: true,
+                onProgress: (sent, _) {
+                  // Progress stays monotonic even when an attempt starts over.
+                  final total = base + sent > src.size ? src.size : base + sent;
+                  if (total > sentSoFar) {
+                    status.bytesDone += total - sentSoFar;
+                    sentSoFar = total;
+                  }
+                  onProgress?.call(status);
+                },
+                cancel: cancel,
+              );
+              break;
+            } on ApiException catch (e) {
+              if (e.status != 429 || attempt >= 5) rethrow;
+              await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
+            }
+          }
           if (src.size > sentSoFar) status.bytesDone += src.size - sentSoFar;
           manifest[x.path] = SyncManifestEntry(size: src.size, modified: src.modified.millisecondsSinceEpoch);
           status.completed++;

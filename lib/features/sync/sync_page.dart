@@ -1560,7 +1560,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          if (st.finishedAt > 0)
+                          if (st.finishedAt > 0 &&
+                              (st.error != null ||
+                                  plan == null ||
+                                  plan.changes.isEmpty))
                             Text(
                               st.error ?? st.message ?? 'Last sync completed.',
                               style: Theme.of(context).textTheme.bodySmall
@@ -1572,7 +1575,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                             ),
                           if (plan != null && plan.changes.isNotEmpty)
                             Text(
-                              '${plan.newFiles} new · ${plan.updatedFiles} updated · ${plan.deletedFiles} destination extras.',
+                              'Pending: ${plan.newFiles} new · ${plan.updatedFiles} updated · ${plan.deletedFiles} destination extras.',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           if (_safeCleanup[p.id]?.isNotEmpty == true)

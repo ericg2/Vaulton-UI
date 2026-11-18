@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/util.dart';
 import '../../core/vaulton.dart';
 import '../../core/widgets.dart';
+import 'backup_summary.dart';
 import 'job_text.dart';
 import 'job_widgets.dart';
 import 'log_widgets.dart';
@@ -422,19 +423,10 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   Widget _backupSummaryCard(RepoJob j) {
     final summary = _backupSummary;
     if (j.kind != 'backup' || summary == null || summary.isEmpty) return const SizedBox.shrink();
-
-    String value(String key, dynamic v) {
-      if (v is bool) return v ? 'Yes' : 'No';
-      if (v is num && key.toLowerCase().contains('bytes')) return fmtBytes(v.toInt());
-      if (v is List) return v.join(', ');
-      if (v is Map) return v.entries.map((e) => '${pretty('${e.key}')}: ${e.value}').join('\n');
-      return '$v';
-    }
-
+    final rows = formatBackupSummary(summary);
+    if (rows.isEmpty) return const SizedBox.shrink();
     return _card('Backup Summary', [
-      for (final e in summary.entries)
-        if (e.value != null && e.value != '')
-          _kv(pretty(e.key), SelectableText(value(e.key, e.value))),
+      for (final row in rows) _kv(row.label, SelectableText(row.value)),
     ]);
   }
 
