@@ -10,6 +10,7 @@
 - `flutter run -d chrome` launches the web app in Chrome; the default API address is `http://localhost:5141` (see `lib/core/session.dart`). Start the backend from the sibling `Vaulton` repository first.
 - `flutter analyze` runs Dart and Flutter static analysis using `analysis_options.yaml` and `flutter_lints`.
 - `flutter test` runs the tests under `test/`.
+- UI releases are GitHub Actions workflows and commonly take about 30 minutes to build and publish every platform. After pushing a version bump, do not block on `gh run watch`: use a short bounded wait (a few minutes at most), then check the run or release later. A failed validation step must be fixed with a new version bump; do not wait for slow packaging to finish before continuing other work.
 - `dart format lib test` formats Dart source.
 - Run the relevant checks after changes and report exactly which commands succeeded, failed, or could not be run. Never claim that a build, test, install, or runtime behavior was verified unless it was actually verified.
 
