@@ -1,7 +1,7 @@
 name: vaulton
 description: Cross-platform client for the Vaulton API (files, backups, sync, administration).
 publish_to: none
-version: 1.3.27+31 # Triggers the validated, versioned release workflow; retry-safe tag creation and draft-aware asset listing.
+version: 1.3.28+32 # Triggers the validated, versioned release workflow; retry-safe tag creation and draft-aware asset listing.
 
 environment:
   sdk: ^3.13.0
