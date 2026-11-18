@@ -59,10 +59,16 @@ List<BackupSummaryRow> formatBackupSummary(Map<String, dynamic> summary) {
   final start = _timeOf(summary['backupStart']);
   final end = _timeOf(summary['backupEnd']);
   final formatter = DateFormat.yMMMd().add_jm();
-  if (start != null) rows.add(BackupSummaryRow('Started', formatter.format(start)));
-  if (end != null) rows.add(BackupSummaryRow('Finished', formatter.format(end)));
-  if (start != null && end != null && end.isAfter(start)) {
-    rows.add(BackupSummaryRow('Duration', _duration(end.difference(start))));
+  if (start != null && end != null) {
+    final span = end.isAfter(start) ? ' (${_duration(end.difference(start))})' : '';
+    rows.add(BackupSummaryRow(
+      'Time',
+      '${formatter.format(start)} → ${formatter.format(end)}$span',
+    ));
+  } else if (start != null) {
+    rows.add(BackupSummaryRow('Started', formatter.format(start)));
+  } else if (end != null) {
+    rows.add(BackupSummaryRow('Finished', formatter.format(end)));
   }
 
   return rows;

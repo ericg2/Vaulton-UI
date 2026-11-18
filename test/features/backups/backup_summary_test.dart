@@ -22,12 +22,12 @@ void main() {
     });
 
     final values = {for (final row in rows) row.label: row.value};
-    expect(rows.length, lessThanOrEqualTo(7));
+    expect(rows.length, lessThanOrEqualTo(6));
     expect(values['Files'], '6,954 new');
     expect(values['Folders'], '717 new');
     expect(values['Blobs'], '102,083 data · 709 tree');
     expect(values['Data stored'], '133 GiB');
-    expect(values['Duration'], '21m');
+    expect(values['Time'], contains('21m'));
     expect(values.containsKey('Files Changed'), isFalse);
     expect(values.containsKey('Dirs Unmodified'), isFalse);
   });
