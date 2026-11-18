@@ -4,6 +4,15 @@ This file contains notes through version 1.3.2 and upcoming changes. For version
 
 ## Unreleased
 
+### Fixed
+
+- Resizing a location no longer requires manually shrinking shares whose limits exceed the new capacity. Idle share quota is reduced automatically and the adjustment is reported to the administrator.
+- The capacity dialog now starts from the location's current allocation instead of silently clamping to the drive's free space.
+
+### Changed
+
+- Space that is set aside for folders is consistently labelled as allocated.
+
 ## 1.3.22
 
 ### Fixed
